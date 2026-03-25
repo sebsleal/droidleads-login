@@ -11,7 +11,8 @@ Pipeline:
   6. Contact enrichment (voter roll + Sunbiz) for top leads
   7. Insert / upsert to Supabase (db/insert.py)
   8. Regenerate public/leads.json with TEMPLATE: outreach placeholders
-     (Claude Code automation fills these in via enrich_leads.py)
+     and public/storm_candidates.json for Storm Watch
+     (Claude Code automation fills lead outreach placeholders via enrich_leads.py)
 
 Scheduled via Railway cron: 0 */6 * * * (every 6 hours)
 """
@@ -205,12 +206,11 @@ def run() -> int:
         return 1
 
     # -------------------------------------------------------------------
-    # 8. Regenerate public/leads.json
-    #    Outreach messages are written as TEMPLATE: placeholders here.
-    #    Claude Code automation (enrich_leads.py) fills them in via the
-    #    IDE — no ANTHROPIC_API_KEY needed on the server side.
+    # 8. Regenerate public/leads.json and public/storm_candidates.json
+    #    Outreach messages are written as TEMPLATE: placeholders in leads.json.
+    #    Claude Code automation (enrich_leads.py) fills those in via the IDE.
     # -------------------------------------------------------------------
-    banner("Step 8: Regenerate leads.json")
+    banner("Step 8: Regenerate dashboard datasets")
     try:
         import subprocess
         result_proc = subprocess.run(
@@ -224,8 +224,20 @@ def run() -> int:
             print(f"[run] generate_leads.py exited {result_proc.returncode}")
             if result_proc.stderr:
                 print(result_proc.stderr[:500])
+
+        storm_proc = subprocess.run(
+            [sys.executable, "generate_storm_candidates.py"],
+            capture_output=True,
+            text=True,
+        )
+        if storm_proc.returncode == 0:
+            print("[run] storm_candidates.json regenerated successfully")
+        else:
+            print(f"[run] generate_storm_candidates.py exited {storm_proc.returncode}")
+            if storm_proc.stderr:
+                print(storm_proc.stderr[:500])
     except Exception as e:
-        print(f"[run] leads.json regeneration failed (non-fatal): {e}")
+        print(f"[run] Dataset regeneration failed (non-fatal): {e}")
 
     elapsed = time.time() - start
 

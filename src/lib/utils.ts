@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { ScoreTier, DamageType, Lead } from '@/types';
+import type { ScoreTier, DamageType, Lead, StormCandidate } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -73,6 +73,20 @@ export function isWithinDays(isoDate: string, days: number): boolean {
 
 type LeadWithScoreReasoning = Lead & { score_reasoning?: string };
 
+function downloadRowsAsCsv(headers: string[], rows: Array<Array<string | number | null | undefined>>, filenamePrefix: string) {
+  const csv = [headers, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filenamePrefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function downloadCSV(leads: Lead[]) {
   const headers = [
     'ID',
@@ -144,15 +158,55 @@ export function downloadCSV(leads: Lead[]) {
     l.priorPermitCount ?? '',
   ]);
 
-  const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    .join('\n');
+  downloadRowsAsCsv(headers, rows, 'cra-leads');
+}
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `cra-leads-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+export function downloadStormCandidatesCSV(candidates: StormCandidate[]) {
+  const headers = [
+    'ID',
+    'Candidate Type',
+    'County',
+    'City',
+    'ZIP',
+    'Location Label',
+    'Storm Event',
+    'Event Type',
+    'Event Date',
+    'FEMA Declaration Number',
+    'FEMA Incident Type',
+    'Narrative',
+    'Score',
+    'Score Reasoning',
+    'Status',
+    'Notes',
+    'Contacted At',
+    'Permit Filed At',
+    'Closed At',
+    'Source',
+  ];
+
+  const rows = candidates.map((candidate) => [
+    candidate.id,
+    candidate.candidateType,
+    candidate.county,
+    candidate.city,
+    candidate.zip,
+    candidate.locationLabel,
+    candidate.stormEvent,
+    candidate.eventType,
+    candidate.eventDate,
+    candidate.femaDeclarationNumber ?? '',
+    candidate.femaIncidentType ?? '',
+    candidate.narrative,
+    candidate.score,
+    candidate.scoreReasoning,
+    candidate.status,
+    candidate.notes,
+    candidate.contactedAt ?? '',
+    candidate.permitFiledAt ?? '',
+    candidate.closedAt ?? '',
+    candidate.source,
+  ]);
+
+  downloadRowsAsCsv(headers, rows, 'cra-storm-watch');
 }

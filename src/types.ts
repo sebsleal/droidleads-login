@@ -6,8 +6,23 @@ export type DamageType =
   | 'Structural';
 
 export type LeadStatus = 'New' | 'Contacted' | 'Converted' | 'Closed';
+export type CountySlug = 'miami-dade' | 'broward' | 'palm-beach';
+export type StormCandidateType = 'area' | 'property';
+export type StormWatchStatus =
+  | 'Watching'
+  | 'Researching'
+  | 'Outreach Ready'
+  | 'Contacted'
+  | 'Permit Filed'
+  | 'Closed';
 
 export type ScoreTier = 'high' | 'medium' | 'low';
+
+export const COUNTY_LABELS: Record<CountySlug, string> = {
+  'miami-dade': 'Miami-Dade',
+  broward: 'Broward',
+  'palm-beach': 'Palm Beach',
+};
 
 export interface ContactInfo {
   email?: string;
@@ -52,7 +67,7 @@ export interface Lead {
   roofAge?: number;
   codeViolation?: boolean;
   // Multi-county + FEMA fields
-  county?: string;                    // 'miami-dade' | 'broward' | 'palm-beach'
+  county?: CountySlug;
   femaDeclarationNumber?: string;     // e.g. 'DR-4611'
   femaIncidentType?: string;          // e.g. 'Hurricane' | 'Flood'
 }
@@ -67,7 +82,7 @@ export interface FilterState {
   underpaid: boolean;
   noContractor: boolean;
   stormFirst: boolean;
-  county: 'All' | 'miami-dade' | 'broward' | 'palm-beach';
+  county: 'All' | CountySlug;
 }
 
 export interface StatsData {
@@ -75,4 +90,43 @@ export interface StatsData {
   highPriority: number;
   absenteeOwners: number;
   underpaidFlags: number;
+}
+
+export interface StormCandidate {
+  id: string;
+  candidateType: StormCandidateType;
+  county: CountySlug;
+  city: string;
+  zip: string;
+  locationLabel: string;
+  stormEvent: string;
+  eventType: string;
+  eventDate: string;
+  femaDeclarationNumber?: string;
+  femaIncidentType?: string;
+  narrative: string;
+  score: number;
+  scoreReasoning: string;
+  status: StormWatchStatus;
+  notes: string;
+  source: string;
+  contactedAt?: string;
+  permitFiledAt?: string;
+  closedAt?: string;
+}
+
+export interface StormFilterState {
+  county: 'All' | CountySlug;
+  eventType: 'All' | string;
+  femaTagged: 'All' | 'Tagged' | 'Untagged';
+  scoreTier: 'All' | 'High' | 'Medium' | 'Low';
+  dateRange: '30' | '90' | '365' | 'all';
+  candidateType: 'All' | StormCandidateType;
+}
+
+export interface StormStatsData {
+  totalCandidates: number;
+  highPriority: number;
+  femaTagged: number;
+  areaCandidates: number;
 }

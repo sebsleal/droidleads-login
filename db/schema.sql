@@ -71,6 +71,28 @@ create table if not exists leads (
 );
 
 -- -----------------------------------------------------------------------------
+-- storm_tracking table
+-- -----------------------------------------------------------------------------
+create table if not exists storm_tracking (
+    candidate_id       text primary key,
+    status             text not null default 'Watching'
+                       check (status in (
+                           'Watching',
+                           'Researching',
+                           'Outreach Ready',
+                           'Contacted',
+                           'Permit Filed',
+                           'Closed'
+                       )),
+    notes              text,
+    contacted_at       timestamptz,
+    permit_filed_at    timestamptz,
+    closed_at          timestamptz,
+    created_at         timestamptz not null default now(),
+    updated_at         timestamptz not null default now()
+);
+
+-- -----------------------------------------------------------------------------
 -- Indexes
 -- -----------------------------------------------------------------------------
 create index if not exists leads_zip_idx         on leads (zip);
@@ -90,6 +112,12 @@ create index if not exists leads_status_score_idx
 create index if not exists leads_zip_damage_idx
     on leads (zip, damage_type);
 
+create index if not exists storm_tracking_status_idx
+    on storm_tracking (status);
+
+create index if not exists storm_tracking_updated_at_idx
+    on storm_tracking (updated_at desc);
+
 -- Partial index for unenriched leads (fast lookup for enrichment runner)
 create index if not exists leads_unenriched_idx
     on leads (created_at)
@@ -107,9 +135,15 @@ end;
 $$ language plpgsql;
 
 drop trigger if exists set_leads_updated_at on leads;
+drop trigger if exists set_storm_tracking_updated_at on storm_tracking;
 
 create trigger set_leads_updated_at
 before update on leads
+for each row
+execute function update_updated_at_column();
+
+create trigger set_storm_tracking_updated_at
+before update on storm_tracking
 for each row
 execute function update_updated_at_column();
 
@@ -131,6 +165,30 @@ create policy "authenticated_read" on leads
     to authenticated
     using (true);
 
+alter table storm_tracking enable row level security;
+
+create policy "storm_tracking_service_role_full_access" on storm_tracking
+    for all
+    to service_role
+    using (true)
+    with check (true);
+
+create policy "storm_tracking_dashboard_read" on storm_tracking
+    for select
+    to anon, authenticated
+    using (true);
+
+create policy "storm_tracking_dashboard_write" on storm_tracking
+    for insert
+    to anon, authenticated
+    with check (true);
+
+create policy "storm_tracking_dashboard_update" on storm_tracking
+    for update
+    to anon, authenticated
+    using (true)
+    with check (true);
+
 -- -----------------------------------------------------------------------------
 -- Migration: add multi-county + FEMA columns to existing databases
 -- Run these if the leads table already exists:
@@ -139,3 +197,15 @@ create policy "authenticated_read" on leads
 -- alter table leads add column if not exists fema_declaration_number text;
 -- alter table leads add column if not exists fema_incident_type      text;
 -- create index if not exists leads_county_idx on leads (county);
+--
+-- Storm Watch migration:
+-- create table if not exists storm_tracking (
+--     candidate_id    text primary key,
+--     status          text not null default 'Watching',
+--     notes           text,
+--     contacted_at    timestamptz,
+--     permit_filed_at timestamptz,
+--     closed_at       timestamptz,
+--     created_at      timestamptz not null default now(),
+--     updated_at      timestamptz not null default now()
+-- );

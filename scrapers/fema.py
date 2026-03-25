@@ -35,6 +35,7 @@ FEMA_COUNTY_MAP: dict[str, str] = {
 
 # State-wide declarations apply to all three counties
 STATEWIDE_SLUG = "statewide"
+STATEWIDE_AREAS = {"STATE OF FLORIDA", "FLORIDA"}
 
 
 def _parse_fema_date(date_str: str | None) -> datetime | None:
@@ -87,6 +88,7 @@ def fetch_fl_declarations(lookback_years: int = 3) -> list[dict[str, Any]]:
 
     raw_records = data.get("DisasterDeclarationsSummaries", [])
     results: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str | None, str | None, str | None]] = set()
 
     for rec in raw_records:
         designated_area = (rec.get("designatedArea") or "").upper().strip()
@@ -95,20 +97,38 @@ def fetch_fl_declarations(lookback_years: int = 3) -> list[dict[str, Any]]:
             if designated_area.endswith(suffix):
                 designated_area = designated_area[: -len(suffix)].strip()
 
-        county_slug = FEMA_COUNTY_MAP.get(designated_area, STATEWIDE_SLUG)
+        if designated_area in FEMA_COUNTY_MAP:
+            county_slug = FEMA_COUNTY_MAP[designated_area]
+        elif designated_area in STATEWIDE_AREAS:
+            county_slug = STATEWIDE_SLUG
+        else:
+            continue
 
         disaster_number = rec.get("disasterNumber") or ""
         declaration_type = rec.get("declarationType") or ""
         fema_number = f"{declaration_type}-{disaster_number}" if declaration_type else str(disaster_number)
+        begin_date = _parse_fema_date(rec.get("incidentBeginDate"))
+        end_date = _parse_fema_date(rec.get("incidentEndDate"))
+        declaration_date = _parse_fema_date(rec.get("declarationDate"))
+        dedup_key = (
+            fema_number,
+            county_slug,
+            begin_date.isoformat() if begin_date else None,
+            end_date.isoformat() if end_date else None,
+            declaration_date.isoformat() if declaration_date else None,
+        )
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
 
         results.append({
             "fema_number":      fema_number,
             "title":            rec.get("declarationTitle") or "",
             "incident_type":    rec.get("incidentType") or "",
             "county_slug":      county_slug,
-            "begin_date":       _parse_fema_date(rec.get("incidentBeginDate")),
-            "end_date":         _parse_fema_date(rec.get("incidentEndDate")),
-            "declaration_date": _parse_fema_date(rec.get("declarationDate")),
+            "begin_date":       begin_date,
+            "end_date":         end_date,
+            "declaration_date": declaration_date,
         })
 
     print(f"[fema] Fetched {len(results)} FL declarations (lookback {lookback_years}y)")
@@ -195,6 +215,56 @@ def match_fema(
     county_specific = [c for c in candidates if c["county_slug"] == county]
     pool = county_specific if county_specific else candidates
     return max(pool, key=lambda w: w["window_start"])
+
+
+def match_fema_declaration(
+    event_date_str: str,
+    county: str,
+    declarations: list[dict[str, Any]],
+    tolerance_days: int = 14,
+) -> dict[str, Any] | None:
+    """
+    Match a NOAA storm event date to the most relevant FEMA declaration.
+
+    The event date must land within the declaration's incident date range,
+    with a small tolerance to account for reporting lag between NOAA and FEMA.
+    County-specific declarations are preferred over statewide declarations.
+    """
+    if not event_date_str or not declarations:
+        return None
+
+    try:
+        event_dt = datetime.fromisoformat(event_date_str).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+    candidates: list[dict[str, Any]] = []
+    for declaration in declarations:
+        if declaration["county_slug"] not in {county, STATEWIDE_SLUG}:
+            continue
+
+        start = declaration.get("begin_date") or declaration.get("declaration_date")
+        end = declaration.get("end_date") or start
+        if not start or not end:
+            continue
+
+        window_start = start - timedelta(days=3)
+        window_end = end + timedelta(days=tolerance_days)
+        if window_start <= event_dt <= window_end:
+            candidates.append(declaration)
+
+    if not candidates:
+        return None
+
+    county_specific = [candidate for candidate in candidates if candidate["county_slug"] == county]
+    pool = county_specific if county_specific else candidates
+    return max(
+        pool,
+        key=lambda declaration: (
+            declaration.get("begin_date") or declaration.get("declaration_date"),
+            declaration.get("declaration_date") or declaration.get("begin_date"),
+        ),
+    )
 
 
 if __name__ == "__main__":

@@ -43,40 +43,64 @@ COUNTY_CONFIGS: dict[str, dict] = {
         "enabled": True,
     },
     "broward": {
-        # Confirm URL via https://geohub-bcgis.opendata.arcgis.com → "building permits"
-        # Then verify field names by fetching ?f=json on the service endpoint
-        "url": "",
-        "where_field":       "WorkDescription",
-        "out_fields":        "*",
-        "date_field":        "IssueDate",
-        "address_field":     "SiteAddress",
-        "owner_field":       "OwnerName",
-        "folio_field":       "ParcelNumber",
-        "phone_field":       "ContractorPhone",
-        "contractor_field":  "ContractorName",
-        "value_field":       "EstimatedValue",
-        "inspection_field":  None,
-        "city_field":        "City",
+        # Fort Lauderdale city permits — confirmed working, 91K+ records.
+        # Field names verified via ?f=json on the service.
+        #
+        # NOTE: This is a MapServer (not FeatureServer). The query API is identical
+        #       but date range filtering uses epoch milliseconds, not DATE 'YYYY-MM-DD'.
+        #       The scraper's WHERE clause will need adjustment if you enable this —
+        #       see the comment in scrape_damage_permits() below.
+        #
+        # NOTE: Covers Fort Lauderdale only (largest city in Broward County ~200K people).
+        #       County-wide endpoint exists but is intermittently offline (503):
+        #         https://gis.broward.org/arcgis/rest/services/ePermits/ePermits/FeatureServer/0
+        #       Swap the url below to that when it's back online.
+        "url": "https://gis.fortlauderdale.gov/arcgis/rest/services/GeneralPurpose/gisdata/MapServer/27/query",
+        "where_field":       "PERMITDESC",
+        "out_fields": (
+            "PERMITID,PERMITTYPE,PERMITDESC,PERMITSTAT,APPROVEDT,SUBMITDT,"
+            "PARCELID,FULLADDR,OWNERNAME,OWNERADDR,OWNERCITY,OWNERZIP,"
+            "CONTRACTOR,ESTCOST,USECLASS,LASTUPDATEDATE"
+        ),
+        "date_field":        "APPROVEDT",
+        "address_field":     "FULLADDR",
+        "owner_field":       "OWNERNAME",
+        "folio_field":       "PARCELID",
+        "phone_field":       None,
+        "contractor_field":  "CONTRACTOR",
+        "value_field":       "ESTCOST",
+        "inspection_field":  "LASTUPDATEDATE",
+        "city_field":        None,           # full address already includes city
         "default_city":      "Fort Lauderdale",
-        "enabled": False,   # flip to True once URL confirmed
+        "enabled": False,   # flip to True to activate Fort Lauderdale permits
     },
     "palm-beach": {
-        # Confirm URL via https://opendata2-pbcgov.opendata.arcgis.com → "permits"
-        # Then verify field names by fetching ?f=json on the service endpoint
+        # No public unauthenticated building permit API exists for Palm Beach County.
+        #
+        # Researched options (as of 2026-03):
+        #   - PAO Permit Portal FeatureServer → requires auth token (HTTP 499)
+        #     https://gis.pbcgov.org/arcgis/rest/services/PAO/Permit_Portal/FeatureServer/0
+        #   - PZB Milestone Inspections (public) → structural recertifications only, not damage permits
+        #     https://gis.pbcgov.org/arcgis/rest/services/PZB/PZB_MILESTONE_INSPECTION_NEW/FeatureServer/1
+        #   - opendata2-pbcgov.opendata.arcgis.com → 27 datasets published, none are building permits
+        #   - County distributes permit data via quarterly PDF reports only:
+        #     https://discover.pbcgov.org/pzb/planning/pages/permit-activity-reports.aspx
+        #
+        # Leave disabled until Palm Beach County publishes a public REST API.
         "url": "",
-        "where_field":       "ApplicationDescription",
+        "where_field":       "WORKDESCRIPTION",
         "out_fields":        "*",
-        "date_field":        "IssueDate",
+        "date_field":        "ISSUEDATE",
         "address_field":     "ADDRESS",
-        "owner_field":       "OwnerName",
-        "folio_field":       "Renum",
+        "owner_field":       "OWNERNAME",
+        "folio_field":       "PARCELNO",
         "phone_field":       None,
         "contractor_field":  None,
-        "value_field":       "EstimateValuation",
+        "value_field":       "ESTCOST",
         "inspection_field":  None,
         "city_field":        None,
         "default_city":      "West Palm Beach",
-        "enabled": False,   # flip to True once URL confirmed
+        "enabled": False,   # no public endpoint available as of 2026-03
     },
 }
 

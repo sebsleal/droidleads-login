@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { StormWatchStatus } from '@/types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -19,5 +20,15 @@ export interface TrackingRecord {
   claim_value: number | null
   contact_method: string | null
   notes: string | null
+  updated_at: string
+}
+
+export interface StormTrackingRecord {
+  candidate_id: string
+  status: StormWatchStatus
+  notes: string | null
+  contacted_at: string | null
+  permit_filed_at: string | null
+  closed_at: string | null
   updated_at: string
 }

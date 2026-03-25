@@ -16,6 +16,12 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, no-cache, must-revalidate" }
       ]
+    },
+    {
+      "source": "/storm_candidates.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, no-cache, must-revalidate" }
+      ]
     }
   ]
 }

@@ -1,24 +1,27 @@
 """
 Miami-Dade Property Appraiser deep lookup.
 
-Uses the PA public JSON API v1 to retrieve per-folio:
+Uses the PA public web service to retrieve per-folio:
   - Owner name + mailing address
   - ZIP code
   - Homestead exemption status (owner-occupied = warmer lead)
   - Assessed value (prioritise higher-value properties)
 
-API endpoint: https://www.miamidade.gov/Apps/PA/paapi/v1/folio/{folio}
+API endpoint: https://apps.miamidadepa.gov/PApublicServiceProxy/PaServicesProxy.ashx
 """
 
 import time
 import requests
 from typing import Any
 
-PA_API_URL = "https://www.miamidade.gov/Apps/PA/paapi/v1/folio/{folio}"
+PA_API_URL = (
+    "https://apps.miamidadepa.gov/PApublicServiceProxy/PaServicesProxy.ashx"
+)
 
 HEADERS = {
-    "User-Agent": "ClaimRemedyAdjusters/1.0 (lead-scraper)",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     "Accept": "application/json",
+    "Referer": "https://apps.miamidadepa.gov/propertysearch/",
 }
 
 
@@ -35,9 +38,13 @@ def lookup_by_folio(folio_number: str) -> dict[str, Any] | None:
     if not folio_clean:
         return None
 
-    url = PA_API_URL.format(folio=folio_clean)
+    params = {
+        "Operation": "GetPropertySearchByFolio",
+        "folioNumber": folio_clean,
+        "clientAppName": "PropertySearch",
+    }
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
+        r = requests.get(PA_API_URL, params=params, headers=HEADERS, timeout=15)
         if r.status_code == 404:
             return None
         r.raise_for_status()
@@ -52,68 +59,42 @@ def lookup_by_folio(folio_number: str) -> dict[str, Any] | None:
 
 
 def _parse(data: dict, folio_number: str) -> dict[str, Any] | None:
-    """Parse the PA API v1 response."""
+    """Parse the PA web service response."""
     if not isinstance(data, dict):
         return None
 
-    # Owner info — may be nested under PropertyInfo or at root
-    prop = data.get("PropertyInfo") or data.get("SiteInfo") or data
-    owner_info = data.get("OwnerInfo") or data.get("Owner") or prop
-
-    owner_name = (
-        owner_info.get("Name") or owner_info.get("OwnerName")
-        or owner_info.get("owner_name") or prop.get("OwnerName") or ""
-    ).strip().title()
+    # Owner name
+    owner_infos = data.get("OwnerInfos") or []
+    owner_name = ""
+    if isinstance(owner_infos, list) and owner_infos:
+        owner_name = (owner_infos[0].get("Name") or "").strip().title()
 
     # Mailing address
-    mail = data.get("MailingInfo") or data.get("Mailing") or owner_info or prop
-    mailing_address = (
-        mail.get("Address1") or mail.get("MailingAddress1")
-        or mail.get("MailingAddress") or mail.get("address") or ""
-    ).strip()
-    mailing_city = (
-        mail.get("City") or mail.get("MailingCity") or "Miami"
-    ).strip()
-    mailing_state = (
-        mail.get("State") or mail.get("MailingState") or "FL"
-    ).strip()
-    mailing_zip = str(
-        mail.get("Zip") or mail.get("MailingZip") or mail.get("ZipCode") or ""
-    ).strip()[:5]
+    mail = data.get("MailingAddress") or {}
+    mailing_address = (mail.get("Address1") or "").strip()
+    mailing_city = (mail.get("City") or "Miami").strip().title()
+    mailing_state = (mail.get("State") or "FL").strip()
+    mailing_zip = str(mail.get("ZipCode") or "").strip()[:5]
 
-    # Site ZIP — from property address
-    site_zip = str(
-        prop.get("SiteZip") or prop.get("Zip") or prop.get("ZipCode") or ""
-    ).strip()[:5]
+    # Site ZIP from SiteAddress
+    site_addresses = data.get("SiteAddress") or []
+    site_zip = ""
+    if isinstance(site_addresses, list) and site_addresses:
+        raw_zip = str(site_addresses[0].get("Zip") or "").strip()
+        site_zip = raw_zip[:5]  # strip trailing "-0000"
 
-    # Homestead: look in exemptions array for code "HX" or text "HOMESTEAD"
-    homestead = False
-    exemptions = (
-        data.get("ExemptionInfo") or data.get("Exemptions")
-        or data.get("exemptions") or []
-    )
-    if isinstance(exemptions, list):
-        for ex in exemptions:
-            code = str(ex.get("Code") or ex.get("code") or "").upper()
-            desc = str(ex.get("Description") or ex.get("desc") or "").upper()
-            if "HX" in code or "HOMESTEAD" in desc or "HOMESTEAD" in code:
-                homestead = True
-                break
-    elif isinstance(exemptions, dict):
-        desc = str(exemptions).upper()
-        homestead = "HOMESTEAD" in desc or "HX" in desc
+    # Homestead: HxBaseYear non-zero means homestead exemption granted
+    prop_info = data.get("PropertyInfo") or {}
+    hx_base_year = prop_info.get("HxBaseYear")
+    homestead = bool(hx_base_year and int(hx_base_year) > 0)
 
-    # Assessed value
-    assess = data.get("AssessmentInfo") or data.get("Assessment") or {}
+    # Assessed value — use most recent year's AssessedValue
+    assessment = data.get("Assessment") or {}
+    infos = assessment.get("AssessmentInfos") or []
     assessed_value = 0
-    for key in ("JustValue", "AssessedValue", "MarketValue", "just_value"):
-        v = assess.get(key) or data.get(key)
-        if v:
-            try:
-                assessed_value = int(float(str(v).replace(",", "")))
-                break
-            except (ValueError, TypeError):
-                pass
+    if infos:
+        # First entry is current year
+        assessed_value = int(infos[0].get("AssessedValue") or 0)
 
     if not owner_name:
         return None
@@ -201,5 +182,5 @@ def enrich_leads(
 
 
 if __name__ == "__main__":
-    result = lookup_by_folio("01-4109-012-0450")
+    result = lookup_by_folio("3059340350540")
     print(result)

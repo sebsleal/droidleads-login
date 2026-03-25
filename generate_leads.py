@@ -334,13 +334,21 @@ def run():
     leads = permits_to_leads(permit_features, storm_windows)
     leads = deduplicate(leads)
 
-    # 4. Score and add outreach templates
+    # 4. Initial score + outreach templates
     for lead in leads:
         lead["score"] = score_lead(lead, today)
         lead["outreachMessage"] = template_outreach(lead)
 
-    # 5. Sort by score descending
+    # 5. Sort by score, then PA-enrich top 40 (adds ZIP, homestead, mailing address,
+    #    assessed value, and applies +10 bonus for owner-occupied properties)
     leads.sort(key=lambda l: l["score"], reverse=True)
+    try:
+        from scrapers.property import enrich_leads
+        leads = enrich_leads(leads, top_n=40, delay=0.4)
+        # Re-sort after homestead score boosts
+        leads.sort(key=lambda l: l["score"], reverse=True)
+    except Exception as e:
+        print(f"  Warning: PA enrichment failed — {e}")
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
@@ -354,9 +362,10 @@ def run():
         json.dump(output, f, indent=2)
 
     print(f"\nSaved {len(leads)} leads to {OUTPUT_PATH}")
-    storm_linked = sum(1 for l in leads if l["stormEvent"])
-    with_contact = sum(1 for l in leads if l["contact"])
-    print(f"  Storm-linked: {storm_linked} | With contact: {with_contact}")
+    storm_linked = sum(1 for l in leads if l.get("stormEvent"))
+    with_contact = sum(1 for l in leads if l.get("contact"))
+    homesteaded = sum(1 for l in leads if l.get("homestead"))
+    print(f"  Storm-linked: {storm_linked} | With contact: {with_contact} | Homesteaded: {homesteaded}")
     print("Next step: run the Claude Code scheduled task to enrich outreach messages.")
 
 

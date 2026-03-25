@@ -30,6 +30,10 @@ export interface Lead {
   permitDate: string; // ISO date string
   stormEvent: string;
   outreachMessage: string;
+  // PA-enriched fields (present after property appraiser lookup)
+  homestead?: boolean;
+  ownerMailingAddress?: string;
+  assessedValue?: number;
 }
 
 export interface FilterState {

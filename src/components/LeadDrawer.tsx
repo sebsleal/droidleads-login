@@ -11,6 +11,8 @@ import {
   Copy,
   Check,
   MessageSquare,
+  Home,
+  DollarSign,
 } from 'lucide-react'
 import type { Lead } from '@/types'
 import { formatDate, damageTypeColor, cn } from '@/lib/utils'
@@ -97,12 +99,24 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus }: LeadDrawer
             </button>
           </div>
 
-          {/* Score + damage type */}
-          <div className="flex items-center gap-2.5 mt-3">
+          {/* Score + damage type + homestead badge */}
+          <div className="flex items-center gap-2.5 mt-3 flex-wrap">
             <ScoreBadge score={lead.score} size="md" showLabel />
             <span className={cn('badge', damageTypeColor(lead.damageType))}>
               {lead.damageType}
             </span>
+            {lead.homestead === true && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Home className="w-3 h-3" />
+                Homestead
+              </span>
+            )}
+            {lead.homestead === false && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200">
+                <Home className="w-3 h-3" />
+                Non-Homestead
+              </span>
+            )}
           </div>
         </div>
 
@@ -139,6 +153,20 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus }: LeadDrawer
                 label="Lead Date"
                 value={formatDate(lead.date)}
               />
+              {lead.ownerMailingAddress && lead.ownerMailingAddress !== `${lead.propertyAddress}, ${lead.city}, FL ${lead.zip}` && (
+                <DetailRow
+                  icon={<MapPin className="w-4 h-4 text-amber-500" />}
+                  label="Owner Mailing Address"
+                  value={<span className="text-amber-700">{lead.ownerMailingAddress}</span>}
+                />
+              )}
+              {lead.assessedValue && lead.assessedValue > 0 && (
+                <DetailRow
+                  icon={<DollarSign className="w-4 h-4" />}
+                  label="Assessed Value"
+                  value={`$${lead.assessedValue.toLocaleString()}`}
+                />
+              )}
             </div>
           </section>
 

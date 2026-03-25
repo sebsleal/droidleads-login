@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/((?!leads\\.json).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {

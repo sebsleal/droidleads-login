@@ -30,7 +30,11 @@ const isDefaultFilters = (f: FilterState) =>
   f.damageType === 'All' &&
   f.scoreTier === 'All' &&
   f.dateRange === 'all' &&
-  !f.hasContact
+  !f.hasContact &&
+  !f.absenteeOwner &&
+  !f.underpaid &&
+  !f.noContractor &&
+  !f.stormFirst
 
 export default function FilterBar({ filters, onChange, onClear }: FilterBarProps) {
   const hasActiveFilters = !isDefaultFilters(filters)
@@ -128,6 +132,62 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             )} />
           </div>
           <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Has contact</span>
+        </label>
+
+        {/* Absentee Owner */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={filters.absenteeOwner}
+            onClick={() => onChange({ ...filters, absenteeOwner: !filters.absenteeOwner })}
+            className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.absenteeOwner ? 'bg-amber-500 border-amber-500' : 'bg-white border-slate-300'}`}
+          >
+            <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.absenteeOwner ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
+          <span className="text-sm text-slate-600">Absentee</span>
+        </label>
+
+        {/* Underpaid */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={filters.underpaid}
+            onClick={() => onChange({ ...filters, underpaid: !filters.underpaid })}
+            className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.underpaid ? 'bg-red-500 border-red-500' : 'bg-white border-slate-300'}`}
+          >
+            <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.underpaid ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
+          <span className="text-sm text-slate-600">Underpaid</span>
+        </label>
+
+        {/* No Contractor */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={filters.noContractor}
+            onClick={() => onChange({ ...filters, noContractor: !filters.noContractor })}
+            className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.noContractor ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300'}`}
+          >
+            <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.noContractor ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
+          <span className="text-sm text-slate-600">No Contractor</span>
+        </label>
+
+        {/* Pre-Permit */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={filters.stormFirst}
+            onClick={() => onChange({ ...filters, stormFirst: !filters.stormFirst })}
+            className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.stormFirst ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'}`}
+          >
+            <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.stormFirst ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
+          <span className="text-sm text-slate-600">Pre-Permit</span>
         </label>
 
         {/* Clear filters */}

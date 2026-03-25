@@ -1,4 +1,4 @@
-import { Users, TrendingUp, Star, Phone } from 'lucide-react'
+import { Users, Star, Home, AlertTriangle } from 'lucide-react'
 import type { StatsData } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -11,7 +11,7 @@ interface StatCardProps {
   label: string
   value: string | number
   subtext?: string
-  accent?: 'green' | 'amber' | 'blue' | 'default'
+  accent?: 'green' | 'amber' | 'blue' | 'red' | 'default'
 }
 
 function StatCard({ icon, label, value, subtext, accent = 'default' }: StatCardProps) {
@@ -19,6 +19,7 @@ function StatCard({ icon, label, value, subtext, accent = 'default' }: StatCardP
     green: 'text-green-600 bg-green-50',
     amber: 'text-amber-600 bg-amber-50',
     blue: 'text-blue-600 bg-blue-50',
+    red: 'text-red-600 bg-red-50',
     default: 'text-slate-600 bg-slate-100',
   }
 
@@ -54,18 +55,18 @@ export default function StatsRow({ stats }: StatsRowProps) {
         accent="green"
       />
       <StatCard
-        icon={<TrendingUp className="w-5 h-5" />}
-        label="Avg Score"
-        value={stats.avgScore}
-        subtext="across all leads"
-        accent={stats.avgScore >= 85 ? 'green' : stats.avgScore >= 70 ? 'amber' : 'default'}
+        icon={<Home className="w-5 h-5" />}
+        label="Absentee Owners"
+        value={stats.absenteeOwners}
+        subtext="out-of-state mailing"
+        accent="amber"
       />
       <StatCard
-        icon={<Phone className="w-5 h-5" />}
-        label="Has Contact"
-        value={stats.leadsWithContact}
-        subtext={stats.totalLeads > 0 ? `${Math.round((stats.leadsWithContact / stats.totalLeads) * 100)}% of total` : 'no leads yet'}
-        accent="blue"
+        icon={<AlertTriangle className="w-5 h-5" />}
+        label="Underpaid Flags"
+        value={stats.underpaidFlags}
+        subtext="below zip median"
+        accent="red"
       />
     </div>
   )

@@ -91,6 +91,26 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                   <div className="text-xs text-slate-400 mt-0.5">
                     {lead.city}, FL {lead.zip}
                   </div>
+                  {/* Flag pills */}
+                  {(() => {
+                    const pills: { label: string; color: string }[] = [];
+                    if (lead.underpaidFlag) pills.push({ label: 'Underpaid', color: 'bg-red-100 text-red-700 border border-red-200' });
+                    if (lead.absenteeOwner) pills.push({ label: 'Absentee', color: 'bg-amber-100 text-amber-700 border border-amber-200' });
+                    if (lead.permitStatus === 'Owner-Builder') pills.push({ label: 'Owner-Builder', color: 'bg-blue-100 text-blue-700 border border-blue-200' });
+                    if (lead.permitStatus === 'Stalled') pills.push({ label: 'Stalled', color: 'bg-orange-100 text-orange-700 border border-orange-200' });
+                    if (lead.permitStatus === 'No Contractor') pills.push({ label: 'No Contractor', color: 'bg-blue-100 text-blue-700 border border-blue-200' });
+                    if ((lead.roofAge ?? 0) > 15) pills.push({ label: 'Aging Roof', color: 'bg-slate-100 text-slate-600 border border-slate-200' });
+                    if ((lead.priorPermitCount ?? 0) >= 1) pills.push({ label: 'Repeat', color: 'bg-purple-100 text-purple-700 border border-purple-200' });
+                    if (pills.length === 0) return null;
+                    return (
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {pills.slice(0, 2).map(p => (
+                          <span key={p.label} className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${p.color}`}>{p.label}</span>
+                        ))}
+                        {pills.length > 2 && <span className="text-[10px] text-slate-400">+{pills.length - 2}</span>}
+                      </div>
+                    );
+                  })()}
                 </td>
 
                 {/* Owner */}

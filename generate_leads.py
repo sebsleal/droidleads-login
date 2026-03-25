@@ -21,6 +21,7 @@ Run via Claude Code scheduled task — no API key needed.
 
 import hashlib
 import json
+import math
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -98,10 +99,8 @@ def score_lead(lead: dict, today: datetime) -> int:
         if lead_date.tzinfo is None:
             lead_date = lead_date.replace(tzinfo=timezone.utc)
         days_ago = (today - lead_date).days
-        if days_ago <= 30:
-            score += 20
-        elif days_ago <= 60:
-            score += 10
+        recency_bonus = round(20 * math.exp(-0.03 * days_ago))
+        score += recency_bonus
     except Exception:
         pass
 
@@ -129,6 +128,21 @@ def score_lead(lead: dict, today: datetime) -> int:
     if lead.get("stormEvent"):
         score += 10
 
+    # Permit status bonuses
+    permit_status = lead.get("permitStatus", "Active")
+    if permit_status in ("Owner-Builder", "No Contractor"):
+        score += 20
+    elif permit_status == "Stalled":
+        score += 15
+
+    # Underpayment flag bonus
+    if lead.get("underpaidFlag"):
+        score += 15
+
+    # Repeat damage bonus
+    if lead.get("priorPermitCount", 0) >= 1:
+        score += 15
+
     return min(score, 100)
 
 
@@ -144,7 +158,7 @@ def fetch_permits(limit: int = 200) -> list[dict]:
     """Fetch damage-related building permits from Miami-Dade ArcGIS Feature Service."""
     print("Fetching Miami-Dade permits (ArcGIS)...")
 
-    since = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%d")
+    since = (datetime.now(timezone.utc) - timedelta(days=180)).strftime("%Y-%m-%d")
 
     # Build WHERE clause — keyword match in description
     kw_clauses = []
@@ -158,27 +172,37 @@ def fetch_permits(limit: int = 200) -> list[dict]:
 
     where = f"PermitIssuedDate >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
 
-    params = {
+    base_params = {
         "where": where,
         "outFields": (
             "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
-            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone"
+            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone,"
+            "ContractorName,EstimatedValue,LastInspectionDate"
         ),
         "resultRecordCount": limit,
         "orderByFields": "PermitIssuedDate DESC",
         "f": "json",
     }
 
+    all_features = []
+    offset = 0
     try:
-        r = requests.get(ARCGIS_PERMITS_URL, params=params, headers=HEADERS, timeout=30)
-        r.raise_for_status()
-        data = r.json()
-        if "error" in data:
-            print(f"  ArcGIS error: {data['error']}")
-            return []
-        features = data.get("features", [])
-        print(f"  Got {len(features)} permit records from ArcGIS.")
-        return features
+        while True:
+            params = {**base_params, "resultOffset": offset}
+            r = requests.get(ARCGIS_PERMITS_URL, params=params, headers=HEADERS, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            if "error" in data:
+                print(f"  ArcGIS error: {data['error']}")
+                break
+            features = data.get("features", [])
+            all_features.extend(features)
+            if not data.get("exceededTransferLimit", False):
+                break
+            offset += len(features)
+            print(f"  Paginating... fetched {len(all_features)} so far (offset={offset})")
+        print(f"  Got {len(all_features)} permit records from ArcGIS.")
+        return all_features
     except Exception as e:
         print(f"  Warning: ArcGIS permits fetch failed — {e}")
         return []
@@ -287,6 +311,28 @@ def permits_to_leads(features: list[dict], storm_windows: list[dict]) -> list[di
 
         storm_event = match_storm(permit_date, storm_windows)
 
+        # Permit intelligence fields
+        contractor = (attrs.get("ContractorName") or "").strip()
+        estimated_value = int(float(attrs.get("EstimatedValue") or 0))
+        last_inspection = attrs.get("LastInspectionDate")  # may be None or epoch ms
+
+        # Derive permit status
+        issued_date = None
+        try:
+            issued_date = datetime.fromisoformat(permit_date).date() if permit_date else None
+        except Exception:
+            pass
+        days_since_issued = (datetime.utcnow().date() - issued_date).days if issued_date else 0
+
+        if not contractor:
+            permit_status = "No Contractor"
+        elif contractor.upper() == "OWNER":
+            permit_status = "Owner-Builder"
+        elif days_since_issued > 60 and not last_inspection:
+            permit_status = "Stalled"
+        else:
+            permit_status = "Active"
+
         leads.append({
             "id": make_id(address, permit_date),
             "ownerName": owner_full,
@@ -304,8 +350,40 @@ def permits_to_leads(features: list[dict], storm_windows: list[dict]) -> list[di
             "outreachMessage": "",
             "status": "New",
             "source": "permit",
+            "permitStatus": permit_status,
+            "contractorName": contractor,
+            "permitValue": estimated_value,
         })
 
+    return leads
+
+
+def compute_underpayment_flags(leads):
+    from statistics import median as stat_median
+    groups = {}
+    for l in leads:
+        if l.get("permitValue", 0) > 500:  # filter junk values
+            key = (l.get("city", "").lower(), l.get("damageType", ""))
+            groups.setdefault(key, []).append(l["permitValue"])
+    medians = {k: stat_median(v) for k, v in groups.items() if len(v) >= 3}
+    for l in leads:
+        key = (l.get("city", "").lower(), l.get("damageType", ""))
+        med = medians.get(key)
+        val = l.get("permitValue", 0)
+        if med and val > 500 and val < 0.6 * med:
+            l["underpaidFlag"] = True
+        else:
+            l["underpaidFlag"] = False
+    return leads
+
+
+def compute_repeat_damage(leads):
+    from collections import Counter
+    folio_counts = Counter(l["folioNumber"] for l in leads if l.get("folioNumber"))
+    for l in leads:
+        folio = l.get("folioNumber", "")
+        count = folio_counts.get(folio, 1)
+        l["priorPermitCount"] = max(0, count - 1)
     return leads
 
 
@@ -333,6 +411,10 @@ def run():
     # 3. Convert permits to leads, tagged with storm events
     leads = permits_to_leads(permit_features, storm_windows)
     leads = deduplicate(leads)
+
+    # 3a. Compute intelligence signals before scoring
+    leads = compute_underpayment_flags(leads)
+    leads = compute_repeat_damage(leads)
 
     # 4. Initial score + outreach templates
     for lead in leads:

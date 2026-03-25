@@ -99,6 +99,16 @@ def _parse(data: dict, folio_number: str) -> dict[str, Any] | None:
     if not owner_name:
         return None
 
+    # Roof age from year built
+    import datetime as _dt
+    year_built_str = prop_info.get("YearBuilt") or prop_info.get("ActualYearBuilt") or ""
+    try:
+        year_built = int(str(year_built_str).strip())
+        roof_age = _dt.date.today().year - year_built
+    except (ValueError, TypeError):
+        year_built = None
+        roof_age = None
+
     return {
         "owner_name": owner_name,
         "mailing_address": mailing_address,
@@ -109,6 +119,8 @@ def _parse(data: dict, folio_number: str) -> dict[str, Any] | None:
         "homestead": homestead,
         "assessed_value": assessed_value,
         "folio_number": folio_number,
+        "year_built": year_built if year_built_str else None,
+        "roof_age": roof_age,
     }
 
 
@@ -168,9 +180,23 @@ def enrich_leads(
             if info["homestead"]:
                 lead["score"] = min(lead["score"] + 10, 100)
 
+            # Roof age
+            if info.get("roof_age") is not None:
+                lead["roofAge"] = info["roof_age"]
+                if info["roof_age"] > 15:
+                    lead["score"] = min(lead["score"] + 10, 100)
+
+            # Absentee owner — out-of-state mailing address
+            mailing_state = (info.get("mailing_state") or "").upper().strip()
+            is_absentee = mailing_state not in ("FL", "FLORIDA", "")
+            lead["absenteeOwner"] = is_absentee
+            if is_absentee:
+                lead["score"] = min(lead["score"] + 10, 100)
+
             enriched_ids.add(lead["id"])
-            status = "🏠 homestead" if info["homestead"] else "non-homestead"
-            print(f"  [{i+1}/{len(to_enrich)}] {lead['propertyAddress'][:40]} — {status}")
+            absentee_str = " | absentee" if is_absentee else ""
+            status = "homestead" if info["homestead"] else "non-homestead"
+            print(f"  [{i+1}/{len(to_enrich)}] {lead['propertyAddress'][:40]} — {status}{absentee_str}")
         else:
             print(f"  [{i+1}/{len(to_enrich)}] {lead['propertyAddress'][:40]} — no PA data")
 

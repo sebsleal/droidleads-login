@@ -30,10 +30,21 @@ export interface Lead {
   permitDate: string; // ISO date string
   stormEvent: string;
   outreachMessage: string;
+  source?: string;
   // PA-enriched fields (present after property appraiser lookup)
   homestead?: boolean;
   ownerMailingAddress?: string;
   assessedValue?: number;
+  // Permit intelligence
+  permitStatus?: 'No Contractor' | 'Owner-Builder' | 'Stalled' | 'Active';
+  contractorName?: string;
+  permitValue?: number;
+  underpaidFlag?: boolean;
+  // Property intelligence
+  absenteeOwner?: boolean;
+  priorPermitCount?: number;
+  roofAge?: number;
+  codeViolation?: boolean;
 }
 
 export interface FilterState {
@@ -42,11 +53,15 @@ export interface FilterState {
   scoreTier: 'All' | 'High' | 'Medium' | 'Low';
   dateRange: '7' | '30' | '90' | 'all';
   hasContact: boolean;
+  absenteeOwner: boolean;
+  underpaid: boolean;
+  noContractor: boolean;
+  stormFirst: boolean;
 }
 
 export interface StatsData {
   totalLeads: number;
   highPriority: number;
-  avgScore: number;
-  leadsWithContact: number;
+  absenteeOwners: number;
+  underpaidFlags: number;
 }

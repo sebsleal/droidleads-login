@@ -170,6 +170,74 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus }: LeadDrawer
             </div>
           </section>
 
+          {/* Permit Intelligence */}
+          {(lead.permitStatus || lead.permitValue || lead.contractorName) && (
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Permit Intelligence</h3>
+              <div className="space-y-1.5 text-sm">
+                {lead.permitStatus && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Status</span>
+                    <span className={`font-medium px-2 py-0.5 rounded text-xs ${
+                      lead.permitStatus === 'Owner-Builder' || lead.permitStatus === 'No Contractor' ? 'bg-blue-100 text-blue-700' :
+                      lead.permitStatus === 'Stalled' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
+                    }`}>{lead.permitStatus}</span>
+                  </div>
+                )}
+                {lead.contractorName && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Contractor</span>
+                    <span className="text-slate-800 font-medium text-right max-w-[60%] truncate">{lead.contractorName}</span>
+                  </div>
+                )}
+                {(lead.permitValue ?? 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Permit Value</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-800 font-medium">${lead.permitValue!.toLocaleString()}</span>
+                      {lead.underpaidFlag && (
+                        <span className="text-[10px] bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full font-medium">Likely Underpaid</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Property Intelligence */}
+          {(lead.absenteeOwner !== undefined || lead.roofAge !== undefined || (lead.priorPermitCount ?? 0) > 0) && (
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Property Intelligence</h3>
+              <div className="space-y-1.5 text-sm">
+                {lead.absenteeOwner !== undefined && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Owner Occupied</span>
+                    {lead.absenteeOwner
+                      ? <span className="text-amber-600 font-medium text-xs flex items-center gap-1">⚠ Absentee — out of state</span>
+                      : <span className="text-emerald-600 font-medium text-xs">✓ Local owner</span>
+                    }
+                  </div>
+                )}
+                {lead.roofAge !== undefined && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Est. Roof Age</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-800 font-medium">{lead.roofAge} yrs</span>
+                      {lead.roofAge > 15 && <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded-full">Aging</span>}
+                    </div>
+                  </div>
+                )}
+                {(lead.priorPermitCount ?? 0) >= 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Prior Permits</span>
+                    <span className="text-purple-700 font-medium">{lead.priorPermitCount} prior at this address</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Contact information */}
           <section>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">

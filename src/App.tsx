@@ -16,6 +16,10 @@ const DEFAULT_FILTERS: FilterState = {
   scoreTier: 'All',
   dateRange: 'all',
   hasContact: false,
+  absenteeOwner: false,
+  underpaid: false,
+  noContractor: false,
+  stormFirst: false,
 }
 
 export default function App() {
@@ -63,6 +67,11 @@ export default function App() {
         if (!isWithinDays(lead.date, days)) return false
       }
 
+      if (filters.absenteeOwner && !lead.absenteeOwner) return false;
+      if (filters.underpaid && !lead.underpaidFlag) return false;
+      if (filters.noContractor && lead.permitStatus !== 'No Contractor' && lead.permitStatus !== 'Owner-Builder') return false;
+      if (filters.stormFirst && lead.source !== 'storm-first') return false;
+
       return true
     })
   }, [leads, filters])
@@ -71,10 +80,8 @@ export default function App() {
     () => ({
       totalLeads: leads.length,
       highPriority: leads.filter((l) => l.score >= 85).length,
-      avgScore: leads.length
-        ? Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length)
-        : 0,
-      leadsWithContact: leads.filter((l) => !!l.contact).length,
+      absenteeOwners: leads.filter(l => l.absenteeOwner).length,
+      underpaidFlags: leads.filter(l => l.underpaidFlag).length,
     }),
     [leads]
   )

@@ -1,1 +1,205 @@
-{"leads":[],"lastScraped":null,"count":0}
+{
+  "leads": [
+    {
+      "id": "4a428f52c9f7",
+      "ownerName": "Angela Moreau",
+      "propertyAddress": "950 NE 96th St",
+      "city": "Miami",
+      "zip": "33138",
+      "folioNumber": "01-3205-011-0070",
+      "damageType": "Roof",
+      "permitType": "Roof Replacement",
+      "permitDate": "2025-10-22",
+      "stormEvent": "Hurricane Helene (Sept 2025)",
+      "date": "2025-10-22",
+      "score": 90,
+      "contact": {
+        "email": "amoreau@gmail.com"
+      },
+      "outreachMessage": "Ms. Moreau, we saw that your property at 950 NE 96th St has an active roof replacement permit following Hurricane Helene and wanted to reach out. Many homeowners leave significant insurance money on the table by handling claims alone — Claim Remedy Adjusters works on your behalf to ensure you receive the full payout your policy allows. There's no upfront cost; we only get paid when you do. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "7509bf31c3d9",
+      "ownerName": "Marcus Johnson",
+      "propertyAddress": "2650 NW 54th St",
+      "city": "Miami",
+      "zip": "33142",
+      "folioNumber": "01-3113-038-0090",
+      "damageType": "Structural",
+      "permitType": "Structural Repair",
+      "permitDate": "2025-09-30",
+      "stormEvent": "Hurricane Helene (Sept 2025)",
+      "date": "2025-09-30",
+      "score": 85,
+      "contact": {
+        "phone": "(305) 688-7741"
+      },
+      "outreachMessage": "Mr. Johnson, we noticed your property at 2650 NW 54th St recently filed a structural repair permit following Hurricane Helene. Structural damage claims can be complex, and Claim Remedy Adjusters specializes in helping Miami homeowners recover the maximum settlement they're entitled to — at no upfront cost to you. We'd welcome the opportunity to review your policy and claim at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "67e4aeac50c1",
+      "ownerName": "Patricia Dunmore",
+      "propertyAddress": "321 NW 42nd Ave",
+      "city": "Miami",
+      "zip": "33126",
+      "folioNumber": "01-4109-025-0600",
+      "damageType": "Roof",
+      "permitType": "Re-Roof",
+      "permitDate": "2025-09-28",
+      "stormEvent": "Hurricane Helene (Sept 2025)",
+      "date": "2025-09-28",
+      "score": 85,
+      "contact": {
+        "email": "p.dunmore@outlook.com"
+      },
+      "outreachMessage": "Ms. Dunmore, we saw that your property at 321 NW 42nd Ave has an active re-roof permit following Hurricane Helene and wanted to reach out. As licensed public adjusters, Claim Remedy Adjusters works on your behalf to make sure your insurance claim reflects the true cost of your repairs — with no upfront fees. We'd be happy to review your situation at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "4a0d952adb96",
+      "ownerName": "Roberto Fernandez",
+      "propertyAddress": "8240 SW 8th St",
+      "city": "Miami",
+      "zip": "33144",
+      "folioNumber": "30-4025-008-0010",
+      "damageType": "Hurricane/Wind",
+      "permitType": "Hurricane Damage Repair",
+      "permitDate": "2025-10-20",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-20",
+      "score": 80,
+      "contact": {
+        "email": "r.fernandez@yahoo.com",
+        "phone": "(305) 441-2218"
+      },
+      "outreachMessage": "Mr. Fernandez, we noticed your property at 8240 SW 8th St recently filed a hurricane damage repair permit following Hurricane Milton. As licensed public adjusters, Claim Remedy Adjusters specializes in helping Miami homeowners navigate their insurance claims and recover the maximum settlement they're entitled to — at no upfront cost to you. We'd love to review your policy and claim at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "b683e8d883b0",
+      "ownerName": "Linda Kowalski",
+      "propertyAddress": "12301 SW 107th Ave",
+      "city": "Miami",
+      "zip": "33186",
+      "folioNumber": "30-5933-003-1080",
+      "damageType": "Flood",
+      "permitType": "Flood Remediation",
+      "permitDate": "2025-10-18",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-18",
+      "score": 80,
+      "contact": {
+        "phone": "(786) 502-9934"
+      },
+      "outreachMessage": "Ms. Kowalski, we noticed your property at 12301 SW 107th Ave recently filed a flood remediation permit following Hurricane Milton. Flood damage claims are among the most underpaid in the industry, and Claim Remedy Adjusters is here to fight for the full settlement you deserve — at no upfront cost. We'd be glad to review your claim at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "fe55508a7b94",
+      "ownerName": "Carlos Esteban Vega",
+      "propertyAddress": "3140 NW 18th Ave",
+      "city": "Miami",
+      "zip": "33142",
+      "folioNumber": "01-3112-029-0400",
+      "damageType": "Hurricane/Wind",
+      "permitType": "Roof Replacement",
+      "permitDate": "2025-10-15",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-15",
+      "score": 80,
+      "contact": null,
+      "outreachMessage": "Mr. Vega, we noticed your property at 3140 NW 18th Ave recently filed a roof replacement permit following Hurricane Milton wind damage. As licensed public adjusters, Claim Remedy Adjusters can ensure your insurance company pays the full amount your policy covers — at no upfront cost to you. We'd welcome the chance to review your claim at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "3231c388f195",
+      "ownerName": "Gabriela Suarez",
+      "propertyAddress": "7710 SW 48th St",
+      "city": "Miami",
+      "zip": "33155",
+      "folioNumber": "30-4013-006-0240",
+      "damageType": "Flood",
+      "permitType": "Water Damage Repair",
+      "permitDate": "2025-10-05",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-05",
+      "score": 80,
+      "contact": {
+        "email": "gsuarez@hotmail.com",
+        "phone": "(786) 344-1892"
+      },
+      "outreachMessage": "Ms. Suarez, we saw that your property at 7710 SW 48th St has an active water damage repair permit following Hurricane Milton and wanted to reach out. Claim Remedy Adjusters are licensed public adjusters who specialize in helping Miami homeowners recover the maximum insurance settlement they're owed — with no upfront fees. We'd love to review your policy and claim at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "94cb3890be3a",
+      "ownerName": "Jose Antonio Pe\u00f1a",
+      "propertyAddress": "5522 NW 7th St",
+      "city": "Miami",
+      "zip": "33126",
+      "folioNumber": "01-4101-013-0290",
+      "damageType": "Hurricane/Wind",
+      "permitType": "Hurricane Damage Repair",
+      "permitDate": "2025-10-08",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-08",
+      "score": 80,
+      "contact": {
+        "phone": "(305) 266-4410"
+      },
+      "outreachMessage": "Mr. Peña, we noticed your property at 5522 NW 7th St recently filed a hurricane damage repair permit following Hurricane Milton. As licensed public adjusters, Claim Remedy Adjusters handles your insurance claim from start to finish, making sure you receive the full settlement your policy allows — at no upfront cost. We'd be happy to review your situation at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "9ee76ebf7d89",
+      "ownerName": "Stephanie Clarke",
+      "propertyAddress": "1860 SW 27th Ave",
+      "city": "Miami",
+      "zip": "33145",
+      "folioNumber": "01-4110-027-0140",
+      "damageType": "Flood",
+      "permitType": "Flood Damage Restoration",
+      "permitDate": "2025-10-19",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-19",
+      "score": 80,
+      "contact": {
+        "email": "s.clarke88@gmail.com",
+        "phone": "(305) 858-2200"
+      },
+      "outreachMessage": "Ms. Clarke, we noticed your property at 1860 SW 27th Ave recently filed a flood damage restoration permit following Hurricane Milton. Claim Remedy Adjusters are licensed public adjusters who work exclusively on your behalf to maximize your insurance settlement — with no upfront cost to you. We'd love the opportunity to review your claim at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    },
+    {
+      "id": "70f1401a6b79",
+      "ownerName": "David Nguyen",
+      "propertyAddress": "14450 SW 8th St",
+      "city": "Miami",
+      "zip": "33184",
+      "folioNumber": "30-4922-006-1300",
+      "damageType": "Hurricane/Wind",
+      "permitType": "Wind Mitigation Repair",
+      "permitDate": "2025-10-12",
+      "stormEvent": "Hurricane Milton (Oct 2024)",
+      "date": "2025-10-12",
+      "score": 65,
+      "contact": null,
+      "outreachMessage": "Mr. Nguyen, we noticed your property at 14450 SW 8th St recently filed a wind mitigation repair permit following Hurricane Milton. As licensed public adjusters, Claim Remedy Adjusters can review your insurance claim to make sure you're receiving the full amount your policy entitles you to — at no upfront cost. We'd be happy to take a look at no obligation. Please call or text us at (305) 555-0100 to get started.",
+      "status": "New",
+      "source": "storm"
+    }
+  ],
+  "lastScraped": "2026-03-25T03:52:49.502661+00:00",
+  "count": 10
+}

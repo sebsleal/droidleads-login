@@ -27,8 +27,14 @@ import requests
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "public", "leads.json")
 
-# Miami-Dade Open Data — building permits
+# Miami-Dade Open Data — building permits (primary + fallback dataset IDs)
 PERMITS_URL = "https://opendata.miamidade.gov/resource/hvj5-8dge.json"
+PERMITS_URL_FALLBACK = "https://opendata.miamidade.gov/resource/3it5-dpnh.json"
+
+HEADERS = {
+    "User-Agent": "ClaimRemedyAdjusters/1.0 (lead-scraper)",
+    "Accept": "application/json",
+}
 
 # Damage-related keyword sets
 DAMAGE_KEYWORDS = {
@@ -103,6 +109,23 @@ def template_outreach(lead: dict) -> str:
     )
 
 
+def _fetch_url(url: str, params: dict, label: str) -> list | None:
+    """Fetch JSON from a Socrata API URL. Returns parsed list or None on failure."""
+    try:
+        r = requests.get(url, params=params, headers=HEADERS, timeout=30)
+        r.raise_for_status()
+        if not r.text.strip():
+            print(f"  Warning: {label} returned empty response body.")
+            return None
+        if "application/json" not in r.headers.get("Content-Type", ""):
+            print(f"  Warning: {label} returned non-JSON content ({r.headers.get('Content-Type')}).")
+            return None
+        return r.json()
+    except Exception as e:
+        print(f"  Warning: {label} failed — {e}")
+        return None
+
+
 def fetch_permits(limit: int = 150) -> list[dict]:
     """Fetch damage-related building permits from Miami-Dade Open Data."""
     print("Fetching Miami-Dade permits...")
@@ -116,12 +139,12 @@ def fetch_permits(limit: int = 150) -> list[dict]:
         "$where": f"issue_date >= '{since}'",
     }
 
-    try:
-        r = requests.get(PERMITS_URL, params=params, timeout=20)
-        r.raise_for_status()
-        raw = r.json()
-    except Exception as e:
-        print(f"  Warning: permit fetch failed — {e}")
+    raw = _fetch_url(PERMITS_URL, params, "primary permits endpoint")
+    if raw is None:
+        print("  Trying fallback permits endpoint...")
+        raw = _fetch_url(PERMITS_URL_FALLBACK, params, "fallback permits endpoint")
+    if raw is None:
+        print("  Both permit endpoints unavailable — skipping permits.")
         return []
 
     leads = []

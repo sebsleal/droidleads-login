@@ -1,20 +1,17 @@
 """
 enrich_leads.py — Claude Code enrichment runner
 
-This script is called by the Claude Code scheduled task.
+This script is called by the Claude Code scheduled automation.
 It reads public/leads.json, finds leads with TEMPLATE: outreach messages,
-and prints them to stdout so Claude can write real outreach messages.
+and prints rich context so Claude can write personalized outreach messages.
 
-Claude then writes the enriched file back via the scheduled task.
+Claude then:
+1. Writes a warm, personalized 3-4 sentence message for each lead
+2. Calls update_outreach(lead_id, message) for each one
+3. git add public/leads.json && git commit -m "chore: enrich outreach messages" && git push
 
-Usage (from Claude Code scheduled task):
-    python enrich_leads.py
-
-The scheduled task prompt instructs Claude to:
-1. Run this script to see which leads need enrichment
-2. Write personalized outreach messages for each
-3. Update public/leads.json with the new messages
-4. git add + commit + push so Vercel redeploys
+Usage:
+    python3 enrich_leads.py
 """
 
 import json
@@ -41,7 +38,10 @@ def main():
     data = load_leads()
     leads = data.get("leads", [])
 
-    needs_enrichment = [l for l in leads if l.get("outreachMessage", "").startswith("TEMPLATE:")]
+    needs_enrichment = [
+        l for l in leads
+        if not l.get("outreachMessage") or l.get("outreachMessage", "").startswith("TEMPLATE:")
+    ]
     already_enriched = len(leads) - len(needs_enrichment)
 
     print(f"Total leads: {len(leads)}")
@@ -54,32 +54,76 @@ def main():
 
     print("\n--- LEADS TO ENRICH ---")
     for i, lead in enumerate(needs_enrichment, 1):
-        print(f"\n[{i}] ID: {lead['id']}")
-        print(f"    Owner: {lead['ownerName']}")
-        print(f"    Address: {lead['propertyAddress']}, Miami FL {lead['zip']}")
-        print(f"    Damage: {lead['damageType']} | Permit: {lead['permitType']}")
-        print(f"    Storm: {lead.get('stormEvent') or 'N/A'}")
-        print(f"    Score: {lead['score']}")
+        county = lead.get("county", "miami-dade")
+        county_label = {
+            "miami-dade":  "Miami-Dade County",
+            "broward":     "Broward County",
+            "palm-beach":  "Palm Beach County",
+        }.get(county, county.title())
+
         contact = lead.get("contact") or {}
-        print(f"    Contact: email={contact.get('email', 'none')} phone={contact.get('phone', 'none')}")
-        print(f"    Current message: {lead['outreachMessage'][:80]}...")
+        fema_num  = lead.get("femaDeclarationNumber", "")
+        fema_type = lead.get("femaIncidentType", "")
+        fema_line = f" | FEMA {fema_num} ({fema_type})" if fema_num else ""
+
+        city = lead.get("city") or "Miami"
+        zip_code = lead.get("zip") or ""
+        location = f"{lead.get('propertyAddress', '')}, {city}, FL {zip_code}".strip(", ")
+
+        print(f"\n[{i}] ID: {lead['id']}")
+        print(f"    Owner:    {lead['ownerName']}")
+        print(f"    Address:  {location}")
+        print(f"    County:   {county_label}{fema_line}")
+        print(f"    Damage:   {lead['damageType']} | Permit: {lead['permitType']}")
+        print(f"    Storm:    {lead.get('stormEvent') or 'N/A'}")
+        print(f"    Score:    {lead['score']}")
+        print(f"    Contact:  email={contact.get('email', 'none')} | phone={contact.get('phone', 'none')}")
+        if lead.get("homestead") is True:
+            print(f"    Homestead: Yes (owner-occupied)")
+        if lead.get("absenteeOwner"):
+            print(f"    Owner:    ABSENTEE (out of state)")
+        if lead.get("permitStatus") in ("Owner-Builder", "No Contractor"):
+            print(f"    Status:   {lead['permitStatus']} — handling claim alone")
+        if lead.get("underpaidFlag"):
+            print(f"    Flag:     LIKELY UNDERPAID — permit value below ZIP median")
+        print(f"    Current:  {lead['outreachMessage'][:80]}...")
 
     print("\n--- END OF LEADS ---")
-    print("\nInstructions for Claude:")
-    print("For each lead above, write a warm 3-4 sentence outreach message.")
-    print("Call update_outreach(lead_id, message) for each one, then save.")
+    print("""
+Instructions for Claude:
+For each lead above, write a warm, professional 3-4 sentence outreach message.
+
+Rules:
+- Address them by last name (e.g. "Dear Mr./Ms. Smith,")
+- Mention the specific damage type and the exact address
+- Reference the storm event or FEMA declaration if present
+- Explain that Claim Remedy Adjusters can maximize their insurance settlement
+- Keep tone warm and helpful — not salesy
+- End with a clear call to action (call or text us)
+- For Broward/Palm Beach leads, adjust city references accordingly (not "Miami")
+- Do NOT include a subject line or signature
+- Do NOT use generic phrases like "I hope this message finds you well"
+
+For each lead, call: update_outreach("LEAD_ID", "your message here")
+Then commit: git add public/leads.json && git commit -m "chore: enrich outreach messages [skip ci]" && git push
+""")
 
 
 def update_outreach(lead_id: str, message: str):
     """Update a single lead's outreach message and save to file."""
     data = load_leads()
     leads = data.get("leads", [])
+    updated = False
     for lead in leads:
         if lead["id"] == lead_id:
             lead["outreachMessage"] = message
+            updated = True
             break
-    save_leads(data)
-    print(f"Updated lead {lead_id}")
+    if updated:
+        save_leads(data)
+        print(f"✓ Updated lead {lead_id}")
+    else:
+        print(f"✗ Lead {lead_id} not found")
 
 
 if __name__ == "__main__":

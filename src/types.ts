@@ -51,6 +51,10 @@ export interface Lead {
   priorPermitCount?: number;
   roofAge?: number;
   codeViolation?: boolean;
+  // Multi-county + FEMA fields
+  county?: string;                    // 'miami-dade' | 'broward' | 'palm-beach'
+  femaDeclarationNumber?: string;     // e.g. 'DR-4611'
+  femaIncidentType?: string;          // e.g. 'Hurricane' | 'Flood'
 }
 
 export interface FilterState {
@@ -63,6 +67,7 @@ export interface FilterState {
   underpaid: boolean;
   noContractor: boolean;
   stormFirst: boolean;
+  county: 'All' | 'miami-dade' | 'broward' | 'palm-beach';
 }
 
 export interface StatsData {

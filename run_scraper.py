@@ -2,15 +2,18 @@
 Master scraper runner for Railway deployment.
 
 Pipeline:
-  1. Fetch Miami-Dade permit data (scrapers/permits.py)
-  2. Fetch NOAA storm events (scrapers/storms.py)
-  3. Optionally enrich leads with owner info from PA (scrapers/property.py)
+  1. Fetch building permits for all enabled counties (scrapers/permits.py)
+  2. Fetch NOAA storm events — now covers Miami-Dade, Broward, Palm Beach
+  2b. Fetch FEMA disaster declarations + build claim windows (scrapers/fema.py)
+  3. Enrich with PA owner info (scrapers/property.py)
   4. Deduplicate (scrapers/dedup.py)
-  5. Contact enrichment (voter roll + Sunbiz) for top leads
-  6. Insert / upsert to Supabase (db/insert.py)
-  7. Enrich new leads with Claude scoring + outreach (enrichment/enrich.py)
+  5. Algorithmic pre-scoring
+  6. Contact enrichment (voter roll + Sunbiz) for top leads
+  7. Insert / upsert to Supabase (db/insert.py)
+  8. Regenerate public/leads.json with TEMPLATE: outreach placeholders
+     (Claude Code automation fills these in via enrich_leads.py)
 
-Scheduled via Railway cron: 0 6 * * * (6am UTC = 2am EST)
+Scheduled via Railway cron: 0 */6 * * * (every 6 hours)
 """
 
 import os
@@ -36,21 +39,34 @@ def run() -> int:
     banner("Claim Remedy Adjusters — Scraper Pipeline Starting")
 
     # -------------------------------------------------------------------
-    # 1. Scrape Miami-Dade permits
+    # 1. Scrape permits — loop over all enabled counties
     # -------------------------------------------------------------------
-    banner("Step 1: Miami-Dade Permits")
+    banner("Step 1: Multi-County Permits")
+    permit_leads: list[dict] = []
     try:
-        from scrapers.permits import scrape_damage_permits
-        permit_leads = scrape_damage_permits(max_records=500)
-        print(f"[run] Permits scraped: {len(permit_leads)}")
+        from scrapers.permits import COUNTY_CONFIGS, scrape_damage_permits
+
+        for county, cfg in COUNTY_CONFIGS.items():
+            if not cfg.get("enabled"):
+                print(f"[run] Permits: skipping '{county}' (disabled)")
+                continue
+            try:
+                leads = scrape_damage_permits(county=county, max_records=500)
+                permit_leads.extend(leads)
+                print(f"[run] {county}: {len(leads)} permit leads")
+            except Exception as e:
+                print(f"[run] Permits scraper failed for '{county}': {e}")
+
+        print(f"[run] Total permit leads: {len(permit_leads)}")
     except Exception as e:
-        print(f"[run] Permits scraper failed: {e}")
+        print(f"[run] Permits module import failed: {e}")
         permit_leads = []
 
     # -------------------------------------------------------------------
-    # 2. Scrape NOAA storm events
+    # 2. Scrape NOAA storm events (Miami-Dade + Broward + Palm Beach)
     # -------------------------------------------------------------------
-    banner("Step 2: NOAA Storm Events")
+    banner("Step 2: NOAA Storm Events (South Florida)")
+    storm_leads: list[dict] = []
     try:
         from scrapers.storms import scrape_storm_events
         current_year = datetime.now(timezone.utc).year
@@ -60,12 +76,49 @@ def run() -> int:
         print(f"[run] Storms scraper failed: {e}")
         storm_leads = []
 
+    # -------------------------------------------------------------------
+    # 2b. FEMA disaster declarations — build claim windows for enrichment
+    # -------------------------------------------------------------------
+    banner("Step 2b: FEMA Disaster Declarations")
+    fema_windows: list[dict] = []
+    try:
+        from scrapers.fema import fetch_fl_declarations, build_fema_windows
+        declarations = fetch_fl_declarations(lookback_years=3)
+        fema_windows = build_fema_windows(declarations)
+        print(f"[run] FEMA: {len(fema_windows)} active declaration windows loaded")
+    except Exception as e:
+        print(f"[run] FEMA fetch failed (non-fatal): {e}")
+
     all_leads = permit_leads + storm_leads
     print(f"[run] Total raw leads: {len(all_leads)}")
 
     if not all_leads:
         print("[run] No leads scraped — exiting early")
         return 1
+
+    # -------------------------------------------------------------------
+    # 2c. FEMA enrichment — tag each lead with matching declaration
+    # -------------------------------------------------------------------
+    if fema_windows:
+        try:
+            from scrapers.fema import match_fema
+            fema_enriched = 0
+            for lead in all_leads:
+                m = match_fema(
+                    lead.get("permit_date", ""),
+                    lead.get("county", "miami-dade"),
+                    fema_windows,
+                )
+                if m:
+                    lead["fema_declaration_number"] = m["fema_number"]
+                    lead["fema_incident_type"]      = m["incident_type"]
+                    # Only set storm_event from FEMA if not already tagged
+                    if not lead.get("storm_event"):
+                        lead["storm_event"] = m["label"]
+                    fema_enriched += 1
+            print(f"[run] FEMA: enriched {fema_enriched} leads with declaration data")
+        except Exception as e:
+            print(f"[run] FEMA enrichment failed (non-fatal): {e}")
 
     # -------------------------------------------------------------------
     # 3. Enrich with PA owner info (top 100 leads by position)
@@ -152,25 +205,45 @@ def run() -> int:
         return 1
 
     # -------------------------------------------------------------------
-    # 8. Claude enrichment (score + outreach messages)
+    # 8. Regenerate public/leads.json
+    #    Outreach messages are written as TEMPLATE: placeholders here.
+    #    Claude Code automation (enrich_leads.py) fills them in via the
+    #    IDE — no ANTHROPIC_API_KEY needed on the server side.
     # -------------------------------------------------------------------
-    banner("Step 8: Claude Enrichment")
+    banner("Step 8: Regenerate leads.json")
     try:
-        from enrichment.enrich import run_enrichment
-        enrich_result = run_enrichment(
-            batch_size=int(os.environ.get("ENRICH_BATCH_SIZE", "10")),
-            supabase=supabase,
+        import subprocess
+        result_proc = subprocess.run(
+            [sys.executable, "generate_leads.py"],
+            capture_output=True,
+            text=True,
         )
-        print(f"[run] Enrichment result: {enrich_result}")
+        if result_proc.returncode == 0:
+            print("[run] leads.json regenerated successfully")
+        else:
+            print(f"[run] generate_leads.py exited {result_proc.returncode}")
+            if result_proc.stderr:
+                print(result_proc.stderr[:500])
     except Exception as e:
-        print(f"[run] Claude enrichment failed (non-fatal): {e}")
+        print(f"[run] leads.json regeneration failed (non-fatal): {e}")
 
     elapsed = time.time() - start
+
+    # County breakdown summary
+    county_counts: dict[str, int] = {}
+    for lead in unique_leads:
+        c = lead.get("county", "miami-dade")
+        county_counts[c] = county_counts.get(c, 0) + 1
+    fema_tagged = sum(1 for l in unique_leads if l.get("fema_declaration_number"))
+
     banner(f"Pipeline Complete in {elapsed:.1f}s")
     print(f"[run] Summary:")
     print(f"  Permit leads scraped:  {len(permit_leads)}")
     print(f"  Storm leads scraped:   {len(storm_leads)}")
     print(f"  Unique new leads:      {len(unique_leads)}")
+    print(f"  FEMA-tagged leads:     {fema_tagged}")
+    for county, count in sorted(county_counts.items()):
+        print(f"  {county}: {count} leads")
 
     return 0
 

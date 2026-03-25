@@ -25,6 +25,13 @@ const DATE_RANGES = [
   { value: 'all', label: 'All time' },
 ] as const
 
+const COUNTY_OPTIONS = [
+  { value: 'All',         label: 'All Counties' },
+  { value: 'miami-dade',  label: 'Miami-Dade' },
+  { value: 'broward',     label: 'Broward' },
+  { value: 'palm-beach',  label: 'Palm Beach' },
+] as const
+
 const isDefaultFilters = (f: FilterState) =>
   f.zip === '' &&
   f.damageType === 'All' &&
@@ -34,7 +41,8 @@ const isDefaultFilters = (f: FilterState) =>
   !f.absenteeOwner &&
   !f.underpaid &&
   !f.noContractor &&
-  !f.stormFirst
+  !f.stormFirst &&
+  f.county === 'All'
 
 export default function FilterBar({ filters, onChange, onClear }: FilterBarProps) {
   const hasActiveFilters = !isDefaultFilters(filters)
@@ -74,6 +82,22 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             {DAMAGE_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* County */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">County</label>
+          <select
+            value={filters.county}
+            onChange={(e) => update('county', e.target.value as FilterState['county'])}
+            className="select-input w-36"
+          >
+            {COUNTY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
               </option>
             ))}
           </select>

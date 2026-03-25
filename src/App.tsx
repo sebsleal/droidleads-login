@@ -21,6 +21,7 @@ const DEFAULT_FILTERS: FilterState = {
   underpaid: false,
   noContractor: false,
   stormFirst: false,
+  county: 'All',
 }
 
 export default function App() {
@@ -92,6 +93,7 @@ export default function App() {
       if (filters.underpaid && !lead.underpaidFlag) return false;
       if (filters.noContractor && lead.permitStatus !== 'No Contractor' && lead.permitStatus !== 'Owner-Builder') return false;
       if (filters.stormFirst && lead.source !== 'storm-first') return false;
+      if (filters.county !== 'All' && lead.county !== filters.county) return false;
 
       return true
     })

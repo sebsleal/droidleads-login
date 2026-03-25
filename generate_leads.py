@@ -210,19 +210,34 @@ def fetch_permits(limit: int = 200) -> list[dict]:
 
 def fetch_noaa_storm_events(lookback_years: int = 2) -> list[dict]:
     """
-    Download NOAA storm event CSV files for Miami-Dade and return parsed events.
-    Returns list of dicts with keys: storm_event, damage_type, event_date.
+    Download NOAA storm event CSV files for South Florida and return parsed events.
+    Covers Miami-Dade, Broward, and Palm Beach counties.
+    Returns list of dicts with keys: storm_event, damage_type, event_date, county.
     """
-    print("Fetching NOAA storm events...")
+    print("Fetching NOAA storm events (South Florida)...")
     try:
         from scrapers.storms import scrape_storm_events
         current_year = datetime.now().year
         years = list(range(current_year - lookback_years + 1, current_year + 1))
         events = scrape_storm_events(years)
-        print(f"  Got {len(events)} Miami-Dade storm events from NOAA.")
+        print(f"  Got {len(events)} South FL storm events from NOAA.")
         return events
     except Exception as e:
         print(f"  Warning: NOAA storm fetch failed — {e}")
+        return []
+
+
+def fetch_fema_windows() -> list[dict]:
+    """Fetch FEMA disaster declaration windows for enrichment."""
+    print("Fetching FEMA disaster declarations...")
+    try:
+        from scrapers.fema import fetch_fl_declarations, build_fema_windows
+        declarations = fetch_fl_declarations(lookback_years=3)
+        windows = build_fema_windows(declarations)
+        print(f"  Got {len(windows)} FEMA claim windows.")
+        return windows
+    except Exception as e:
+        print(f"  Warning: FEMA fetch failed — {e}")
         return []
 
 
@@ -322,7 +337,7 @@ def permits_to_leads(features: list[dict], storm_windows: list[dict]) -> list[di
             issued_date = datetime.fromisoformat(permit_date).date() if permit_date else None
         except Exception:
             pass
-        days_since_issued = (datetime.utcnow().date() - issued_date).days if issued_date else 0
+        days_since_issued = (datetime.now(timezone.utc).date() - issued_date).days if issued_date else 0
 
         if not contractor:
             permit_status = "No Contractor"
@@ -350,6 +365,7 @@ def permits_to_leads(features: list[dict], storm_windows: list[dict]) -> list[di
             "outreachMessage": "",
             "status": "New",
             "source": "permit",
+            "county": "miami-dade",  # fetch_permits() targets Miami-Dade ArcGIS
             "permitStatus": permit_status,
             "contractorName": contractor,
             "permitValue": estimated_value,
@@ -403,14 +419,38 @@ def run():
     # 1. Fetch permits from ArcGIS
     permit_features = fetch_permits()
 
-    # 2. Fetch NOAA storm events for cross-referencing
+    # 2. Fetch NOAA storm events for cross-referencing (now covers all South FL)
     storm_events = fetch_noaa_storm_events(lookback_years=2)
     storm_windows = build_storm_windows(storm_events)
     print(f"  Built {len(storm_windows)} storm windows for cross-referencing.")
 
+    # 2b. Fetch FEMA disaster declaration windows
+    fema_windows = fetch_fema_windows()
+
     # 3. Convert permits to leads, tagged with storm events
     leads = permits_to_leads(permit_features, storm_windows)
     leads = deduplicate(leads)
+
+    # 3b. FEMA enrichment — tag each lead with matching declaration
+    if fema_windows:
+        try:
+            from scrapers.fema import match_fema
+            fema_count = 0
+            for lead in leads:
+                m = match_fema(
+                    lead.get("permitDate", ""),
+                    lead.get("county", "miami-dade"),
+                    fema_windows,
+                )
+                if m:
+                    lead["femaDeclarationNumber"] = m["fema_number"]
+                    lead["femaIncidentType"]       = m["incident_type"]
+                    if not lead.get("stormEvent"):
+                        lead["stormEvent"] = m["label"]
+                    fema_count += 1
+            print(f"  FEMA-enriched {fema_count} leads with declaration data.")
+        except Exception as e:
+            print(f"  Warning: FEMA enrichment failed — {e}")
 
     # 3a. Compute intelligence signals before scoring
     leads = compute_underpayment_flags(leads)
@@ -460,9 +500,18 @@ def run():
 
     print(f"\nSaved {len(leads)} leads to {OUTPUT_PATH}")
     storm_linked = sum(1 for l in leads if l.get("stormEvent"))
+    fema_tagged  = sum(1 for l in leads if l.get("femaDeclarationNumber"))
     with_contact = sum(1 for l in leads if l.get("contact"))
-    homesteaded = sum(1 for l in leads if l.get("homestead"))
-    print(f"  Storm-linked: {storm_linked} | With contact: {with_contact} | Homesteaded: {homesteaded}")
+    homesteaded  = sum(1 for l in leads if l.get("homestead"))
+    print(f"  Storm-linked: {storm_linked} | FEMA-tagged: {fema_tagged} | With contact: {with_contact} | Homesteaded: {homesteaded}")
+
+    # County breakdown
+    county_counts: dict[str, int] = {}
+    for l in leads:
+        c = l.get("county", "miami-dade")
+        county_counts[c] = county_counts.get(c, 0) + 1
+    breakdown = " | ".join(f"{c}: {n}" for c, n in sorted(county_counts.items()))
+    print(f"  County breakdown — {breakdown}")
     print("Next step: run the Claude Code scheduled task to enrich outreach messages.")
 
 

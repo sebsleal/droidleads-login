@@ -85,6 +85,10 @@ def upsert_leads(
             "score_reasoning": pick("score_reasoning", "scoreReasoning"),
             "noaa_episode_id": lead.get("noaa_episode_id") or None,
             "noaa_event_id": lead.get("noaa_event_id") or None,
+            # Multi-county + FEMA fields
+            "county": lead.get("county") or "miami-dade",
+            "fema_declaration_number": lead.get("fema_declaration_number") or None,
+            "fema_incident_type": lead.get("fema_incident_type") or None,
         }
 
         # Only include user-protected fields when they carry a real value so

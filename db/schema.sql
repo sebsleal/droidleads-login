@@ -59,6 +59,11 @@ create table if not exists leads (
     noaa_episode_id  text,
     noaa_event_id    text,
 
+    -- Multi-county + FEMA fields
+    county                   text        not null default 'miami-dade',
+    fema_declaration_number  text,
+    fema_incident_type       text,
+
     -- Timestamps
     created_at      timestamptz not null default now(),
     updated_at      timestamptz not null default now(),
@@ -76,6 +81,7 @@ create index if not exists leads_created_at_idx  on leads (created_at desc);
 create index if not exists leads_permit_date_idx on leads (permit_date desc);
 create index if not exists leads_source_idx      on leads (source);
 create index if not exists leads_dedup_hash_idx  on leads (dedup_hash);
+create index if not exists leads_county_idx      on leads (county);
 
 -- Composite index for common dashboard queries
 create index if not exists leads_status_score_idx
@@ -124,3 +130,12 @@ create policy "authenticated_read" on leads
     for select
     to authenticated
     using (true);
+
+-- -----------------------------------------------------------------------------
+-- Migration: add multi-county + FEMA columns to existing databases
+-- Run these if the leads table already exists:
+-- -----------------------------------------------------------------------------
+-- alter table leads add column if not exists county                  text not null default 'miami-dade';
+-- alter table leads add column if not exists fema_declaration_number text;
+-- alter table leads add column if not exists fema_incident_type      text;
+-- create index if not exists leads_county_idx on leads (county);

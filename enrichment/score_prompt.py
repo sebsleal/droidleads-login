@@ -1,21 +1,27 @@
 """
-Claude scoring prompt for leads.
+Lead scoring for Claim Remedy Adjusters.
 
-Returns a 0-100 integer score representing the lead's quality,
-urgency, and likelihood of converting to a public adjuster engagement.
+Provides:
+  - build_score_prompt()     — rich prompt string for Claude Code automation
+  - _algorithmic_score()     — fast rule-based scorer used by the pipeline
+  - score_leads_batch()      — batch wrapper around _algorithmic_score
+
+Scoring is done algorithmically by the Railway scraper pipeline.
+The prompt text in build_score_prompt() is surfaced to Claude Code
+automation (enrich_leads.py) so the IDE can reason about each lead
+and produce a nuanced 0-100 score + outreach message — no API key needed.
 """
 
-import anthropic
-import json
-import os
 from typing import Any
-
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 def build_score_prompt(lead: dict[str, Any]) -> str:
+    """
+    Build a rich scoring prompt string for a lead.
+
+    This is used by Claude Code automation (enrich_leads.py) to give
+    Claude full context when scoring each lead and writing outreach.
+    """
     # Build optional enrichment context lines
     extras = []
     if lead.get("assessed_value") or lead.get("assessedValue"):
@@ -39,7 +45,7 @@ def build_score_prompt(lead: dict[str, Any]) -> str:
         val = lead.get("permitValue") or lead.get("permit_value")
         extras.append(f"- Permit estimated value: ${val:,}")
     if lead.get("underpaidFlag") or lead.get("underpaid_flag"):
-        extras.append(f"- Underpaid flag: Permit value significantly below ZIP median (possible underpayment)")
+        extras.append("- Underpaid flag: Permit value significantly below ZIP median (possible underpayment)")
     if lead.get("contractorName") or lead.get("contractor_name"):
         name = lead.get("contractorName") or lead.get("contractor_name")
         extras.append(f"- Contractor: {name}")
@@ -89,54 +95,17 @@ Respond with ONLY a JSON object in this exact format:
 {{"score": <integer 0-100>, "reasoning": "<one sentence explanation>"}}"""
 
 
-def score_lead(lead: dict[str, Any], client: anthropic.Anthropic | None = None) -> dict[str, Any]:
-    """
-    Score a single lead using Claude.
-
-    Args:
-        lead: Lead dict with damage_type, permit_type, permit_date, etc.
-        client: Optional pre-built Anthropic client.
-
-    Returns:
-        Dict with 'score' (int) and 'reasoning' (str) keys.
-        Falls back to algorithmic score if Claude call fails.
-    """
-    if client is None:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
-    prompt = build_score_prompt(lead)
-
-    try:
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=150,
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        text = message.content[0].text.strip() if message.content else ""
-
-        # Strip markdown code fences if present
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-
-        result = json.loads(text)
-        score = max(0, min(100, int(result.get("score", 30))))
-        reasoning = str(result.get("reasoning", ""))
-        return {"score": score, "reasoning": reasoning}
-
-    except Exception as e:
-        print(f"[score] Claude scoring failed for {lead.get('address')}: {e}")
-        # Algorithmic fallback
-        return {"score": _algorithmic_score(lead), "reasoning": "Algorithmic fallback"}
-
-
 def _algorithmic_score(lead: dict[str, Any]) -> int:
-    """Simple rule-based fallback scorer."""
+    """
+    Rule-based lead scorer used by the Railway scraper pipeline.
+
+    Mirrors the scoring criteria in build_score_prompt() so that leads
+    arrive in Supabase with a sensible pre-score before Claude Code
+    automation reviews and refines them.
+    """
     from datetime import date
 
-    score = 30
+    score = 30  # base
 
     # Recency
     try:
@@ -150,129 +119,73 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
         pass
 
     # Damage type
-    damage = lead.get("damage_type", "")
+    damage = lead.get("damage_type", "") or lead.get("damageType", "")
     if damage in ("Hurricane/Wind", "Flood"):
         score += 25
     elif damage in ("Roof", "Fire", "Structural"):
         score += 20
 
     # Permit scope
-    permit_type = (lead.get("permit_type") or "").lower()
+    permit_type = (lead.get("permit_type") or lead.get("permitType") or "").lower()
     if any(kw in permit_type for kw in ["replacement", "structural", "foundation", "load-bearing", "full roof"]):
         score += 15
 
-    # Contact
+    # Contact info
     if lead.get("contact_email") or lead.get("contact_phone"):
+        score += 15
+    elif (lead.get("contact") or {}).get("phone") or (lead.get("contact") or {}).get("email"):
         score += 15
 
     # Storm linkage
-    if lead.get("storm_event"):
+    if lead.get("storm_event") or lead.get("stormEvent"):
+        score += 10
+
+    # Permit status bonuses
+    permit_status = lead.get("permit_status") or lead.get("permitStatus") or "Active"
+    if permit_status in ("Owner-Builder", "No Contractor"):
+        score += 20
+    elif permit_status == "Stalled":
+        score += 15
+
+    # Underpayment flag
+    if lead.get("underpaid_flag") or lead.get("underpaidFlag"):
+        score += 15
+
+    # Repeat damage
+    prior = lead.get("prior_permit_count") or lead.get("priorPermitCount") or 0
+    if prior >= 1:
+        score += 15
+
+    # Homestead (owner-occupied)
+    if lead.get("homestead"):
+        score += 10
+
+    # Absentee owner
+    if lead.get("absentee_owner") or lead.get("absenteeOwner"):
+        score += 10
+
+    # Aging roof
+    roof_age = lead.get("roof_age") or lead.get("roofAge") or 0
+    if roof_age > 15:
         score += 10
 
     return min(score, 100)
 
 
-def score_and_generate_outreach(
-    lead: dict[str, Any],
-    client: anthropic.Anthropic | None = None,
-) -> dict[str, Any]:
+def score_leads_batch(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
-    Score a lead AND generate an outreach message in a single Claude call.
-    Returns dict with 'score', 'reasoning', and 'outreach_message' keys.
-    Falls back to algorithmic score + template message if Claude fails.
+    Algorithmically score a list of leads.
+
+    Returns list of lead dicts with 'score' and 'score_reasoning' fields set.
     """
-    if client is None:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
-    last_name = (lead.get("owner_name") or "Property Owner").split()[-1]
-    address = lead.get("address", "your property")
-
-    score_section = build_score_prompt(lead)
-
-    combined_prompt = f"""{score_section}
-
-Additionally, write a warm, professional 3-4 sentence outreach message to this property owner.
-
-Rules for the outreach message:
-- Address them by last name (e.g. "Dear Mr./Ms. {last_name},")
-- Mention the specific damage type and the address ({address})
-- Explain that Claim Remedy Adjusters can help maximize their insurance settlement
-- Keep it warm and helpful, not salesy
-- End with a clear call to action (call or text us)
-- Do NOT use generic filler phrases like "I hope this message finds you well"
-- Do NOT include a subject line or signature
-
-Respond with ONLY a JSON object in this exact format:
-{{"score": <integer 0-100>, "reasoning": "<one sentence>", "outreach_message": "<the full message text>"}}"""
-
-    try:
-        message = client.messages.create(
-            model="claude-haiku-4-5",  # Use Haiku for cost efficiency
-            max_tokens=500,
-            messages=[{"role": "user", "content": combined_prompt}],
-        )
-
-        text = message.content[0].text.strip() if message.content else ""
-
-        # Strip markdown code fences if present
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-
-        result = json.loads(text)
-        score = max(0, min(100, int(result.get("score", 30))))
-        reasoning = str(result.get("reasoning", ""))
-        outreach_message = str(result.get("outreach_message", ""))
-
-        if not outreach_message:
-            from enrichment.outreach_prompt import _fallback_template
-            outreach_message = _fallback_template(lead)
-
-        return {
-            "score": score,
-            "reasoning": reasoning,
-            "outreach_message": outreach_message,
-        }
-
-    except Exception as e:
-        print(f"[score] Combined Claude call failed for {lead.get('address')}: {e}")
-        from enrichment.outreach_prompt import _fallback_template
-        return {
-            "score": _algorithmic_score(lead),
-            "reasoning": "Algorithmic fallback",
-            "outreach_message": _fallback_template(lead),
-        }
-
-
-def score_leads_batch(
-    leads: list[dict[str, Any]],
-    use_claude: bool = True,
-    client: anthropic.Anthropic | None = None,
-) -> list[dict[str, Any]]:
-    """
-    Score a list of leads, either using Claude or the algorithmic fallback.
-
-    Args:
-        leads: List of lead dicts.
-        use_claude: If True, uses Claude API for scoring. Otherwise, algorithmic only.
-        client: Optional Anthropic client.
-
-    Returns:
-        List of lead dicts with 'score' field updated.
-    """
-    if use_claude and client is None:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
-    results: list[dict[str, Any]] = []
+    results = []
     for lead in leads:
-        if use_claude:
-            scored = score_lead(lead, client)
-        else:
-            scored = {"score": _algorithmic_score(lead), "reasoning": "Algorithmic"}
-
-        results.append({**lead, "score": scored["score"], "score_reasoning": scored["reasoning"]})
-
+        score = _algorithmic_score(lead)
+        results.append({
+            **lead,
+            "score": score,
+            "score_reasoning": "Algorithmic pre-score",
+        })
     return results
 
 
@@ -290,5 +203,7 @@ if __name__ == "__main__":
         "source": "permit",
     }
 
-    result = score_lead(test_lead)
-    print(result)
+    score = _algorithmic_score(test_lead)
+    print(f"Score: {score}")
+    print("\n--- Scoring prompt (used by Claude Code automation) ---")
+    print(build_score_prompt(test_lead))

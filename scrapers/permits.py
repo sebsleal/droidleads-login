@@ -1,21 +1,84 @@
 """
-Miami-Dade building permits scraper — ArcGIS Feature Service.
+Multi-county building permits scraper — ArcGIS Feature Services.
 
-Dataset: "Building Permits Issued By Miami-Dade County - 2 Previous Years to Present"
-Source: https://hub.arcgis.com/datasets/6db5f56e886446df88313ca279e59120_0
-Service: https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/miamidade_permit_data/FeatureServer/0
+Supported counties (via COUNTY_CONFIGS):
+  - miami-dade: Active — ArcGIS Feature Service confirmed working
+  - broward:    Disabled — flip enabled=True once ArcGIS URL confirmed
+                via https://geohub-bcgis.opendata.arcgis.com → "building permits"
+  - palm-beach: Disabled — flip enabled=True once ArcGIS URL confirmed
+                via https://opendata2-pbcgov.opendata.arcgis.com → "permits"
 
-Public API — no key required.
+Public APIs — no key required.
 """
 
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-ARCGIS_URL = (
-    "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/"
-    "miamidade_permit_data/FeatureServer/0/query"
-)
+# ---------------------------------------------------------------------------
+# County configurations
+# ---------------------------------------------------------------------------
+COUNTY_CONFIGS: dict[str, dict] = {
+    "miami-dade": {
+        "url": (
+            "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/"
+            "miamidade_permit_data/FeatureServer/0/query"
+        ),
+        "where_field":      "DetailDescriptionComments",
+        "out_fields": (
+            "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
+            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone,"
+            "ContractorName,EstimatedValue,LastInspectionDate"
+        ),
+        "date_field":        "PermitIssuedDate",
+        "address_field":     "PropertyAddress",
+        "owner_field":       "OwnerName",
+        "folio_field":       "FolioNumber",
+        "phone_field":       "ContractorPhone",
+        "contractor_field":  "ContractorName",
+        "value_field":       "EstimatedValue",
+        "inspection_field":  "LastInspectionDate",
+        "city_field":        "City",
+        "default_city":      "Miami",
+        "enabled": True,
+    },
+    "broward": {
+        # Confirm URL via https://geohub-bcgis.opendata.arcgis.com → "building permits"
+        # Then verify field names by fetching ?f=json on the service endpoint
+        "url": "",
+        "where_field":       "WorkDescription",
+        "out_fields":        "*",
+        "date_field":        "IssueDate",
+        "address_field":     "SiteAddress",
+        "owner_field":       "OwnerName",
+        "folio_field":       "ParcelNumber",
+        "phone_field":       "ContractorPhone",
+        "contractor_field":  "ContractorName",
+        "value_field":       "EstimatedValue",
+        "inspection_field":  None,
+        "city_field":        "City",
+        "default_city":      "Fort Lauderdale",
+        "enabled": False,   # flip to True once URL confirmed
+    },
+    "palm-beach": {
+        # Confirm URL via https://opendata2-pbcgov.opendata.arcgis.com → "permits"
+        # Then verify field names by fetching ?f=json on the service endpoint
+        "url": "",
+        "where_field":       "ApplicationDescription",
+        "out_fields":        "*",
+        "date_field":        "IssueDate",
+        "address_field":     "ADDRESS",
+        "owner_field":       "OwnerName",
+        "folio_field":       "Renum",
+        "phone_field":       None,
+        "contractor_field":  None,
+        "value_field":       "EstimateValuation",
+        "inspection_field":  None,
+        "city_field":        None,
+        "default_city":      "West Palm Beach",
+        "enabled": False,   # flip to True once URL confirmed
+    },
+}
 
 DAMAGE_KEYWORDS = [
     "roof", "reroof", "re-roof", "hurricane", "flood", "fire", "structural",
@@ -53,24 +116,41 @@ def classify_damage_type(permit_type: str, work_desc: str) -> str:
     return "Roof"
 
 
-def scrape_damage_permits(max_records: int = 500, lookback_days: int = 90) -> list[dict[str, Any]]:
+def scrape_damage_permits(
+    county: str = "miami-dade",
+    max_records: int = 500,
+    lookback_days: int = 90,
+) -> list[dict[str, Any]]:
     """
-    Fetch damage-related building permits from Miami-Dade ArcGIS Feature Service.
-    Returns a list of normalised lead dicts ready for dedup and insert.
-    """
-    since = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    Fetch damage-related building permits for the given county from its
+    ArcGIS Feature Service.
 
-    kw_clauses = [f"DetailDescriptionComments LIKE '%{kw}%'" for kw in DAMAGE_KEYWORDS]
-    where = f"PermitIssuedDate >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
+    Returns a list of normalised lead dicts ready for dedup and insert.
+    Each lead dict includes a 'county' field with the county slug.
+    """
+    config = COUNTY_CONFIGS.get(county)
+    if not config:
+        print(f"[permits] Unknown county '{county}' — skipping")
+        return []
+    if not config["enabled"]:
+        print(f"[permits] County '{county}' is disabled — skipping")
+        return []
+    if not config["url"]:
+        print(f"[permits] County '{county}' has no URL configured — skipping")
+        return []
+
+    since = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    where_field = config["where_field"]
+
+    kw_clauses = [f"{where_field} LIKE '%{kw}%'" for kw in DAMAGE_KEYWORDS]
+    date_field = config["date_field"]
+    where = f"{date_field} >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
 
     base_params = {
         "where": where,
-        "outFields": (
-            "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
-            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone"
-        ),
+        "outFields": config["out_fields"],
         "resultRecordCount": min(max_records, 1000),
-        "orderByFields": "PermitIssuedDate DESC",
+        "orderByFields": f"{date_field} DESC",
         "f": "json",
     }
 
@@ -79,33 +159,41 @@ def scrape_damage_permits(max_records: int = 500, lookback_days: int = 90) -> li
     try:
         while True:
             params = {**base_params, "resultOffset": offset}
-            resp = requests.get(ARCGIS_URL, params=params, timeout=30)
+            resp = requests.get(config["url"], params=params, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             if "error" in data:
-                print(f"[permits] ArcGIS error: {data['error']}")
+                print(f"[permits] ArcGIS error ({county}): {data['error']}")
                 break
             features = data.get("features", [])
             all_features.extend(features)
             if not data.get("exceededTransferLimit", False) or len(all_features) >= max_records:
                 break
             offset += len(features)
-            print(f"[permits] Paginating... fetched {len(all_features)} so far")
+            print(f"[permits] {county}: paginating... fetched {len(all_features)} so far")
     except requests.RequestException as e:
-        print(f"[permits] Fetch error: {e}")
+        print(f"[permits] Fetch error ({county}): {e}")
         return []
 
     results: list[dict[str, Any]] = []
 
+    addr_field       = config["address_field"]
+    owner_field      = config["owner_field"]
+    folio_field      = config["folio_field"]
+    phone_field      = config["phone_field"]
+    contractor_field = config["contractor_field"]
+    city_field       = config["city_field"]
+    default_city     = config["default_city"]
+
     for feat in all_features:
         attrs = feat.get("attributes", {})
-        permit_type = (attrs.get("PermitType") or "").strip()
-        work_desc = (attrs.get("DetailDescriptionComments") or "").strip()
+        permit_type = (attrs.get("PermitType") or attrs.get("WorkType") or "").strip()
+        work_desc = (attrs.get(where_field) or "").strip()
 
         if not is_damage_related(permit_type, work_desc):
             continue
 
-        raw_owner = (attrs.get("OwnerName") or "").strip()
+        raw_owner = (attrs.get(owner_field) or "").strip()
         # Strip joint-ownership suffixes
         for suffix in [" &W ", " &H ", " & ", " ETAL", " TR ", " EST "]:
             idx = raw_owner.upper().find(suffix)
@@ -113,11 +201,13 @@ def scrape_damage_permits(max_records: int = 500, lookback_days: int = 90) -> li
                 raw_owner = raw_owner[:idx]
         owner_name = raw_owner.strip().title() or "Property Owner"
 
-        address = (attrs.get("PropertyAddress") or "Unknown Address").strip().title()
-        permit_date = (attrs.get("PermitIssuedDate") or "")[:10]
-        city = (attrs.get("City") or "Miami").strip().title() or "Miami"
-        folio = (attrs.get("FolioNumber") or "").strip()
-        phone = (attrs.get("ContractorPhone") or "").strip() or None
+        address = (attrs.get(addr_field) or "Unknown Address").strip().title()
+        permit_date = (attrs.get(date_field) or "")[:10]
+        city = (attrs.get(city_field) or default_city if city_field else default_city)
+        city = (city or default_city).strip().title() or default_city
+        folio = (attrs.get(folio_field) or "").strip()
+        phone = (attrs.get(phone_field) or "").strip() if phone_field else None
+        phone = phone or None
 
         damage_type = classify_damage_type(permit_type, work_desc)
 
@@ -135,13 +225,14 @@ def scrape_damage_permits(max_records: int = 500, lookback_days: int = 90) -> li
             "status": "New",
             "contact_email": None,
             "contact_phone": phone,
+            "county": county,
         })
 
-    print(f"[permits] Fetched {len(all_features)} records, kept {len(results)} damage-related permits")
+    print(f"[permits] {county}: fetched {len(all_features)} records, kept {len(results)} damage-related permits")
     return results
 
 
 if __name__ == "__main__":
-    permits = scrape_damage_permits()
+    permits = scrape_damage_permits("miami-dade", max_records=10)
     for p in permits[:5]:
         print(p)

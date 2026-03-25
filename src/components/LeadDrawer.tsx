@@ -13,6 +13,8 @@ import {
   MessageSquare,
   Home,
   DollarSign,
+  Building2,
+  ShieldAlert,
 } from 'lucide-react'
 import type { Lead } from '@/types'
 import { formatDate, damageTypeColor, cn } from '@/lib/utils'
@@ -140,6 +142,36 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
               Property Details
             </h3>
             <div className="space-y-2.5">
+              {lead.county && (
+                <DetailRow
+                  icon={<Building2 className="w-4 h-4" />}
+                  label="County"
+                  value={
+                    <span className="capitalize">
+                      {lead.county === 'miami-dade' ? 'Miami-Dade County'
+                        : lead.county === 'broward' ? 'Broward County'
+                        : lead.county === 'palm-beach' ? 'Palm Beach County'
+                        : lead.county}
+                    </span>
+                  }
+                />
+              )}
+              {lead.femaDeclarationNumber && (
+                <DetailRow
+                  icon={<ShieldAlert className="w-4 h-4 text-orange-500" />}
+                  label="FEMA Declaration"
+                  value={
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="font-semibold text-orange-700">{lead.femaDeclarationNumber}</span>
+                      {lead.femaIncidentType && (
+                        <span className="text-xs bg-orange-50 text-orange-600 border border-orange-200 px-1.5 py-0.5 rounded-full">
+                          {lead.femaIncidentType}
+                        </span>
+                      )}
+                    </span>
+                  }
+                />
+              )}
               <DetailRow
                 icon={<Hash className="w-4 h-4" />}
                 label="Folio Number"

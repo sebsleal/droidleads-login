@@ -72,6 +72,27 @@ export default function Analytics({ leads }: AnalyticsProps) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
+  // Leads by county
+  const COUNTY_LABELS: Record<string, string> = {
+    'miami-dade': 'Miami-Dade',
+    'broward':    'Broward',
+    'palm-beach': 'Palm Beach',
+  }
+  const COUNTY_COLORS: Record<string, string> = {
+    'miami-dade': '#0f1f3d',
+    'broward':    '#1e3c82',
+    'palm-beach': '#3a5ea8',
+  }
+  const countyData = Object.entries(
+    leads.reduce<Record<string, number>>((acc, l) => {
+      const key = l.county || 'miami-dade'
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})
+  )
+    .map(([county, count]) => ({ county, label: COUNTY_LABELS[county] ?? county, count }))
+    .sort((a, b) => b.count - a.count)
+
   // Score distribution buckets
   const scoreRanges = [
     { range: '55-59', min: 55, max: 59 },
@@ -188,7 +209,51 @@ export default function Analytics({ leads }: AnalyticsProps) {
         </div>
       </div>
 
-      {/* Row 2: Score distribution + Status */}
+      {/* Row 2: County breakdown */}
+      <div className="card px-6 py-5">
+        <h2 className="text-sm font-semibold text-slate-700 mb-1">Leads by County</h2>
+        <p className="text-xs text-slate-400 mb-5">Coverage across South Florida markets</p>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={countyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 12, fill: '#475569', fontWeight: 500 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#94a3b8' }}
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+            <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+              {countyData.map((entry) => (
+                <Cell
+                  key={entry.county}
+                  fill={COUNTY_COLORS[entry.county] ?? '#94a3b8'}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3">
+          {countyData.map((d) => (
+            <div key={d.county} className="flex items-center gap-1.5">
+              <span
+                className="w-2.5 h-2.5 rounded-sm"
+                style={{ backgroundColor: COUNTY_COLORS[d.county] ?? '#94a3b8' }}
+              />
+              <span className="text-xs text-slate-500">{d.label}</span>
+              <span className="text-xs font-semibold text-slate-700">{d.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Row 3: Score distribution + Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Score distribution */}
         <div className="card px-6 py-5">

@@ -1,18 +1,20 @@
 """
 generate_leads.py — Claim Remedy Adjusters lead generator
 
-Fetches real property damage leads from Miami-Dade public APIs,
-scores them, and saves to public/leads.json for the Vercel dashboard.
+Fetches real property damage leads from two live sources:
+  1. Miami-Dade building permits via ArcGIS Feature Service (real addresses + owners)
+  2. NOAA Storm Events CSV files (used to tag permits with the causal storm)
 
 Usage:
     python generate_leads.py
 
 The script will:
-1. Pull building permits from Miami-Dade Open Data
-2. Add synthetic storm event leads (Hurricane Helene / Milton)
-3. Score each lead (0-100)
-4. Save outreach messages (filled in by Claude Code scheduled task)
-5. Write output to public/leads.json
+1. Pull building permits from Miami-Dade ArcGIS REST API (90-day lookback)
+2. Pull recent storm events from NOAA for Miami-Dade County
+3. Cross-reference: tag each permit with the storm that likely caused it
+4. Score each lead (0-100)
+5. Save outreach message placeholders (filled in by Claude Code scheduled task)
+6. Write output to public/leads.json
 
 Run via Claude Code scheduled task — no API key needed.
 """
@@ -27,20 +29,23 @@ import requests
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "public", "leads.json")
 
-# Miami-Dade Open Data — building permits (primary + fallback dataset IDs)
-PERMITS_URL = "https://opendata.miamidade.gov/resource/hvj5-8dge.json"
-PERMITS_URL_FALLBACK = "https://opendata.miamidade.gov/resource/3it5-dpnh.json"
+# Miami-Dade ArcGIS Feature Service — "Building Permits Issued By Miami-Dade County"
+# Dataset: https://hub.arcgis.com/datasets/6db5f56e886446df88313ca279e59120_0
+ARCGIS_PERMITS_URL = (
+    "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/"
+    "miamidade_permit_data/FeatureServer/0/query"
+)
 
 HEADERS = {
     "User-Agent": "ClaimRemedyAdjusters/1.0 (lead-scraper)",
     "Accept": "application/json",
 }
 
-# Damage-related keyword sets
+# Damage-related keyword sets (matched against DetailDescriptionComments)
 DAMAGE_KEYWORDS = {
     "Hurricane/Wind": ["hurricane", "wind", "storm damage", "wind damage", "roof blow", "shutter"],
     "Flood": ["flood", "water damage", "water intrusion", "drainage", "sewer backup"],
-    "Roof": ["roof", "roofing", "re-roof", "reroof", "shingle", "tile repair"],
+    "Roof": ["roof", "roofing", "re-roof", "reroof", "shingle", "tile repair", "metal roof"],
     "Fire": ["fire", "smoke damage", "fire damage", "burn"],
     "Structural": ["structural", "foundation", "load bearing", "beam", "column", "wall crack"],
 }
@@ -60,12 +65,38 @@ def make_id(address: str, date: str) -> str:
     return hashlib.md5(raw.encode()).hexdigest()[:12]
 
 
+def parse_owner_name(raw: str) -> tuple[str, str]:
+    """
+    Parse ArcGIS OwnerName (e.g. 'YAUDI RODRIGUEZ CHAVEZ') into (full_name, last_name).
+    Handles joint ownership like 'LAZARO ROIG &W PEGGY'.
+    """
+    if not raw or not raw.strip():
+        return "Property Owner", "Owner"
+
+    # Strip joint-ownership suffixes like '&W PEGGY', '&H JOHN', 'ETAL', 'TR', 'EST'
+    name = raw.strip()
+    for suffix in [" &W ", " &H ", " & ", " ETAL", " TR ", " EST "]:
+        idx = name.upper().find(suffix)
+        if idx > 0:
+            name = name[:idx]
+
+    parts = name.strip().title().split()
+    if not parts:
+        return "Property Owner", "Owner"
+
+    last_name = parts[-1]
+    full_name = " ".join(parts)
+    return full_name, last_name
+
+
 def score_lead(lead: dict, today: datetime) -> int:
     score = 30  # base
 
     # Recency
     try:
         lead_date = datetime.fromisoformat(lead["permitDate"].replace("Z", "+00:00"))
+        if lead_date.tzinfo is None:
+            lead_date = lead_date.replace(tzinfo=timezone.utc)
         days_ago = (today - lead_date).days
         if days_ago <= 30:
             score += 20
@@ -109,234 +140,172 @@ def template_outreach(lead: dict) -> str:
     )
 
 
-def _fetch_url(url: str, params: dict, label: str) -> list | None:
-    """Fetch JSON from a Socrata API URL. Returns parsed list or None on failure."""
-    try:
-        r = requests.get(url, params=params, headers=HEADERS, timeout=30)
-        r.raise_for_status()
-        if not r.text.strip():
-            print(f"  Warning: {label} returned empty response body.")
-            return None
-        if "application/json" not in r.headers.get("Content-Type", ""):
-            print(f"  Warning: {label} returned non-JSON content ({r.headers.get('Content-Type')}).")
-            return None
-        return r.json()
-    except Exception as e:
-        print(f"  Warning: {label} failed — {e}")
-        return None
+def fetch_permits(limit: int = 200) -> list[dict]:
+    """Fetch damage-related building permits from Miami-Dade ArcGIS Feature Service."""
+    print("Fetching Miami-Dade permits (ArcGIS)...")
 
+    since = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%d")
 
-def fetch_permits(limit: int = 150) -> list[dict]:
-    """Fetch damage-related building permits from Miami-Dade Open Data."""
-    print("Fetching Miami-Dade permits...")
+    # Build WHERE clause — keyword match in description
+    kw_clauses = []
+    all_keywords = [
+        "roof", "reroof", "re-roof", "hurricane", "flood", "wind damage",
+        "water damage", "structural", "fire damage", "storm", "shingle",
+        "shutter", "elevation", "mitigation",
+    ]
+    for kw in all_keywords:
+        kw_clauses.append(f"DetailDescriptionComments LIKE '%{kw}%'")
 
-    # Calculate 90-day lookback
-    since = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT00:00:00")
+    where = f"PermitIssuedDate >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
 
     params = {
-        "$limit": limit,
-        "$order": "issue_date DESC",
-        "$where": f"issue_date >= '{since}'",
+        "where": where,
+        "outFields": (
+            "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
+            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone"
+        ),
+        "resultRecordCount": limit,
+        "orderByFields": "PermitIssuedDate DESC",
+        "f": "json",
     }
 
-    raw = _fetch_url(PERMITS_URL, params, "primary permits endpoint")
-    if raw is None:
-        print("  Trying fallback permits endpoint...")
-        raw = _fetch_url(PERMITS_URL_FALLBACK, params, "fallback permits endpoint")
-    if raw is None:
-        print("  Both permit endpoints unavailable — skipping permits.")
+    try:
+        r = requests.get(ARCGIS_PERMITS_URL, params=params, headers=HEADERS, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        if "error" in data:
+            print(f"  ArcGIS error: {data['error']}")
+            return []
+        features = data.get("features", [])
+        print(f"  Got {len(features)} permit records from ArcGIS.")
+        return features
+    except Exception as e:
+        print(f"  Warning: ArcGIS permits fetch failed — {e}")
         return []
 
+
+def fetch_noaa_storm_events(lookback_years: int = 2) -> list[dict]:
+    """
+    Download NOAA storm event CSV files for Miami-Dade and return parsed events.
+    Returns list of dicts with keys: storm_event, damage_type, event_date.
+    """
+    print("Fetching NOAA storm events...")
+    try:
+        from scrapers.storms import scrape_storm_events
+        current_year = datetime.now().year
+        years = list(range(current_year - lookback_years + 1, current_year + 1))
+        events = scrape_storm_events(years)
+        print(f"  Got {len(events)} Miami-Dade storm events from NOAA.")
+        return events
+    except Exception as e:
+        print(f"  Warning: NOAA storm fetch failed — {e}")
+        return []
+
+
+def build_storm_windows(storm_events: list[dict]) -> list[dict]:
+    """
+    Collapse storm events into named windows.
+    Returns list of dicts: {label, damage_type, date, window_start, window_end}
+    where permits issued within the window are attributed to this storm.
+    """
+    # Group by storm name/label and get earliest date per group
+    groups: dict[str, dict] = {}
+    for ev in storm_events:
+        label = ev.get("storm_event", "")
+        ev_date_str = ev.get("permit_date", "")
+        try:
+            ev_date = datetime.fromisoformat(ev_date_str)
+        except Exception:
+            continue
+
+        if label not in groups:
+            groups[label] = {
+                "label": label,
+                "damage_type": ev.get("damage_type", "Hurricane/Wind"),
+                "earliest": ev_date,
+            }
+        else:
+            if ev_date < groups[label]["earliest"]:
+                groups[label]["earliest"] = ev_date
+
+    windows = []
+    for g in groups.values():
+        start = g["earliest"]
+        windows.append({
+            "label": g["label"],
+            "damage_type": g["damage_type"],
+            "window_start": start,
+            "window_end": start + timedelta(days=120),  # permits filed up to 120 days after
+        })
+
+    return windows
+
+
+def match_storm(permit_date_str: str, storm_windows: list[dict]) -> str:
+    """Return the storm event label for a permit date, or empty string."""
+    try:
+        permit_date = datetime.fromisoformat(permit_date_str)
+    except Exception:
+        return ""
+
+    # Find the most recent storm whose window contains this permit date
+    best = None
+    for w in storm_windows:
+        if w["window_start"] <= permit_date <= w["window_end"]:
+            if best is None or w["window_start"] > best["window_start"]:
+                best = w
+
+    return best["label"] if best else ""
+
+
+def permits_to_leads(features: list[dict], storm_windows: list[dict]) -> list[dict]:
+    """Convert ArcGIS feature records to lead dicts."""
     leads = []
-    for p in raw:
-        permit_type = p.get("permit_type", "") or ""
-        work_desc = p.get("work_description", "") or ""
+    for feat in features:
+        attrs = feat.get("attributes", {})
+
+        permit_type = (attrs.get("PermitType") or "").strip()
+        work_desc = (attrs.get("DetailDescriptionComments") or "").strip()
         damage_type = classify_damage(permit_type, work_desc)
         if not damage_type:
             continue
 
-        address = p.get("address", "").strip()
+        address = (attrs.get("PropertyAddress") or "").strip()
         if not address:
             continue
 
-        # Best-effort owner name
-        last = p.get("owner1_last_name", "").strip().title()
-        first = p.get("owner1_first_name", "").strip().title()
-        owner = f"{first} {last}".strip() if (first or last) else "Property Owner"
+        raw_owner = (attrs.get("OwnerName") or "").strip()
+        owner_full, _ = parse_owner_name(raw_owner)
 
-        folio = p.get("folio_number", p.get("folio", "")).strip()
-        permit_date = (p.get("issue_date") or p.get("permit_date") or "")[:10]
-        zip_code = p.get("zip_code", p.get("zip", "33125")).strip() or "33125"
-        if len(zip_code) > 5:
-            zip_code = zip_code[:5]
+        folio = (attrs.get("FolioNumber") or "").strip()
+        permit_date = (attrs.get("PermitIssuedDate") or "")[:10]  # already 'YYYY-MM-DD'
+        city = (attrs.get("City") or "Miami").strip().title() or "Miami"
 
-        lead = {
+        # Build contact from contractor phone (best available without a property lookup)
+        phone = (attrs.get("ContractorPhone") or "").strip() or None
+        contact = {"phone": phone} if phone else None
+
+        storm_event = match_storm(permit_date, storm_windows)
+
+        leads.append({
             "id": make_id(address, permit_date),
-            "ownerName": owner,
-            "propertyAddress": address,
-            "city": "Miami",
-            "zip": zip_code,
+            "ownerName": owner_full,
+            "propertyAddress": address.title(),
+            "city": city,
+            "zip": "",
             "folioNumber": folio,
             "damageType": damage_type,
-            "permitType": permit_type.title() or "Building Permit",
+            "permitType": work_desc.title() or permit_type.title() or "Building Permit",
             "permitDate": permit_date,
-            "stormEvent": "",
+            "stormEvent": storm_event,
             "date": permit_date,
-            "score": 0,  # filled below
-            "contact": None,
-            "outreachMessage": "",  # filled below
-            "status": "New",
-            "source": "permit",
-        }
-        leads.append(lead)
-
-    print(f"  Found {len(leads)} damage-related permits.")
-    return leads
-
-
-def generate_storm_leads() -> list[dict]:
-    """
-    Synthetic storm leads based on real Miami-Dade hurricane events.
-    Replace with live NOAA CSV parsing once scrapers/storms.py is on Railway.
-    """
-    print("Generating storm event leads...")
-
-    storm_leads = [
-        {
-            "ownerName": "Roberto Fernandez",
-            "propertyAddress": "8240 SW 8th St",
-            "zip": "33144",
-            "folioNumber": "30-4025-008-0010",
-            "damageType": "Hurricane/Wind",
-            "permitType": "Hurricane Damage Repair",
-            "permitDate": "2025-10-20",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": {"email": "r.fernandez@yahoo.com", "phone": "(305) 441-2218"},
-        },
-        {
-            "ownerName": "Linda Kowalski",
-            "propertyAddress": "12301 SW 107th Ave",
-            "zip": "33186",
-            "folioNumber": "30-5933-003-1080",
-            "damageType": "Flood",
-            "permitType": "Flood Remediation",
-            "permitDate": "2025-10-18",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": {"phone": "(786) 502-9934"},
-        },
-        {
-            "ownerName": "Carlos Esteban Vega",
-            "propertyAddress": "3140 NW 18th Ave",
-            "zip": "33142",
-            "folioNumber": "01-3112-029-0400",
-            "damageType": "Hurricane/Wind",
-            "permitType": "Roof Replacement",
-            "permitDate": "2025-10-15",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": None,
-        },
-        {
-            "ownerName": "Angela Moreau",
-            "propertyAddress": "950 NE 96th St",
-            "zip": "33138",
-            "folioNumber": "01-3205-011-0070",
-            "damageType": "Roof",
-            "permitType": "Roof Replacement",
-            "permitDate": "2025-10-22",
-            "stormEvent": "Hurricane Helene (Sept 2025)",
-            "contact": {"email": "amoreau@gmail.com"},
-        },
-        {
-            "ownerName": "Marcus Johnson",
-            "propertyAddress": "2650 NW 54th St",
-            "zip": "33142",
-            "folioNumber": "01-3113-038-0090",
-            "damageType": "Structural",
-            "permitType": "Structural Repair",
-            "permitDate": "2025-09-30",
-            "stormEvent": "Hurricane Helene (Sept 2025)",
-            "contact": {"phone": "(305) 688-7741"},
-        },
-        {
-            "ownerName": "Gabriela Suarez",
-            "propertyAddress": "7710 SW 48th St",
-            "zip": "33155",
-            "folioNumber": "30-4013-006-0240",
-            "damageType": "Flood",
-            "permitType": "Water Damage Repair",
-            "permitDate": "2025-10-05",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": {"email": "gsuarez@hotmail.com", "phone": "(786) 344-1892"},
-        },
-        {
-            "ownerName": "David Nguyen",
-            "propertyAddress": "14450 SW 8th St",
-            "zip": "33184",
-            "folioNumber": "30-4922-006-1300",
-            "damageType": "Hurricane/Wind",
-            "permitType": "Wind Mitigation Repair",
-            "permitDate": "2025-10-12",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": None,
-        },
-        {
-            "ownerName": "Patricia Dunmore",
-            "propertyAddress": "321 NW 42nd Ave",
-            "zip": "33126",
-            "folioNumber": "01-4109-025-0600",
-            "damageType": "Roof",
-            "permitType": "Re-Roof",
-            "permitDate": "2025-09-28",
-            "stormEvent": "Hurricane Helene (Sept 2025)",
-            "contact": {"email": "p.dunmore@outlook.com"},
-        },
-        {
-            "ownerName": "Jose Antonio Peña",
-            "propertyAddress": "5522 NW 7th St",
-            "zip": "33126",
-            "folioNumber": "01-4101-013-0290",
-            "damageType": "Hurricane/Wind",
-            "permitType": "Hurricane Damage Repair",
-            "permitDate": "2025-10-08",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": {"phone": "(305) 266-4410"},
-        },
-        {
-            "ownerName": "Stephanie Clarke",
-            "propertyAddress": "1860 SW 27th Ave",
-            "zip": "33145",
-            "folioNumber": "01-4110-027-0140",
-            "damageType": "Flood",
-            "permitType": "Flood Damage Restoration",
-            "permitDate": "2025-10-19",
-            "stormEvent": "Hurricane Milton (Oct 2024)",
-            "contact": {"email": "s.clarke88@gmail.com", "phone": "(305) 858-2200"},
-        },
-    ]
-
-    leads = []
-    for s in storm_leads:
-        lead = {
-            "id": make_id(s["propertyAddress"], s["permitDate"]),
-            "ownerName": s["ownerName"],
-            "propertyAddress": s["propertyAddress"],
-            "city": "Miami",
-            "zip": s["zip"],
-            "folioNumber": s["folioNumber"],
-            "damageType": s["damageType"],
-            "permitType": s["permitType"],
-            "permitDate": s["permitDate"],
-            "stormEvent": s["stormEvent"],
-            "date": s["permitDate"],
             "score": 0,
-            "contact": s["contact"],
+            "contact": contact,
             "outreachMessage": "",
             "status": "New",
-            "source": "storm",
-        }
-        leads.append(lead)
+            "source": "permit",
+        })
 
-    print(f"  Generated {len(leads)} storm leads.")
     return leads
 
 
@@ -353,32 +322,41 @@ def deduplicate(leads: list[dict]) -> list[dict]:
 def run():
     today = datetime.now(timezone.utc)
 
-    permit_leads = fetch_permits()
-    storm_leads = generate_storm_leads()
+    # 1. Fetch permits from ArcGIS
+    permit_features = fetch_permits()
 
-    all_leads = deduplicate(permit_leads + storm_leads)
+    # 2. Fetch NOAA storm events for cross-referencing
+    storm_events = fetch_noaa_storm_events(lookback_years=2)
+    storm_windows = build_storm_windows(storm_events)
+    print(f"  Built {len(storm_windows)} storm windows for cross-referencing.")
 
-    # Score all leads
-    for lead in all_leads:
+    # 3. Convert permits to leads, tagged with storm events
+    leads = permits_to_leads(permit_features, storm_windows)
+    leads = deduplicate(leads)
+
+    # 4. Score and add outreach templates
+    for lead in leads:
         lead["score"] = score_lead(lead, today)
         lead["outreachMessage"] = template_outreach(lead)
 
-    # Sort by score descending
-    all_leads.sort(key=lambda l: l["score"], reverse=True)
+    # 5. Sort by score descending
+    leads.sort(key=lambda l: l["score"], reverse=True)
 
-    # Ensure output directory exists
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
     output = {
-        "leads": all_leads,
+        "leads": leads,
         "lastScraped": today.isoformat(),
-        "count": len(all_leads),
+        "count": len(leads),
     }
 
     with open(OUTPUT_PATH, "w") as f:
         json.dump(output, f, indent=2)
 
-    print(f"\nSaved {len(all_leads)} leads to {OUTPUT_PATH}")
+    print(f"\nSaved {len(leads)} leads to {OUTPUT_PATH}")
+    storm_linked = sum(1 for l in leads if l["stormEvent"])
+    with_contact = sum(1 for l in leads if l["contact"])
+    print(f"  Storm-linked: {storm_linked} | With contact: {with_contact}")
     print("Next step: run the Claude Code scheduled task to enrich outreach messages.")
 
 

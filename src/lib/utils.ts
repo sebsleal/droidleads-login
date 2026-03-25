@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { ScoreTier, DamageType } from '@/types';
+import type { ScoreTier, DamageType, Lead } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -71,7 +71,9 @@ export function isWithinDays(isoDate: string, days: number): boolean {
   return date >= cutoff;
 }
 
-export function downloadCSV(leads: import('@/types').Lead[]) {
+type LeadWithScoreReasoning = Lead & { score_reasoning?: string };
+
+export function downloadCSV(leads: Lead[]) {
   const headers = [
     'ID',
     'Owner Name',
@@ -81,13 +83,30 @@ export function downloadCSV(leads: import('@/types').Lead[]) {
     'Folio Number',
     'Damage Type',
     'Score',
+    'Score Reasoning',
     'Date',
     'Email',
     'Phone',
     'Status',
+    'Contacted At',
+    'Converted At',
+    'Claim Value',
+    'Contact Method',
+    'Notes',
     'Permit Type',
     'Permit Date',
     'Storm Event',
+    'Source',
+    'Assessed Value',
+    'Homestead',
+    'Owner Mailing Address',
+    'Absentee Owner',
+    'Underpaid Flag',
+    'Permit Status',
+    'Contractor Name',
+    'Permit Value',
+    'Roof Age',
+    'Prior Permit Count',
   ];
 
   const rows = leads.map((l) => [
@@ -99,13 +118,30 @@ export function downloadCSV(leads: import('@/types').Lead[]) {
     l.folioNumber,
     l.damageType,
     l.score,
+    l.scoreReasoning ?? (l as LeadWithScoreReasoning).score_reasoning ?? '',
     l.date,
     l.contact?.email ?? '',
     l.contact?.phone ?? '',
     l.status,
+    l.contactedAt ?? '',
+    l.convertedAt ?? '',
+    l.claimValue ?? '',
+    l.contactMethod ?? '',
+    l.notes ?? '',
     l.permitType,
     l.permitDate,
     l.stormEvent,
+    l.source ?? '',
+    l.assessedValue ?? '',
+    l.homestead != null ? (l.homestead ? 'Yes' : 'No') : '',
+    l.ownerMailingAddress ?? '',
+    l.absenteeOwner != null ? (l.absenteeOwner ? 'Yes' : 'No') : '',
+    l.underpaidFlag ? 'Yes' : '',
+    l.permitStatus ?? '',
+    l.contractorName ?? '',
+    l.permitValue ?? '',
+    l.roofAge ?? '',
+    l.priorPermitCount ?? '',
   ]);
 
   const csv = [headers, ...rows]

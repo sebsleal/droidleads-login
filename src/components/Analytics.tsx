@@ -88,7 +88,8 @@ export default function Analytics({ leads }: AnalyticsProps) {
   }))
 
   // Status breakdown
-  const statusData = ['New', 'Contacted', 'Closed'].map((status) => ({
+  const statusOrder: Lead['status'][] = ['New', 'Contacted', 'Converted', 'Closed']
+  const statusData = statusOrder.map((status) => ({
     status,
     count: leads.filter((l) => l.status === status).length,
   }))
@@ -96,6 +97,7 @@ export default function Analytics({ leads }: AnalyticsProps) {
   const STATUS_COLORS: Record<string, string> = {
     New: '#3b82f6',
     Contacted: '#f59e0b',
+    Converted: '#10b981',
     Closed: '#94a3b8',
   }
 
@@ -240,7 +242,7 @@ export default function Analytics({ leads }: AnalyticsProps) {
 
           <div className="space-y-4 mt-6">
             {statusData.map((s) => {
-              const pct = Math.round((s.count / leads.length) * 100)
+              const pct = leads.length > 0 ? Math.round((s.count / leads.length) * 100) : 0
               return (
                 <div key={s.status}>
                   <div className="flex items-center justify-between mb-1.5">
@@ -286,7 +288,7 @@ export default function Analytics({ leads }: AnalyticsProps) {
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-slate-900 score-number">
-                {Math.round(leads.reduce((s, l) => s + l.score, 0) / leads.length)}
+                {leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.score, 0) / leads.length) : 0}
               </p>
               <p className="text-xs text-slate-400 mt-0.5">Avg Score</p>
             </div>

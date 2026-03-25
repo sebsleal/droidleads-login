@@ -5,7 +5,7 @@ export type DamageType =
   | 'Fire'
   | 'Structural';
 
-export type LeadStatus = 'New' | 'Contacted' | 'Closed';
+export type LeadStatus = 'New' | 'Contacted' | 'Converted' | 'Closed';
 
 export type ScoreTier = 'high' | 'medium' | 'low';
 
@@ -30,7 +30,13 @@ export interface Lead {
   permitDate: string; // ISO date string
   stormEvent: string;
   outreachMessage: string;
+  scoreReasoning?: string;
   source?: string;
+  contactedAt?: string;
+  convertedAt?: string;
+  claimValue?: number;
+  contactMethod?: string;
+  notes?: string;
   // PA-enriched fields (present after property appraiser lookup)
   homestead?: boolean;
   ownerMailingAddress?: string;

@@ -6,4 +6,4 @@ name = "scraper"
 
 [services.deploy]
 startCommand = "python run_scraper.py"
-cronSchedule = "0 6 * * *"  # 2am EST = 6am UTC
+cronSchedule = "0 */6 * * *"  # every 6 hours

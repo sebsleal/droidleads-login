@@ -432,6 +432,21 @@ def run():
     except Exception as e:
         print(f"  Warning: PA enrichment failed — {e}")
 
+    # 6. Contact enrichment (Sunbiz + voter roll) for top leads
+    try:
+        from scrapers.sunbiz import enrich_business_owners
+        from scrapers.voter_lookup import enrich_with_voter_data
+
+        leads = enrich_business_owners(leads, top_n=20, delay=2.0)
+        leads = enrich_with_voter_data(leads, top_n=100)
+
+        # Re-score after contact enrichment
+        for lead in leads:
+            lead["score"] = score_lead(lead, today)
+        leads.sort(key=lambda l: l["score"], reverse=True)
+    except Exception as e:
+        print(f"  Warning: Contact enrichment failed — {e}")
+
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
     output = {

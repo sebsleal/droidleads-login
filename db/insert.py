@@ -52,6 +52,14 @@ def upsert_leads(
     # Map lead dicts to DB column names
     rows = []
     for lead in leads:
+        def pick(*keys: str):
+            for key in keys:
+                if key in lead:
+                    value = lead.get(key)
+                    if value is not None and value != "":
+                        return value
+            return None
+
         rows.append({
             "id": lead.get("id") or lead.get("dedup_hash"),
             "dedup_hash": lead["dedup_hash"],
@@ -70,8 +78,14 @@ def upsert_leads(
             "contact_email": lead.get("contact_email") or None,
             "contact_phone": lead.get("contact_phone") or None,
             "outreach_message": lead.get("outreach_message") or lead.get("outreachMessage") or "",
+            "score_reasoning": pick("score_reasoning", "scoreReasoning"),
             "noaa_episode_id": lead.get("noaa_episode_id") or None,
             "noaa_event_id": lead.get("noaa_event_id") or None,
+            "contacted_at": pick("contacted_at", "contactedAt"),
+            "converted_at": pick("converted_at", "convertedAt"),
+            "claim_value": pick("claim_value", "claimValue"),
+            "contact_method": pick("contact_method", "contactMethod"),
+            "notes": pick("notes"),
         })
 
     try:

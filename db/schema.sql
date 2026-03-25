@@ -36,7 +36,7 @@ create table if not exists leads (
     score           smallint    not null default 30
                     check (score between 0 and 100),
     status          text        not null default 'New'
-                    check (status in ('New', 'Contacted', 'Closed')),
+                    check (status in ('New', 'Contacted', 'Converted', 'Closed')),
     source          text        not null default 'permit'
                     check (source in ('permit', 'storm')),
 
@@ -46,6 +46,14 @@ create table if not exists leads (
 
     -- Outreach
     outreach_message text       not null default '',
+    score_reasoning  text,
+
+    -- Conversion tracking
+    contacted_at    timestamptz,
+    converted_at    timestamptz,
+    claim_value     numeric,
+    contact_method  text,
+    notes           text,
 
     -- NOAA-specific fields (null for permit-sourced leads)
     noaa_episode_id  text,

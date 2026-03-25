@@ -63,33 +63,41 @@ def scrape_damage_permits(max_records: int = 500, lookback_days: int = 90) -> li
     kw_clauses = [f"DetailDescriptionComments LIKE '%{kw}%'" for kw in DAMAGE_KEYWORDS]
     where = f"PermitIssuedDate >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
 
-    params = {
+    base_params = {
         "where": where,
         "outFields": (
             "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
             "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone"
         ),
-        "resultRecordCount": max_records,
+        "resultRecordCount": min(max_records, 1000),
         "orderByFields": "PermitIssuedDate DESC",
         "f": "json",
     }
 
+    all_features = []
+    offset = 0
     try:
-        resp = requests.get(ARCGIS_URL, params=params, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
+        while True:
+            params = {**base_params, "resultOffset": offset}
+            resp = requests.get(ARCGIS_URL, params=params, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            if "error" in data:
+                print(f"[permits] ArcGIS error: {data['error']}")
+                break
+            features = data.get("features", [])
+            all_features.extend(features)
+            if not data.get("exceededTransferLimit", False) or len(all_features) >= max_records:
+                break
+            offset += len(features)
+            print(f"[permits] Paginating... fetched {len(all_features)} so far")
     except requests.RequestException as e:
         print(f"[permits] Fetch error: {e}")
         return []
 
-    if "error" in data:
-        print(f"[permits] ArcGIS error: {data['error']}")
-        return []
-
-    features = data.get("features", [])
     results: list[dict[str, Any]] = []
 
-    for feat in features:
+    for feat in all_features:
         attrs = feat.get("attributes", {})
         permit_type = (attrs.get("PermitType") or "").strip()
         work_desc = (attrs.get("DetailDescriptionComments") or "").strip()
@@ -129,7 +137,7 @@ def scrape_damage_permits(max_records: int = 500, lookback_days: int = 90) -> li
             "contact_phone": phone,
         })
 
-    print(f"[permits] Fetched {len(features)} records, kept {len(results)} damage-related permits")
+    print(f"[permits] Fetched {len(all_features)} records, kept {len(results)} damage-related permits")
     return results
 
 

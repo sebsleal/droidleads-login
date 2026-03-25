@@ -24,11 +24,12 @@ interface LeadDrawerProps {
   onUpdateStatus: (id: string, status: Lead['status']) => void
 }
 
-const STATUS_OPTIONS: Lead['status'][] = ['New', 'Contacted', 'Closed']
+const STATUS_OPTIONS: Lead['status'][] = ['New', 'Contacted', 'Converted', 'Closed']
 
 const STATUS_ACTIVE: Record<Lead['status'], string> = {
   New: 'bg-blue-600 text-white border-blue-600',
   Contacted: 'bg-amber-500 text-white border-amber-500',
+  Converted: 'bg-emerald-600 text-white border-emerald-600',
   Closed: 'bg-slate-400 text-white border-slate-400',
 }
 
@@ -319,6 +320,52 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus }: LeadDrawer
               </p>
             </div>
           </section>
+
+          {/* Engagement & conversion */}
+          {(lead.contactedAt || lead.convertedAt || lead.contactMethod || lead.notes || lead.claimValue != null) && (
+            <section>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                Engagement & Conversion
+              </h3>
+              <div className="space-y-2.5">
+                {lead.contactedAt && (
+                  <DetailRow
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="Contacted At"
+                    value={formatDate(lead.contactedAt)}
+                  />
+                )}
+                {lead.convertedAt && (
+                  <DetailRow
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="Converted At"
+                    value={formatDate(lead.convertedAt)}
+                  />
+                )}
+                {lead.contactMethod && (
+                  <DetailRow
+                    icon={<MessageSquare className="w-4 h-4" />}
+                    label="Contact Method"
+                    value={lead.contactMethod}
+                  />
+                )}
+                {lead.claimValue != null && (
+                  <DetailRow
+                    icon={<DollarSign className="w-4 h-4" />}
+                    label="Claim Value"
+                    value={`$${lead.claimValue.toLocaleString()}`}
+                  />
+                )}
+                {lead.notes && (
+                  <DetailRow
+                    icon={<MessageSquare className="w-4 h-4" />}
+                    label="Notes"
+                    value={lead.notes}
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Status selector */}
           <section>

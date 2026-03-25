@@ -6,8 +6,9 @@ Pipeline:
   2. Fetch NOAA storm events (scrapers/storms.py)
   3. Optionally enrich leads with owner info from PA (scrapers/property.py)
   4. Deduplicate (scrapers/dedup.py)
-  5. Insert / upsert to Supabase (db/insert.py)
-  6. Enrich new leads with Claude scoring + outreach (enrichment/enrich.py)
+  5. Contact enrichment (voter roll + Sunbiz) for top leads
+  6. Insert / upsert to Supabase (db/insert.py)
+  7. Enrich new leads with Claude scoring + outreach (enrichment/enrich.py)
 
 Scheduled via Railway cron: 0 6 * * * (6am UTC = 2am EST)
 """
@@ -52,7 +53,8 @@ def run() -> int:
     banner("Step 2: NOAA Storm Events")
     try:
         from scrapers.storms import scrape_storm_events
-        storm_leads = scrape_storm_events(years=[2024, 2025])
+        current_year = datetime.now(timezone.utc).year
+        storm_leads = scrape_storm_events(years=[current_year - 1, current_year])
         print(f"[run] Storm events scraped: {len(storm_leads)}")
     except Exception as e:
         print(f"[run] Storms scraper failed: {e}")
@@ -66,19 +68,15 @@ def run() -> int:
         return 1
 
     # -------------------------------------------------------------------
-    # 3. Optional: Enrich with PA owner info (skipped if too many leads
-    #    to avoid rate-limiting the PA API)
+    # 3. Enrich with PA owner info (top 100 leads by position)
     # -------------------------------------------------------------------
-    if len(all_leads) <= 100:
-        banner("Step 3: Property Appraiser Owner Lookup")
-        try:
-            from scrapers.property import enrich_leads_with_owner_info
-            all_leads = enrich_leads_with_owner_info(all_leads, max_lookups=50)
-            print(f"[run] Owner info enrichment complete")
-        except Exception as e:
-            print(f"[run] Property lookup failed (non-fatal): {e}")
-    else:
-        print("[run] Skipping PA lookups (too many leads for this run)")
+    banner("Step 3: Property Appraiser Owner Lookup")
+    try:
+        from scrapers.property import enrich_leads_with_owner_info
+        all_leads = enrich_leads_with_owner_info(all_leads, max_lookups=100)
+        print(f"[run] Owner info enrichment complete")
+    except Exception as e:
+        print(f"[run] Property lookup failed (non-fatal): {e}")
 
     # -------------------------------------------------------------------
     # 4. Deduplicate
@@ -121,9 +119,30 @@ def run() -> int:
         print(f"[run] Pre-scoring failed (non-fatal): {e}")
 
     # -------------------------------------------------------------------
-    # 6. Insert to Supabase
+    # 6. Contact enrichment (voter roll + Sunbiz)
     # -------------------------------------------------------------------
-    banner("Step 6: Upsert to Supabase")
+    banner("Step 6: Contact Enrichment")
+    try:
+        from scrapers.sunbiz import enrich_business_owners
+        from scrapers.voter_lookup import enrich_with_voter_data
+        from enrichment.score_prompt import _algorithmic_score
+
+        unique_leads.sort(key=lambda l: l.get("score", 0), reverse=True)
+        unique_leads = enrich_business_owners(unique_leads, top_n=20, delay=2.0)
+        unique_leads = enrich_with_voter_data(unique_leads, top_n=100)
+
+        # Refresh pre-scores now that contact info may exist
+        for lead in unique_leads:
+            lead["score"] = _algorithmic_score(lead)
+
+        print("[run] Contact enrichment complete")
+    except Exception as e:
+        print(f"[run] Contact enrichment failed (non-fatal): {e}")
+
+    # -------------------------------------------------------------------
+    # 7. Insert to Supabase
+    # -------------------------------------------------------------------
+    banner("Step 7: Upsert to Supabase")
     try:
         from db.insert import upsert_leads
         result = upsert_leads(unique_leads, supabase=supabase)
@@ -133,9 +152,9 @@ def run() -> int:
         return 1
 
     # -------------------------------------------------------------------
-    # 7. Claude enrichment (score + outreach messages)
+    # 8. Claude enrichment (score + outreach messages)
     # -------------------------------------------------------------------
-    banner("Step 7: Claude Enrichment")
+    banner("Step 8: Claude Enrichment")
     try:
         from enrichment.enrich import run_enrichment
         enrich_result = run_enrichment(

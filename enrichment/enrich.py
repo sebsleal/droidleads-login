@@ -13,7 +13,7 @@ import anthropic
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from enrichment.score_prompt import score_lead
+from enrichment.score_prompt import score_lead, score_and_generate_outreach
 from enrichment.outreach_prompt import generate_outreach_message
 
 load_dotenv()
@@ -85,6 +85,7 @@ def update_lead(
         supabase.table("leads").update({
             "score": score,
             "outreach_message": outreach_message,
+            "score_reasoning": score_reasoning,
             "enriched_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", lead_id).execute()
         return True
@@ -136,12 +137,10 @@ def run_enrichment(
         address = lead.get("address", "Unknown")
 
         try:
-            # Score
-            score_result = score_lead(lead, client=anthropic_client)
-            time.sleep(RATE_LIMIT_DELAY)
-
-            # Outreach message
-            outreach = generate_outreach_message(lead, client=anthropic_client)
+            # Score + outreach in a single Claude call
+            result = score_and_generate_outreach(lead, client=anthropic_client)
+            score_result = {"score": result["score"], "reasoning": result["reasoning"]}
+            outreach = result["outreach_message"]
             time.sleep(RATE_LIMIT_DELAY)
 
             processed += 1

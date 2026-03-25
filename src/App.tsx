@@ -87,9 +87,24 @@ export default function App() {
   )
 
   function handleUpdateStatus(id: string, status: Lead['status']) {
-    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)))
+    const nowIso = new Date().toISOString()
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id !== id) return l
+        const next: Lead = { ...l, status }
+        if (status === 'Contacted' && !l.contactedAt) next.contactedAt = nowIso
+        if (status === 'Converted' && !l.convertedAt) next.convertedAt = nowIso
+        return next
+      })
+    )
     if (selectedLead?.id === id) {
-      setSelectedLead((prev) => (prev ? { ...prev, status } : null))
+      setSelectedLead((prev) => {
+        if (!prev) return null
+        const next: Lead = { ...prev, status }
+        if (status === 'Contacted' && !prev.contactedAt) next.contactedAt = nowIso
+        if (status === 'Converted' && !prev.convertedAt) next.convertedAt = nowIso
+        return next
+      })
     }
   }
 

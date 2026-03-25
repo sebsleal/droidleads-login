@@ -49,7 +49,12 @@ def upsert_leads(
     if supabase is None:
         supabase = get_client()
 
-    # Map lead dicts to DB column names
+    # Map lead dicts to DB column names.
+    # USER-PROTECTED fields (contacted_at, converted_at, claim_value,
+    # contact_method, notes, status) are only included in the payload when
+    # the incoming lead actually carries a non-null value.  Combined with
+    # default_to_null=False on the upsert call, this ensures that a scraper
+    # re-run never overwrites data that an adjuster has manually entered.
     rows = []
     for lead in leads:
         def pick(*keys: str):
@@ -60,7 +65,7 @@ def upsert_leads(
                         return value
             return None
 
-        rows.append({
+        row: dict = {
             "id": lead.get("id") or lead.get("dedup_hash"),
             "dedup_hash": lead["dedup_hash"],
             "owner_name": lead.get("owner_name") or "Property Owner",
@@ -73,7 +78,6 @@ def upsert_leads(
             "permit_date": lead.get("permit_date") or lead.get("permitDate") or None,
             "storm_event": lead.get("storm_event") or lead.get("stormEvent") or "",
             "score": lead.get("score") or 30,
-            "status": lead.get("status") or "New",
             "source": lead.get("source") or "permit",
             "contact_email": lead.get("contact_email") or None,
             "contact_phone": lead.get("contact_phone") or None,
@@ -81,12 +85,24 @@ def upsert_leads(
             "score_reasoning": pick("score_reasoning", "scoreReasoning"),
             "noaa_episode_id": lead.get("noaa_episode_id") or None,
             "noaa_event_id": lead.get("noaa_event_id") or None,
+        }
+
+        # Only include user-protected fields when they carry a real value so
+        # that default_to_null=False can preserve whatever the adjuster set
+        # in a previous session.
+        _user_fields = {
+            "status": lead.get("status"),
             "contacted_at": pick("contacted_at", "contactedAt"),
             "converted_at": pick("converted_at", "convertedAt"),
             "claim_value": pick("claim_value", "claimValue"),
             "contact_method": pick("contact_method", "contactMethod"),
             "notes": pick("notes"),
-        })
+        }
+        for col, val in _user_fields.items():
+            if val is not None and val != "":
+                row[col] = val
+
+        rows.append(row)
 
     try:
         response = (
@@ -94,8 +110,10 @@ def upsert_leads(
             .upsert(
                 rows,
                 on_conflict="dedup_hash",
-                # Preserve user-set fields; only update scraper-controlled fields
                 ignore_duplicates=False,
+                # Columns absent from the payload keep their existing DB value
+                # instead of being set to NULL — this is what protects user data.
+                default_to_null=False,
             )
             .execute()
         )

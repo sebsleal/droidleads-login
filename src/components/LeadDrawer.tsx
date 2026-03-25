@@ -18,10 +18,13 @@ import type { Lead } from '@/types'
 import { formatDate, damageTypeColor, cn } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
 
+type TrackingPatch = Partial<Pick<Lead, 'status' | 'contactedAt' | 'convertedAt' | 'claimValue' | 'contactMethod' | 'notes'>>
+
 interface LeadDrawerProps {
   lead: Lead
   onClose: () => void
   onUpdateStatus: (id: string, status: Lead['status']) => void
+  onUpdateTracking?: (id: string, patch: TrackingPatch) => void
 }
 
 const STATUS_OPTIONS: Lead['status'][] = ['New', 'Contacted', 'Converted', 'Closed']
@@ -35,9 +38,17 @@ const STATUS_ACTIVE: Record<Lead['status'], string> = {
 
 const STATUS_INACTIVE = 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
 
-export default function LeadDrawer({ lead, onClose, onUpdateStatus }: LeadDrawerProps) {
+export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTracking }: LeadDrawerProps) {
   const [copied, setCopied] = useState(false)
+  const [notesValue, setNotesValue] = useState(lead.notes ?? '')
+  const [claimValue, setClaimValue] = useState(lead.claimValue != null ? String(lead.claimValue) : '')
   const drawerRef = useRef<HTMLDivElement>(null)
+
+  // Sync local editable state when the lead prop changes (e.g. different lead opened)
+  useEffect(() => {
+    setNotesValue(lead.notes ?? '')
+    setClaimValue(lead.claimValue != null ? String(lead.claimValue) : '')
+  }, [lead.id, lead.notes, lead.claimValue])
 
   // Close on Escape key
   useEffect(() => {
@@ -322,50 +333,99 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus }: LeadDrawer
           </section>
 
           {/* Engagement & conversion */}
-          {(lead.contactedAt || lead.convertedAt || lead.contactMethod || lead.notes || lead.claimValue != null) && (
-            <section>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                Engagement & Conversion
-              </h3>
-              <div className="space-y-2.5">
-                {lead.contactedAt && (
-                  <DetailRow
-                    icon={<Calendar className="w-4 h-4" />}
-                    label="Contacted At"
-                    value={formatDate(lead.contactedAt)}
-                  />
-                )}
-                {lead.convertedAt && (
-                  <DetailRow
-                    icon={<Calendar className="w-4 h-4" />}
-                    label="Converted At"
-                    value={formatDate(lead.convertedAt)}
-                  />
-                )}
-                {lead.contactMethod && (
-                  <DetailRow
-                    icon={<MessageSquare className="w-4 h-4" />}
-                    label="Contact Method"
-                    value={lead.contactMethod}
-                  />
-                )}
-                {lead.claimValue != null && (
-                  <DetailRow
-                    icon={<DollarSign className="w-4 h-4" />}
-                    label="Claim Value"
-                    value={`$${lead.claimValue.toLocaleString()}`}
-                  />
-                )}
-                {lead.notes && (
-                  <DetailRow
-                    icon={<MessageSquare className="w-4 h-4" />}
-                    label="Notes"
-                    value={lead.notes}
-                  />
-                )}
+          <section>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+              Engagement & Conversion
+            </h3>
+            <div className="space-y-3">
+              {/* Timestamps — read-only, auto-set by status changes */}
+              {lead.contactedAt && (
+                <DetailRow
+                  icon={<Calendar className="w-4 h-4" />}
+                  label="Contacted At"
+                  value={formatDate(lead.contactedAt)}
+                />
+              )}
+              {lead.convertedAt && (
+                <DetailRow
+                  icon={<Calendar className="w-4 h-4" />}
+                  label="Converted At"
+                  value={formatDate(lead.convertedAt)}
+                />
+              )}
+
+              {/* Contact Method — editable select */}
+              <div className="flex items-start gap-3">
+                <span className="mt-2 text-slate-400 flex-shrink-0">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-slate-400 block mb-1">Contact Method</span>
+                  <select
+                    value={lead.contactMethod ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value || undefined
+                      onUpdateTracking?.(lead.id, { contactMethod: val })
+                    }}
+                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5
+                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">— not set —</option>
+                    <option value="Phone">Phone</option>
+                    <option value="Email">Email</option>
+                    <option value="In-Person">In-Person</option>
+                    <option value="Mail">Mail</option>
+                    <option value="Text">Text</option>
+                  </select>
+                </div>
               </div>
-            </section>
-          )}
+
+              {/* Claim Value — editable number input */}
+              <div className="flex items-start gap-3">
+                <span className="mt-2 text-slate-400 flex-shrink-0">
+                  <DollarSign className="w-4 h-4" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-slate-400 block mb-1">Claim Value</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    placeholder="e.g. 45000"
+                    value={claimValue}
+                    onChange={(e) => setClaimValue(e.target.value)}
+                    onBlur={() => {
+                      const num = parseFloat(claimValue)
+                      onUpdateTracking?.(lead.id, { claimValue: isNaN(num) ? undefined : num })
+                    }}
+                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5
+                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Notes — editable textarea */}
+              <div className="flex items-start gap-3">
+                <span className="mt-2 text-slate-400 flex-shrink-0">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-slate-400 block mb-1">Notes</span>
+                  <textarea
+                    rows={3}
+                    placeholder="Add adjuster notes…"
+                    value={notesValue}
+                    onChange={(e) => setNotesValue(e.target.value)}
+                    onBlur={() => {
+                      onUpdateTracking?.(lead.id, { notes: notesValue.trim() || undefined })
+                    }}
+                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5
+                               resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Status selector */}
           <section>

@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { BarChart2, Users } from 'lucide-react'
 import type { FilterState, Lead } from '@/types'
 import { isWithinDays } from '@/lib/utils'
+import { useTracking } from '@/lib/useTracking'
 import Header from '@/components/Header'
 import StatsRow from '@/components/StatsRow'
 import FilterBar from '@/components/FilterBar'
@@ -25,8 +26,10 @@ const DEFAULT_FILTERS: FilterState = {
 export default function App() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [leads, setLeads] = useState<Lead[]>([])
+  const [rawLeads, setRawLeads] = useState<Lead[]>([])
   const [lastScraped, setLastScraped] = useState<string | null>(null)
+
+  const { trackingMap, saveTracking } = useTracking()
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -41,7 +44,7 @@ export default function App() {
       })
       .then((data: { leads: Lead[]; lastScraped: string }) => {
         if (data.leads?.length > 0) {
-          setLeads(data.leads)
+          setRawLeads(data.leads)
           setLastScraped(data.lastScraped)
         }
       })
@@ -49,6 +52,24 @@ export default function App() {
         // No leads.json yet — using mock data
       })
   }, [])
+
+  // Merge Supabase tracking overlay on top of JSON leads
+  const leads = useMemo(() => {
+    if (trackingMap.size === 0) return rawLeads
+    return rawLeads.map((lead) => {
+      const t = trackingMap.get(lead.id)
+      if (!t) return lead
+      return {
+        ...lead,
+        status: t.status,
+        contactedAt: t.contacted_at ?? undefined,
+        convertedAt: t.converted_at ?? undefined,
+        claimValue: t.claim_value ?? undefined,
+        contactMethod: t.contact_method ?? undefined,
+        notes: t.notes ?? undefined,
+      }
+    })
+  }, [rawLeads, trackingMap])
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -88,23 +109,30 @@ export default function App() {
 
   function handleUpdateStatus(id: string, status: Lead['status']) {
     const nowIso = new Date().toISOString()
-    setLeads((prev) =>
-      prev.map((l) => {
-        if (l.id !== id) return l
-        const next: Lead = { ...l, status }
-        if (status === 'Contacted' && !l.contactedAt) next.contactedAt = nowIso
-        if (status === 'Converted' && !l.convertedAt) next.convertedAt = nowIso
-        return next
-      })
-    )
+    const current = leads.find((l) => l.id === id)
+    const patch: Parameters<typeof saveTracking>[1] = { status }
+    if (status === 'Contacted' && !current?.contactedAt) patch.contactedAt = nowIso
+    if (status === 'Converted' && !current?.convertedAt) patch.convertedAt = nowIso
+
+    // Persist to Supabase (optimistic — also updates trackingMap which rerenders leads)
+    saveTracking(id, patch)
+
+    // Keep selectedLead in sync so the drawer reflects the change immediately
     if (selectedLead?.id === id) {
       setSelectedLead((prev) => {
         if (!prev) return null
         const next: Lead = { ...prev, status }
-        if (status === 'Contacted' && !prev.contactedAt) next.contactedAt = nowIso
-        if (status === 'Converted' && !prev.convertedAt) next.convertedAt = nowIso
+        if (patch.contactedAt) next.contactedAt = patch.contactedAt
+        if (patch.convertedAt) next.convertedAt = patch.convertedAt
         return next
       })
+    }
+  }
+
+  function handleUpdateTracking(id: string, patch: Parameters<typeof saveTracking>[1]) {
+    saveTracking(id, patch)
+    if (selectedLead?.id === id) {
+      setSelectedLead((prev) => prev ? { ...prev, ...patch } : null)
     }
   }
 
@@ -176,6 +204,7 @@ export default function App() {
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
           onUpdateStatus={handleUpdateStatus}
+          onUpdateTracking={handleUpdateTracking}
         />
       )}
     </div>

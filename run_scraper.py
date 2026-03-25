@@ -12,7 +12,7 @@ Pipeline:
   7. Insert / upsert to Supabase (db/insert.py)
   8. Regenerate public/leads.json with TEMPLATE: outreach placeholders
      and public/storm_candidates.json for Storm Watch
-     (Claude Code automation fills lead outreach placeholders via enrich_leads.py)
+     (Codex / ChatGPT automation fills lead outreach placeholders via enrich_leads.py)
 
 Scheduled via Railway cron: 0 */6 * * * (every 6 hours)
 """
@@ -208,7 +208,7 @@ def run() -> int:
     # -------------------------------------------------------------------
     # 8. Regenerate public/leads.json and public/storm_candidates.json
     #    Outreach messages are written as TEMPLATE: placeholders in leads.json.
-    #    Claude Code automation (enrich_leads.py) fills those in via the IDE.
+    #    Codex / ChatGPT automation (enrich_leads.py) fills those in via the IDE.
     # -------------------------------------------------------------------
     banner("Step 8: Regenerate dashboard datasets")
     try:

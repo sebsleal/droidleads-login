@@ -1,14 +1,14 @@
 """
-enrich_leads.py — Claude Code enrichment runner
+enrich_leads.py - Codex enrichment runner
 
-This script is called by the Claude Code scheduled automation.
+This script is intended for a Codex / ChatGPT automation.
 It reads public/leads.json, finds leads with TEMPLATE: outreach messages,
-and prints rich context so Claude can write personalized outreach messages.
+and prints rich context so Codex can write personalized outreach messages.
 
-Claude then:
+Codex then:
 1. Writes a warm, personalized 3-4 sentence message for each lead
 2. Calls update_outreach(lead_id, message) for each one
-3. git add public/leads.json && git commit -m "chore: enrich outreach messages" && git push
+3. git add public/leads.json && git commit -m "chore: enrich outreach messages [skip ci]" && git push
 
 Usage:
     python3 enrich_leads.py
@@ -90,7 +90,7 @@ def main():
 
     print("\n--- END OF LEADS ---")
     print("""
-Instructions for Claude:
+Instructions for Codex:
 For each lead above, write a warm, professional 3-4 sentence outreach message.
 
 Rules:

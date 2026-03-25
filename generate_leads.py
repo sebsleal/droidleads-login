@@ -13,10 +13,10 @@ The script will:
 2. Pull recent storm events from NOAA for Miami-Dade County
 3. Cross-reference: tag each permit with the storm that likely caused it
 4. Score each lead (0-100)
-5. Save outreach message placeholders (filled in by Claude Code scheduled task)
+5. Save outreach message placeholders (filled in by Codex / ChatGPT automation)
 6. Write output to public/leads.json
 
-Run via Claude Code scheduled task — no API key needed.
+Run via Codex / ChatGPT automation - no API key needed.
 """
 
 import hashlib
@@ -147,7 +147,7 @@ def score_lead(lead: dict, today: datetime) -> int:
 
 
 def template_outreach(lead: dict) -> str:
-    """Placeholder message — Claude replaces this during the scheduled task."""
+    """Placeholder message - Codex replaces this during the automation."""
     return (
         f"TEMPLATE: {lead['damageType']} damage at {lead['propertyAddress']}, "
         f"{lead['zip']} for {lead['ownerName']}."
@@ -512,7 +512,7 @@ def run():
         county_counts[c] = county_counts.get(c, 0) + 1
     breakdown = " | ".join(f"{c}: {n}" for c, n in sorted(county_counts.items()))
     print(f"  County breakdown — {breakdown}")
-    print("Next step: run the Claude Code scheduled task to enrich outreach messages.")
+    print("Next step: run the Codex / ChatGPT automation to enrich outreach messages.")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ Pipeline:
   1. Fetch building permits for all enabled counties (scrapers/permits.py)
   2. Fetch NOAA storm events — now covers Miami-Dade, Broward, Palm Beach
   2b. Fetch FEMA disaster declarations + build claim windows (scrapers/fema.py)
+  2c. Pre-permit parcel scan — storm-first leads for properties with no permit yet
+  2d. FEMA enrichment — tag each lead with matching declaration
   3. Enrich with PA owner info (scrapers/property.py)
   4. Deduplicate (scrapers/dedup.py)
   5. Algorithmic pre-scoring
@@ -90,7 +92,59 @@ def run() -> int:
     except Exception as e:
         print(f"[run] FEMA fetch failed (non-fatal): {e}")
 
-    all_leads = permit_leads + storm_leads
+    # -------------------------------------------------------------------
+    # 2c. Pre-Permit parcel scan — storm-first leads (no permit filed yet)
+    # -------------------------------------------------------------------
+    banner("Step 2c: Pre-Permit Parcel Scan (Storm-First)")
+    pre_permit_leads: list[dict] = []
+    try:
+        from scrapers.parcels import fetch_parcels_by_zip, MIAMI_DADE_ZIPS
+
+        # Only scan if we have recent Miami-Dade storm events
+        mdc_storms = [l for l in storm_leads if l.get("county") == "miami-dade"]
+        if mdc_storms:
+            # Pick the most recent storm event label + damage type for tagging
+            latest_storm = max(mdc_storms, key=lambda l: l.get("permitDate", ""))
+            storm_label = latest_storm.get("stormEvent", "")
+            storm_damage = latest_storm.get("damageType", "Hurricane/Wind")
+
+            # Existing permit addresses — used to exclude already-filed properties
+            existing_addresses = {
+                l.get("propertyAddress", "").lower().strip()
+                for l in permit_leads
+                if l.get("propertyAddress")
+            }
+
+            # Sample ZIP codes (parcels.py hard-caps at 5 per run)
+            sample_zips = MIAMI_DADE_ZIPS[:5]
+            parcels = fetch_parcels_by_zip(sample_zips, limit_per_zip=20)
+
+            today = datetime.now(timezone.utc).date().isoformat()
+            for p in parcels:
+                addr = (p.get("propertyAddress") or "").lower().strip()
+                if not addr or addr in existing_addresses:
+                    continue  # skip already-permitted properties
+                pre_permit_leads.append({
+                    "source": "storm-first",
+                    "propertyAddress": p.get("propertyAddress", ""),
+                    "city": "Miami",
+                    "zip": p.get("zip", "33101"),
+                    "folioNumber": p.get("folioNumber", ""),
+                    "county": "miami-dade",
+                    "damageType": storm_damage,
+                    "permitType": "Pre-Permit",
+                    "permitDate": today,
+                    "stormEvent": storm_label,
+                    "ownerName": "Property Owner",
+                    "score": 0,
+                })
+            print(f"[run] Pre-permit leads generated: {len(pre_permit_leads)}")
+        else:
+            print("[run] No recent Miami-Dade storm events — skipping parcel scan")
+    except Exception as e:
+        print(f"[run] Pre-permit parcel scan failed (non-fatal): {e}")
+
+    all_leads = permit_leads + storm_leads + pre_permit_leads
     print(f"[run] Total raw leads: {len(all_leads)}")
 
     if not all_leads:
@@ -98,7 +152,7 @@ def run() -> int:
         return 1
 
     # -------------------------------------------------------------------
-    # 2c. FEMA enrichment — tag each lead with matching declaration
+    # 2d. FEMA enrichment — tag each lead with matching declaration
     # -------------------------------------------------------------------
     if fema_windows:
         try:
@@ -254,6 +308,7 @@ def run() -> int:
     print(f"[run] Summary:")
     print(f"  Permit leads scraped:  {len(permit_leads)}")
     print(f"  Storm leads scraped:   {len(storm_leads)}")
+    print(f"  Pre-permit leads:      {len(pre_permit_leads)}")
     print(f"  Unique new leads:      {len(unique_leads)}")
     print(f"  FEMA-tagged leads:     {fema_tagged}")
     for county, count in sorted(county_counts.items()):

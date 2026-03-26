@@ -84,8 +84,14 @@ def main():
             print(f"    Owner:    ABSENTEE (out of state)")
         if lead.get("permitStatus") in ("Owner-Builder", "No Contractor"):
             print(f"    Status:   {lead['permitStatus']} — handling claim alone")
+        if lead.get("permitStatus") == "Stalled":
+            print(f"    Status:   STALLED PERMIT — work may have stopped mid-repair")
         if lead.get("underpaidFlag"):
             print(f"    Flag:     LIKELY UNDERPAID — permit value below ZIP median")
+        if lead.get("roofAge") and lead["roofAge"] > 15:
+            print(f"    Roof Age: ~{lead['roofAge']} years (aging roof)")
+        if lead.get("priorPermitCount") and lead["priorPermitCount"] >= 2:
+            print(f"    History:  {lead['priorPermitCount']} prior permits at this address (repeat damage)")
         print(f"    Current:  {lead['outreachMessage'][:80]}...")
 
     print("\n--- END OF LEADS ---")

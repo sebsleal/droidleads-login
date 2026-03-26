@@ -77,25 +77,6 @@
       "source": "NOAA Storm Events"
     },
     {
-      "id": "efbeb6c49225",
-      "candidateType": "area",
-      "county": "miami-dade",
-      "city": "",
-      "zip": "",
-      "locationLabel": "Multiple areas in Miami-Dade County",
-      "stormEvent": "Thunderstorm Wind impact in Miami-Dade County",
-      "eventType": "Thunderstorm Wind",
-      "eventDate": "2025-03-25",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "ARES operator relayed a report of downed power lines near SW 87th Ave and SW 131 St |near The Falls. Time estimated from radar. Wind gust estimated by nearby observations and time of damage.\n\nAn off-duty NWS employee reported quarter-inch diameter hail, downed small tree limbs and branches, and water ponding on roads near Homestead Air Reserve Base. Wind speeds estimated upon damage due to passing thunderstorm.",
-      "score": 64,
-      "scoreReasoning": "Thunderstorm Wind carries a 14-point severity weight. NOAA reported impacts across more than one area (+4). Narrative mentions residential impact (+6). Narrative indicates water intrusion or flooding (+5).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
       "id": "e1768b000b12",
       "candidateType": "area",
       "county": "broward",
@@ -476,25 +457,6 @@
       "source": "NOAA Storm Events"
     },
     {
-      "id": "84bfbe1f294e",
-      "candidateType": "area",
-      "county": "miami-dade",
-      "city": "",
-      "zip": "",
-      "locationLabel": "Multiple areas in Miami-Dade County",
-      "stormEvent": "Hail impact in Miami-Dade County",
-      "eventType": "Hail",
-      "eventDate": "2025-03-25",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "A member of the public reported hail up to the size of pennies at the Homestead RaceTrac gas station on SW 312th Street.\n\nSocial media report of quarter sized hail ongoing for 15 minutes near the intersection of         Campbell Drive and SW 137th Avenue in Homestead.",
-      "score": 57,
-      "scoreReasoning": "Hail carries a 12-point severity weight. NOAA reported impacts across more than one area (+4). Narrative mentions residential impact (+6).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
       "id": "9cda70c341b6",
       "candidateType": "area",
       "county": "broward",
@@ -856,6 +818,6 @@
       "source": "NOAA Storm Events"
     }
   ],
-  "lastGenerated": "2026-03-25T21:52:17.024779+00:00",
-  "count": 45
+  "lastGenerated": "2026-03-26T00:26:03.849542+00:00",
+  "count": 43
 }

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { StormFilterState, StormCandidateType } from '@/types'
+import Tooltip from './Tooltip'
 
 interface StormWatchFiltersProps {
   filters: StormFilterState
@@ -40,8 +41,11 @@ export default function StormWatchFilters({
   return (
     <div className="card px-4 py-3.5">
       <div className="flex flex-wrap items-center gap-3">
+
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">County</label>
+          <Tooltip text="Filter storm opportunities by county — Miami-Dade, Broward (Fort Lauderdale area), or Palm Beach (West Palm Beach area).">
+            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">County</label>
+          </Tooltip>
           <select
             value={filters.county}
             onChange={(e) => update('county', e.target.value as StormFilterState['county'])}
@@ -55,7 +59,9 @@ export default function StormWatchFilters({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Event</label>
+          <Tooltip text="Filter by the type of storm event recorded by NOAA — e.g. Hurricane, Flood, Tornado, High Wind, Hail. Different event types have different claim profiles.">
+            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Event</label>
+          </Tooltip>
           <select
             value={filters.eventType}
             onChange={(e) => update('eventType', e.target.value)}
@@ -71,7 +77,9 @@ export default function StormWatchFilters({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">FEMA</label>
+          <Tooltip text="Filter by FEMA disaster declaration status. 'FEMA tagged' means the storm area has an active federal disaster declaration — these areas have the strongest claim eligibility and highest payout potential.">
+            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">FEMA</label>
+          </Tooltip>
           <select
             value={filters.femaTagged}
             onChange={(e) => update('femaTagged', e.target.value as StormFilterState['femaTagged'])}
@@ -84,7 +92,9 @@ export default function StormWatchFilters({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Score</label>
+          <Tooltip text="Filter by opportunity score. High = 85 or above (most severe events, FEMA-matched, recent). Medium = 70–84. Low = below 70. Score factors in storm severity, FEMA status, recency, reported damage, and geographic spread.">
+            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Score</label>
+          </Tooltip>
           <select
             value={filters.scoreTier}
             onChange={(e) => update('scoreTier', e.target.value as StormFilterState['scoreTier'])}
@@ -99,7 +109,9 @@ export default function StormWatchFilters({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Date</label>
+          <Tooltip text="Filter by when the storm event occurred. Use shorter ranges to focus on the most recent and actionable opportunities.">
+            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Date</label>
+          </Tooltip>
           <select
             value={filters.dateRange}
             onChange={(e) => update('dateRange', e.target.value as StormFilterState['dateRange'])}
@@ -114,7 +126,9 @@ export default function StormWatchFilters({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Candidate</label>
+          <Tooltip text="Area-based candidates cover a whole county or zone hit by a storm — good for broad outreach. Property-based candidates target specific parcels with confirmed damage. Most Storm Watch data is currently area-based.">
+            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Candidate</label>
+          </Tooltip>
           <select
             value={filters.candidateType}
             onChange={(e) => update('candidateType', e.target.value as StormFilterState['candidateType'])}

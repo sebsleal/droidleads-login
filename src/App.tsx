@@ -17,6 +17,7 @@ import LeadsTable from '@/components/LeadsTable'
 import LeadDrawer from '@/components/LeadDrawer'
 import Analytics from '@/components/Analytics'
 import StormWatchFilters from '@/components/StormWatchFilters'
+import Tooltip from '@/components/Tooltip'
 import StormWatchStatsRow from '@/components/StormWatchStatsRow'
 import StormWatchTable from '@/components/StormWatchTable'
 import StormWatchDrawer from '@/components/StormWatchDrawer'
@@ -286,39 +287,45 @@ export default function App() {
         </div>
 
         <div className="flex gap-1 mb-6 border-b border-slate-200">
-          <button
-            onClick={() => navigate('/')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
-              activeTab === 'leads'
-                ? 'border-navy-900 text-navy-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Leads
-          </button>
-          <button
-            onClick={() => navigate('/storm-watch')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
-              activeTab === 'storm-watch'
-                ? 'border-navy-900 text-navy-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <CloudLightning className="w-4 h-4" />
-            Storm Watch
-          </button>
-          <button
-            onClick={() => navigate('/analytics')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
-              activeTab === 'analytics'
-                ? 'border-navy-900 text-navy-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            <BarChart2 className="w-4 h-4" />
-            Analytics
-          </button>
+          <Tooltip text="Your permit-based lead list — property owners who recently filed damage permits and may need a licensed public adjuster to maximize their insurance settlement." position="bottom">
+            <button
+              onClick={() => navigate('/')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
+                activeTab === 'leads'
+                  ? 'border-navy-900 text-navy-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Leads
+            </button>
+          </Tooltip>
+          <Tooltip text="Area-level storm opportunities sourced from NOAA storm events and FEMA disaster declarations. Shows counties and zones recently hit by storms — ideal for proactive outreach before permits are even filed." position="bottom">
+            <button
+              onClick={() => navigate('/storm-watch')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
+                activeTab === 'storm-watch'
+                  ? 'border-navy-900 text-navy-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              <CloudLightning className="w-4 h-4" />
+              Storm Watch
+            </button>
+          </Tooltip>
+          <Tooltip text="Pipeline summary — total leads, high-priority count, absentee owners, and underpaid flags. Use this to track the health and volume of your lead pipeline over time." position="bottom">
+            <button
+              onClick={() => navigate('/analytics')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
+                activeTab === 'analytics'
+                  ? 'border-navy-900 text-navy-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4" />
+              Analytics
+            </button>
+          </Tooltip>
         </div>
 
         <Routes>

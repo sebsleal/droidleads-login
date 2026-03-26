@@ -197,13 +197,15 @@ def run() -> int:
     # 7. Insert to Supabase
     # -------------------------------------------------------------------
     banner("Step 7: Upsert to Supabase")
-    try:
-        from db.insert import upsert_leads
-        result = upsert_leads(unique_leads, supabase=supabase)
-        print(f"[run] DB upsert result: {result}")
-    except Exception as e:
-        print(f"[run] DB upsert failed: {e}")
-        return 1
+    if not os.environ.get("SUPABASE_URL") or not os.environ.get("SUPABASE_KEY"):
+        print("[run] SUPABASE_URL/KEY not set — skipping DB upsert (non-fatal)")
+    else:
+        try:
+            from db.insert import upsert_leads
+            result = upsert_leads(unique_leads, supabase=supabase)
+            print(f"[run] DB upsert result: {result}")
+        except Exception as e:
+            print(f"[run] DB upsert failed (non-fatal): {e}")
 
     # -------------------------------------------------------------------
     # 8. Regenerate public/leads.json and public/storm_candidates.json

@@ -6,7 +6,6 @@ import {
   Calendar,
   Mail,
   Phone,
-  DollarSign,
   Building2,
   FileText,
   CheckSquare,
@@ -14,7 +13,6 @@ import {
   AlertTriangle,
   Clock,
   MessageSquare,
-  ChevronRight,
 } from 'lucide-react'
 import type { Case, CaseStatusPhase } from '@/types'
 import { cn, formatDate } from '@/lib/utils'

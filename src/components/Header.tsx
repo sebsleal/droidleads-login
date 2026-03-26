@@ -3,7 +3,7 @@ import { Shield, Download } from 'lucide-react'
 interface HeaderProps {
   totalCount: number
   lastScraped?: string | null
-  onExport: () => void
+  onExport?: () => void
   entityLabel?: string
 }
 
@@ -68,14 +68,16 @@ export default function Header({
             )}
 
             {/* Export CSV */}
-            <button
-              onClick={onExport}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20
-                         border border-white/10 text-white text-sm font-medium transition-colors duration-150"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </button>
+            {onExport && (
+              <button
+                onClick={onExport}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20
+                           border border-white/10 text-white text-sm font-medium transition-colors duration-150"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

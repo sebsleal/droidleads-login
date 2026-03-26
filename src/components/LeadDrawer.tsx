@@ -19,6 +19,7 @@ import {
 import type { Lead } from '@/types'
 import { formatDate, damageTypeColor, cn } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
+import Tooltip from '@/components/Tooltip'
 
 type TrackingPatch = Partial<Pick<Lead, 'status' | 'contactedAt' | 'convertedAt' | 'claimValue' | 'contactMethod' | 'notes'>>
 
@@ -39,6 +40,13 @@ const STATUS_ACTIVE: Record<Lead['status'], string> = {
 }
 
 const STATUS_INACTIVE = 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+
+const STATUS_TOOLTIPS: Record<Lead['status'], string> = {
+  New: "This lead hasn't been contacted yet. Mark it when you're ready to start outreach.",
+  Contacted: "You've reached out to this owner. The contact date is recorded automatically.",
+  Converted: "This owner has signed on as a client. The conversion date is recorded automatically.",
+  Closed: "This lead is no longer active — not interested, unresponsive, or otherwise resolved.",
+}
 
 export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTracking }: LeadDrawerProps) {
   const [copied, setCopied] = useState(false)
@@ -115,37 +123,51 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
 
           {/* Score + damage type + homestead badge */}
           <div className="flex items-center gap-2.5 mt-3 flex-wrap">
-            <ScoreBadge score={lead.score} size="md" showLabel />
-            <span className={cn('badge', damageTypeColor(lead.damageType))}>
-              {lead.damageType}
-            </span>
-            {lead.homestead === true && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <Home className="w-3 h-3" />
-                Homestead
+            <Tooltip text="Lead priority score (0–100). 85+ = High priority. Calculated from damage type, storm event match, FEMA declaration, permit status, roof age, absentee owner, and contact availability." position="bottom">
+              <span className="cursor-help">
+                <ScoreBadge score={lead.score} size="md" showLabel />
               </span>
+            </Tooltip>
+            <Tooltip text="Type of damage recorded on the permit — drives both the lead score and the outreach message tone." position="bottom">
+              <span className={cn('badge cursor-help', damageTypeColor(lead.damageType))}>
+                {lead.damageType}
+              </span>
+            </Tooltip>
+            {lead.homestead === true && (
+              <Tooltip text="The owner lives here as their primary residence (homestead exemption on file). Owner-occupied properties often have more at stake in a claim." position="bottom">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-help">
+                  <Home className="w-3 h-3" />
+                  Homestead
+                </span>
+              </Tooltip>
             )}
             {lead.homestead === false && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200">
-                <Home className="w-3 h-3" />
-                Non-Homestead
-              </span>
+              <Tooltip text="This property is not the owner's primary residence — likely a rental, investment, or vacation property. Absentee investors are often very open to professional claim help." position="bottom">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200 cursor-help">
+                  <Home className="w-3 h-3" />
+                  Non-Homestead
+                </span>
+              </Tooltip>
             )}
           </div>
         </div>
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
           {/* Property details */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-              Property Details
-            </h3>
+            <Tooltip text="Core property and permit information pulled from the county permit system and Property Appraiser records." position="bottom">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                Property Details
+              </h3>
+            </Tooltip>
             <div className="space-y-2.5">
               {lead.county && (
                 <DetailRow
                   icon={<Building2 className="w-4 h-4" />}
                   label="County"
+                  tooltip="The county where the property is located."
                   value={
                     <span className="capitalize">
                       {lead.county === 'miami-dade' ? 'Miami-Dade County'
@@ -160,6 +182,7 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                 <DetailRow
                   icon={<ShieldAlert className="w-4 h-4 text-orange-500" />}
                   label="FEMA Declaration"
+                  tooltip="An active FEMA federal disaster declaration covers this area. This strengthens the insurance claim, may unlock additional federal aid, and is a strong buying signal for the homeowner."
                   value={
                     <span className="inline-flex items-center gap-1.5">
                       <span className="font-semibold text-orange-700">{lead.femaDeclarationNumber}</span>
@@ -175,32 +198,38 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
               <DetailRow
                 icon={<Hash className="w-4 h-4" />}
                 label="Folio Number"
+                tooltip="The county Property Appraiser's unique parcel ID for this property. Useful for looking up tax records, assessed value, and ownership history."
                 value={lead.folioNumber}
               />
               <DetailRow
                 icon={<Wrench className="w-4 h-4" />}
                 label="Permit Type"
+                tooltip="The type of building permit filed — e.g. Roof Replacement, Water Damage Repair, Hurricane Damage. Indicates the scope of the repair work."
                 value={lead.permitType}
               />
               <DetailRow
                 icon={<Calendar className="w-4 h-4" />}
                 label="Permit Date"
+                tooltip="The date the damage repair permit was filed with the county. More recent permits are higher priority — the owner is actively dealing with the damage."
                 value={formatDate(lead.permitDate)}
               />
               <DetailRow
                 icon={<CloudLightning className="w-4 h-4" />}
                 label="Storm Event"
+                tooltip="The NOAA-recorded storm event associated with this area's damage. Referencing the specific storm by name in outreach significantly improves response rates."
                 value={lead.stormEvent}
               />
               <DetailRow
                 icon={<Calendar className="w-4 h-4" />}
                 label="Lead Date"
+                tooltip="The date this lead was added to the system."
                 value={formatDate(lead.date)}
               />
               {lead.ownerMailingAddress && lead.ownerMailingAddress !== `${lead.propertyAddress}, ${lead.city}, FL ${lead.zip}` && (
                 <DetailRow
                   icon={<MapPin className="w-4 h-4 text-amber-500" />}
                   label="Owner Mailing Address"
+                  tooltip="Where the owner receives mail — different from the property address. This confirms the owner is absentee (out of state or elsewhere), meaning they may not be aware of the full damage."
                   value={<span className="text-amber-700">{lead.ownerMailingAddress}</span>}
                 />
               )}
@@ -208,6 +237,7 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                 <DetailRow
                   icon={<DollarSign className="w-4 h-4" />}
                   label="Assessed Value"
+                  tooltip="County Property Appraiser assessed value. Used as a rough baseline for estimating claim size — higher assessed values typically mean larger potential settlements."
                   value={`$${lead.assessedValue.toLocaleString()}`}
                 />
               )}
@@ -217,11 +247,17 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
           {/* Permit Intelligence */}
           {(lead.permitStatus || lead.permitValue || lead.contractorName) && (
             <section className="space-y-2">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Permit Intelligence</h3>
+              <Tooltip text="Signals derived from the permit filing itself — who filed it, the repair cost, and whether there are red flags like a stalled permit or no contractor." position="bottom">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                  Permit Intelligence
+                </h3>
+              </Tooltip>
               <div className="space-y-1.5 text-sm">
                 {lead.permitStatus && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Status</span>
+                    <Tooltip text="The filing status of the permit. Owner-Builder = no licensed contractor, owner is handling it themselves. No Contractor = contractor field is blank. Stalled = work started but stopped. Active = repair is in progress.">
+                      <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">Status</span>
+                    </Tooltip>
                     <span className={`font-medium px-2 py-0.5 rounded text-xs ${
                       lead.permitStatus === 'Owner-Builder' || lead.permitStatus === 'No Contractor' ? 'bg-blue-100 text-blue-700' :
                       lead.permitStatus === 'Stalled' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
@@ -230,17 +266,23 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                 )}
                 {lead.contractorName && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Contractor</span>
+                    <Tooltip text="The licensed contractor listed on the permit. If a contractor is already hired, focus your pitch on the insurance claim side rather than the repair work.">
+                      <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">Contractor</span>
+                    </Tooltip>
                     <span className="text-slate-800 font-medium text-right max-w-[60%] truncate">{lead.contractorName}</span>
                   </div>
                 )}
                 {(lead.permitValue ?? 0) > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Permit Value</span>
+                    <Tooltip text="The declared repair cost on the permit. If flagged 'Likely Underpaid', this value is below 60% of the ZIP code median — a strong sign the insurance settlement may not cover the true cost of repairs.">
+                      <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">Permit Value</span>
+                    </Tooltip>
                     <div className="flex items-center gap-1.5">
                       <span className="text-slate-800 font-medium">${lead.permitValue!.toLocaleString()}</span>
                       {lead.underpaidFlag && (
-                        <span className="text-[10px] bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full font-medium">Likely Underpaid</span>
+                        <Tooltip text="This permit value is below 60% of the median for this ZIP code. The owner may have accepted a low settlement without realizing they could have received more.">
+                          <span className="text-[10px] bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full font-medium cursor-help">Likely Underpaid</span>
+                        </Tooltip>
                       )}
                     </div>
                   </div>
@@ -252,11 +294,17 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
           {/* Property Intelligence */}
           {(lead.absenteeOwner !== undefined || lead.roofAge !== undefined || (lead.priorPermitCount ?? 0) > 0) && (
             <section className="space-y-2">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Property Intelligence</h3>
+              <Tooltip text="Signals about the property and owner derived from Property Appraiser records — ownership patterns, roof condition, and damage history." position="bottom">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                  Property Intelligence
+                </h3>
+              </Tooltip>
               <div className="space-y-1.5 text-sm">
                 {lead.absenteeOwner !== undefined && (
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Owner Occupied</span>
+                    <Tooltip text="Whether the owner lives at this address. Absentee = mailing address is out of state. These owners often haven't seen the damage firsthand and are more likely to need remote claim assistance.">
+                      <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">Owner Occupied</span>
+                    </Tooltip>
                     {lead.absenteeOwner
                       ? <span className="text-amber-600 font-medium text-xs flex items-center gap-1">⚠ Absentee — out of state</span>
                       : <span className="text-emerald-600 font-medium text-xs">✓ Local owner</span>
@@ -265,16 +313,24 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                 )}
                 {lead.roofAge !== undefined && (
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Est. Roof Age</span>
+                    <Tooltip text="Estimated roof age based on the year the property was built. Roofs older than 15 years are frequently undervalued by insurers — older roofs may have pre-existing wear that adjusters can document to support a larger claim.">
+                      <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">Est. Roof Age</span>
+                    </Tooltip>
                     <div className="flex items-center gap-1.5">
                       <span className="text-slate-800 font-medium">{lead.roofAge} yrs</span>
-                      {lead.roofAge > 15 && <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded-full">Aging</span>}
+                      {lead.roofAge > 15 && (
+                        <Tooltip text="This roof is over 15 years old and may be undervalued in the insurance settlement.">
+                          <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded-full cursor-help">Aging</span>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 )}
                 {(lead.priorPermitCount ?? 0) >= 1 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Prior Permits</span>
+                    <Tooltip text="Number of prior damage permits filed at this address. Multiple claims suggest ongoing vulnerability or a complex repair history — worth mentioning you understand repeat claim situations.">
+                      <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">Prior Permits</span>
+                    </Tooltip>
                     <span className="text-purple-700 font-medium">{lead.priorPermitCount} prior at this address</span>
                   </div>
                 )}
@@ -284,15 +340,18 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
 
           {/* Contact information */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-              Contact Information
-            </h3>
+            <Tooltip text="Contact details found via voter roll and business records lookups. Click email or phone to open your mail or dialer directly." position="bottom">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                Contact Information
+              </h3>
+            </Tooltip>
             {lead.contact ? (
               <div className="space-y-2.5">
                 {lead.contact.email && (
                   <DetailRow
                     icon={<Mail className="w-4 h-4 text-blue-500" />}
                     label="Email"
+                    tooltip="Owner's email address found from voter roll or public records. Click to open in your email client."
                     value={
                       <a
                         href={`mailto:${lead.contact.email}`}
@@ -308,6 +367,7 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                   <DetailRow
                     icon={<Phone className="w-4 h-4 text-green-500" />}
                     label="Phone"
+                    tooltip="Owner's phone number found from voter roll or public records. Click to dial directly from your device."
                     value={
                       <a
                         href={`tel:${lead.contact.phone}`}
@@ -331,31 +391,35 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
           {/* AI Outreach Message */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
-                <MessageSquare className="w-3.5 h-3.5" />
-                AI Outreach Message
-              </h3>
-              <button
-                onClick={handleCopy}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border transition-all duration-200',
-                  copied
-                    ? 'bg-green-50 text-green-700 border-green-200'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                )}
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    Copy Message
-                  </>
-                )}
-              </button>
+              <Tooltip text="A personalized outreach message written by AI using this lead's specific details — damage type, address, storm event, FEMA declaration, and owner signals. Edit before sending if needed." position="bottom">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2 cursor-help underline decoration-dotted decoration-slate-300">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  AI Outreach Message
+                </h3>
+              </Tooltip>
+              <Tooltip text="Copy this message to your clipboard — ready to paste into an email, text, or mail merge tool. The message is personalized to this specific owner and property.">
+                <button
+                  onClick={handleCopy}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border transition-all duration-200',
+                    copied
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  )}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy Message
+                    </>
+                  )}
+                </button>
+              </Tooltip>
             </div>
             <div className="bg-slate-50 rounded-xl border border-slate-200 px-4 py-4">
               <p className="text-sm text-slate-700 leading-relaxed">
@@ -366,15 +430,18 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
 
           {/* Engagement & conversion */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-              Engagement & Conversion
-            </h3>
+            <Tooltip text="Track your outreach and deal progress for this lead. All fields are saved automatically when you leave them." position="bottom">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                Engagement & Conversion
+              </h3>
+            </Tooltip>
             <div className="space-y-3">
               {/* Timestamps — read-only, auto-set by status changes */}
               {lead.contactedAt && (
                 <DetailRow
                   icon={<Calendar className="w-4 h-4" />}
                   label="Contacted At"
+                  tooltip="Date this lead was first marked as Contacted. Set automatically when you change the status."
                   value={formatDate(lead.contactedAt)}
                 />
               )}
@@ -382,6 +449,7 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                 <DetailRow
                   icon={<Calendar className="w-4 h-4" />}
                   label="Converted At"
+                  tooltip="Date this lead was marked as Converted (signed as a client). Set automatically when you change the status."
                   value={formatDate(lead.convertedAt)}
                 />
               )}
@@ -392,7 +460,9 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                   <MessageSquare className="w-4 h-4" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs text-slate-400 block mb-1">Contact Method</span>
+                  <Tooltip text="How you reached out to this owner — phone call, email, in-person visit, mail, or text. Helps you track which outreach method works best across your leads." position="top">
+                    <span className="text-xs text-slate-400 block mb-1 cursor-help underline decoration-dotted decoration-slate-300">Contact Method</span>
+                  </Tooltip>
                   <select
                     value={lead.contactMethod ?? ''}
                     onChange={(e) => {
@@ -418,7 +488,9 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                   <DollarSign className="w-4 h-4" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs text-slate-400 block mb-1">Claim Value</span>
+                  <Tooltip text="The estimated or final insurance claim value for this property. Enter the settlement amount once known — used to track your pipeline value in Analytics." position="top">
+                    <span className="text-xs text-slate-400 block mb-1 cursor-help underline decoration-dotted decoration-slate-300">Claim Value</span>
+                  </Tooltip>
                   <input
                     type="number"
                     min="0"
@@ -442,7 +514,9 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                   <MessageSquare className="w-4 h-4" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs text-slate-400 block mb-1">Notes</span>
+                  <Tooltip text="Your private notes about this lead — conversation summaries, follow-up reminders, property access info, or anything else relevant to the claim." position="top">
+                    <span className="text-xs text-slate-400 block mb-1 cursor-help underline decoration-dotted decoration-slate-300">Notes</span>
+                  </Tooltip>
                   <textarea
                     rows={3}
                     placeholder="Add adjuster notes…"
@@ -461,21 +535,24 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
 
           {/* Status selector */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-              Lead Status
-            </h3>
+            <Tooltip text="Set the current stage of this lead in your pipeline. Status changes are saved immediately and timestamps are recorded automatically." position="bottom">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                Lead Status
+              </h3>
+            </Tooltip>
             <div className="flex items-center gap-2">
               {STATUS_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onUpdateStatus(lead.id, s)}
-                  className={cn(
-                    'flex-1 py-2 rounded-lg text-sm font-medium border transition-all duration-150',
-                    lead.status === s ? STATUS_ACTIVE[s] : STATUS_INACTIVE
-                  )}
-                >
-                  {s}
-                </button>
+                <Tooltip key={s} text={STATUS_TOOLTIPS[s]} position="top">
+                  <button
+                    onClick={() => onUpdateStatus(lead.id, s)}
+                    className={cn(
+                      'flex-1 py-2 rounded-lg text-sm font-medium border transition-all duration-150',
+                      lead.status === s ? STATUS_ACTIVE[s] : STATUS_INACTIVE
+                    )}
+                  >
+                    {s}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           </section>
@@ -500,14 +577,21 @@ interface DetailRowProps {
   icon: React.ReactNode
   label: string
   value: React.ReactNode
+  tooltip?: string
 }
 
-function DetailRow({ icon, label, value }: DetailRowProps) {
+function DetailRow({ icon, label, value, tooltip }: DetailRowProps) {
   return (
     <div className="flex items-start gap-3">
       <span className="mt-0.5 text-slate-400 flex-shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
-        <span className="text-xs text-slate-400 block">{label}</span>
+        {tooltip ? (
+          <Tooltip text={tooltip}>
+            <span className="text-xs text-slate-400 block cursor-help underline decoration-dotted decoration-slate-300">{label}</span>
+          </Tooltip>
+        ) : (
+          <span className="text-xs text-slate-400 block">{label}</span>
+        )}
         <span className="text-sm text-slate-800 font-medium">{value}</span>
       </div>
     </div>

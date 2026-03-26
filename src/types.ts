@@ -3,7 +3,8 @@ export type DamageType =
   | 'Flood'
   | 'Roof'
   | 'Fire'
-  | 'Structural';
+  | 'Structural'
+  | 'Accidental Discharge';
 
 export type LeadStatus = 'New' | 'Contacted' | 'Converted' | 'Closed';
 export type CountySlug = 'miami-dade' | 'broward' | 'palm-beach';
@@ -70,6 +71,10 @@ export interface Lead {
   county?: CountySlug;
   femaDeclarationNumber?: string;     // e.g. 'DR-4611'
   femaIncidentType?: string;          // e.g. 'Hurricane' | 'Flood'
+  // Insurer intelligence (from enrichment or CRM data)
+  insuranceCompany?: string;
+  insurerRisk?: 'high' | 'medium' | 'low';
+  insurerRiskLabel?: string;
 }
 
 export interface FilterState {
@@ -129,4 +134,67 @@ export interface StormStatsData {
   highPriority: number;
   femaTagged: number;
   areaCandidates: number;
+}
+
+// ---------------------------------------------------------------------------
+// Cases — active client case management
+// ---------------------------------------------------------------------------
+
+export type CaseStatusPhase =
+  | 'Settled'
+  | 'Litigation'
+  | 'Appraisal'
+  | 'Closed w/o Pay'
+  | 'OpenPhase: Estimating'
+  | 'OpenPhase: Inspection'
+  | 'OpenPhase: Appraisal'
+  | 'OpenPhase: Mortgage Processing'
+  | 'OpenPhase: Negotiation'
+  | 'OpenPhase: Mediation'
+  | 'OpenPhase: Initial Payment'
+  | 'OpenPhase: Under Review'
+  | 'OpenPhase: Claim Originated'
+  | 'OpenPhase: Recovering Depreciation'
+  | 'OpenPhase: Ready to Close'
+  | 'OpenPhase: Settled';
+
+export interface Case {
+  id: string;
+  fileNumber: string;
+  clientName: string;
+  lossAddress: string;
+  mailingAddress?: string;
+  lossDate?: string;
+  perilType?: string;
+  insuranceCompany?: string;
+  policyNumber?: string;
+  claimNumber?: string;
+  phone?: string;
+  email?: string;
+  statusPhase: CaseStatusPhase;
+  feeRate?: number;         // 0.10 = 10%
+  feeDisbursed?: number;    // dollars actually received
+  estimatedLoss?: number;
+  dateLogged: string;
+  // Process checklist
+  lor: boolean;
+  plumbingInvoice: boolean;
+  waterMitigation: boolean;
+  estimateDate?: string;
+  inspectionDate?: string;
+  srlDate?: string;
+  cdl1Date?: string;
+  cdl2Date?: string;
+  cdl3Date?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseFilterState {
+  search: string;
+  statusGroup: 'All' | 'Open' | 'Settled' | 'Litigation' | 'Closed';
+  insuranceCompany: string;
+  perilType: string;
+  dateRange: '30' | '90' | '365' | 'all';
 }

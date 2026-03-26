@@ -195,6 +195,31 @@ export default function LeadDrawer({ lead, onClose, onUpdateStatus, onUpdateTrac
                   }
                 />
               )}
+              {(lead.insurerRisk || lead.insuranceCompany) && (
+                <DetailRow
+                  icon={<Building2 className="w-4 h-4 text-slate-500" />}
+                  label="Insurer Risk"
+                  tooltip="Risk level for this insurance company based on historical payout rates, litigation frequency, and settlement amounts from closed claims data."
+                  value={
+                    <span className="inline-flex items-center gap-2">
+                      {lead.insuranceCompany && (
+                        <span className="text-sm text-slate-700">{lead.insuranceCompany}</span>
+                      )}
+                      {lead.insurerRiskLabel && (
+                        <span className={cn(
+                          'badge text-[10px]',
+                          lead.insurerRisk === 'high'   ? 'bg-red-100 text-red-800 border-red-200' :
+                          lead.insurerRisk === 'medium' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                          lead.insurerRisk === 'low'    ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                          'bg-slate-100 text-slate-600 border-slate-200'
+                        )}>
+                          {lead.insurerRiskLabel}
+                        </span>
+                      )}
+                    </span>
+                  }
+                />
+              )}
               <DetailRow
                 icon={<Hash className="w-4 h-4" />}
                 label="Folio Number"

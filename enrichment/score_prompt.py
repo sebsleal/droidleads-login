@@ -10,9 +10,113 @@ Scoring is done algorithmically by the Railway scraper pipeline.
 The prompt text in build_score_prompt() is surfaced to Claude Code
 automation (enrich_leads.py) so the IDE can reason about each lead
 and produce a nuanced 0-100 score + outreach message — no API key needed.
+
+Insurer risk and score weights are data-driven from 120+ real closed claims:
+  - Bathroom/Accidental Discharge = 65.2% of settled claims (highest revenue)
+  - Hurricane/Wind = 25.2% of settlements
+  - Tower Hill / Progressive = strongest payers ($31K+ in fees each)
+  - Integon National = near 100% litigation rate
+  - Citizens (Wind/Rain) = high litigation risk
 """
 
 from typing import Any
+
+
+# ---------------------------------------------------------------------------
+# Insurer risk table — derived from 120+ closed Claim Remedy cases
+# ---------------------------------------------------------------------------
+
+INSURER_RISK_TABLE: dict[str, dict] = {
+    "integon national": {
+        "risk": "high",
+        "litigation_rate": 0.95,
+        "label": "Near 100% Litigation",
+        "score_modifier": -20,
+    },
+    "citizens": {
+        "risk": "high",
+        "litigation_rate": 0.50,
+        "label": "High Litigation Risk",
+        "score_modifier": -10,
+    },
+    "state farm": {
+        "risk": "medium",
+        "litigation_rate": 0.35,
+        "label": "Mixed Outcomes",
+        "score_modifier": 0,
+    },
+    "statefarm": {
+        "risk": "medium",
+        "litigation_rate": 0.35,
+        "label": "Mixed Outcomes",
+        "score_modifier": 0,
+    },
+    "tower hill": {
+        "risk": "low",
+        "litigation_rate": 0.10,
+        "label": "Strong Payer",
+        "score_modifier": +10,
+    },
+    "progressive": {
+        "risk": "low",
+        "litigation_rate": 0.12,
+        "label": "Strong Payer",
+        "score_modifier": +10,
+    },
+    "universal property": {
+        "risk": "low",
+        "litigation_rate": 0.20,
+        "label": "Reliable Payer",
+        "score_modifier": +5,
+    },
+    "universal north america": {
+        "risk": "low",
+        "litigation_rate": 0.18,
+        "label": "Reliable Payer",
+        "score_modifier": +5,
+    },
+    "homeowners choice": {
+        "risk": "medium",
+        "litigation_rate": 0.30,
+        "label": "Moderate Risk",
+        "score_modifier": +2,
+    },
+    "florida peninsula": {
+        "risk": "low",
+        "litigation_rate": 0.15,
+        "label": "Reliable Payer",
+        "score_modifier": +5,
+    },
+    "cypress": {
+        "risk": "low",
+        "litigation_rate": 0.15,
+        "label": "Reliable Payer",
+        "score_modifier": +5,
+    },
+    "slide": {
+        "risk": "medium",
+        "litigation_rate": 0.25,
+        "label": "Moderate Risk",
+        "score_modifier": +2,
+    },
+    "monarch national": {
+        "risk": "low",
+        "litigation_rate": 0.15,
+        "label": "Reliable Payer",
+        "score_modifier": +5,
+    },
+}
+
+
+def get_insurer_risk(insurer_name: str) -> dict | None:
+    """Look up insurer risk data by name (case-insensitive, partial match)."""
+    if not insurer_name:
+        return None
+    key = insurer_name.lower().strip()
+    for insurer_key, data in INSURER_RISK_TABLE.items():
+        if insurer_key in key or key in insurer_key:
+            return data
+    return None
 
 
 def build_score_prompt(lead: dict[str, Any]) -> str:
@@ -50,11 +154,25 @@ def build_score_prompt(lead: dict[str, Any]) -> str:
         name = lead.get("contractorName") or lead.get("contractor_name")
         extras.append(f"- Contractor: {name}")
 
+    # Insurer risk context
+    insurer = lead.get("insurance_company") or lead.get("insuranceCompany") or ""
+    risk_data = get_insurer_risk(insurer)
+    if insurer:
+        extras.append(f"- Insurance company: {insurer}")
+    if risk_data:
+        extras.append(f"- Insurer risk: {risk_data['label']} (litigation rate: {int(risk_data['litigation_rate']*100)}%)")
+
     enrichment_section = "\n".join(extras) if extras else "- No additional enrichment data available"
 
     return f"""You are a lead scoring expert for Claim Remedy Adjusters, a licensed Florida public adjuster firm in Miami.
 
 Score the following insurance claim lead from 0 to 100 based on its quality, urgency, and conversion likelihood.
+
+IMPORTANT CONTEXT FROM REAL CLOSED CLAIMS (120+ cases):
+- Bathroom/Accidental Discharge = 65.2% of all settled claims — highest revenue damage type
+- Hurricane/Wind = 25.2% of settlements
+- Tower Hill and Progressive are strong payers; Citizens and Integon have high litigation rates
+- Expected value = P(settled) × avg_settlement × fee_rate is the real driver of lead quality
 
 Lead details:
 - Owner: {lead.get("owner_name", "Unknown")}
@@ -69,20 +187,21 @@ Lead details:
 Enrichment data:
 {enrichment_section}
 
-Scoring criteria:
+Scoring criteria (data-driven from 120+ real cases):
 - Recency: Permits filed within 30 days are most valuable (+20); 31-60 days (+10)
-- Damage type: Hurricane/Wind or Flood indicates highest claim potential (+25); Roof or Fire (+20); Structural (+20)
+- Damage type: Accidental Discharge/Bathroom (+30) — highest real-world settlement rate; Hurricane/Wind (+20); Roof (+18); Fire (+15); Structural (+15); Flood (+12)
+- Insurer: Strong payers (Tower Hill, Progressive, Universal) increase score (+5 to +10); High litigation risk (Citizens, Integon) decrease score (-10 to -20)
 - Permit scope: Full roof replacement or structural permits suggest larger claims (+15)
-- Contact availability: Having email or phone enables direct outreach (+15)
+- Contact availability: Having email or phone enables direct outreach (+12)
 - Storm linkage: A named storm event confirms insurance eligibility (+10)
 - Owner-occupied (homestead): More likely to engage directly (+10)
 - Absentee owner: May have unresolved claim, needs professional help (+10)
 - Aging roof (>15 years): Higher replacement cost, stronger claim (+10)
-- Repeat damage (prior permits): Established damage history, strong claim (+15)
-- Permit status Owner-Builder/No Contractor: Owner handling claim alone — ideal target (+20)
+- Repeat damage (prior permits): Established damage history, strong claim (+18)
+- Permit status Owner-Builder/No Contractor: Owner handling claim alone — ideal target (+22)
 - Stalled permit (no inspection >60 days): Owner may be stuck — intervention opportunity (+15)
-- Underpayment flag: Permit value below median — likely underpaid by insurer (+15)
-- Base score: 30
+- Underpayment flag: Permit value below median — likely underpaid by insurer (+18)
+- Base score: 25
 
 Additional qualitative factors:
 - High-value ZIP codes (Coral Gables 33134, Coconut Grove 33133, Brickell 33131, Key Biscayne 33149, Pinecrest 33156) → increase score
@@ -99,13 +218,14 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
     """
     Rule-based lead scorer used by the Railway scraper pipeline.
 
-    Mirrors the scoring criteria in build_score_prompt() so that leads
-    arrive in Supabase with a sensible pre-score before Claude Code
-    automation reviews and refines them.
+    Mirrors the scoring criteria in build_score_prompt() and is calibrated
+    from 120+ real closed claims. Bathroom/Accidental Discharge claims are
+    the highest-revenue damage type (65.2% of settlements). Insurer risk
+    modifiers are applied based on real payout and litigation history.
     """
     from datetime import date
 
-    score = 30  # base
+    score = 25  # base (down from 30 to leave more room for signal differentiation)
 
     # Recency
     try:
@@ -118,12 +238,18 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
     except ValueError:
         pass
 
-    # Damage type
+    # Damage type — reweighted from real outcome data
     damage = lead.get("damage_type", "") or lead.get("damageType", "")
-    if damage in ("Hurricane/Wind", "Flood"):
-        score += 25
-    elif damage in ("Roof", "Fire", "Structural"):
-        score += 20
+    if damage in ("Accidental Discharge", "Bathroom"):
+        score += 30   # 65.2% of all settled claims — highest revenue type
+    elif damage in ("Hurricane/Wind",):
+        score += 20   # 25.2% of settlements
+    elif damage in ("Roof",):
+        score += 18
+    elif damage in ("Fire", "Structural"):
+        score += 15
+    elif damage in ("Flood",):
+        score += 12
 
     # Permit scope
     permit_type = (lead.get("permit_type") or lead.get("permitType") or "").lower()
@@ -132,9 +258,9 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
 
     # Contact info
     if lead.get("contact_email") or lead.get("contact_phone"):
-        score += 15
+        score += 12
     elif (lead.get("contact") or {}).get("phone") or (lead.get("contact") or {}).get("email"):
-        score += 15
+        score += 12
 
     # Storm linkage
     if lead.get("storm_event") or lead.get("stormEvent"):
@@ -143,18 +269,18 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
     # Permit status bonuses
     permit_status = lead.get("permit_status") or lead.get("permitStatus") or "Active"
     if permit_status in ("Owner-Builder", "No Contractor"):
-        score += 20
+        score += 22   # ideal target — no professional help yet
     elif permit_status == "Stalled":
         score += 15
 
     # Underpayment flag
     if lead.get("underpaid_flag") or lead.get("underpaidFlag"):
-        score += 15
+        score += 18   # clear recovery opportunity
 
     # Repeat damage
     prior = lead.get("prior_permit_count") or lead.get("priorPermitCount") or 0
     if prior >= 1:
-        score += 15
+        score += 18   # proven claim history = easier settlement
 
     # Homestead (owner-occupied)
     if lead.get("homestead"):
@@ -169,7 +295,13 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
     if roof_age > 15:
         score += 10
 
-    return min(score, 100)
+    # Insurer risk modifier — data-driven from real closed claims
+    insurer = lead.get("insurance_company") or lead.get("insuranceCompany") or ""
+    risk_data = get_insurer_risk(insurer)
+    if risk_data:
+        score += risk_data["score_modifier"]
+
+    return min(max(score, 0), 100)
 
 
 def score_leads_batch(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -195,12 +327,13 @@ if __name__ == "__main__":
         "address": "1427 SW 8th St",
         "city": "Miami",
         "zip": "33135",
-        "damage_type": "Hurricane/Wind",
-        "permit_type": "Roof Replacement",
+        "damage_type": "Accidental Discharge",
+        "permit_type": "Bathroom Water Damage Repair",
         "permit_date": "2026-03-10",
-        "storm_event": "Hurricane Helene (Sept 2025)",
+        "storm_event": "",
         "contact_email": "c.mendoza@gmail.com",
         "source": "permit",
+        "insurance_company": "Tower Hill",
     }
 
     score = _algorithmic_score(test_lead)

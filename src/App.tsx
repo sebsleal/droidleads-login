@@ -1,15 +1,18 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { BarChart2, Users, CloudLightning } from 'lucide-react'
+import { BarChart2, Users, CloudLightning, Briefcase } from 'lucide-react'
 import type {
   FilterState,
   Lead,
   StormCandidate,
   StormFilterState,
+  Case,
+  CaseFilterState,
 } from '@/types'
 import { downloadCSV, downloadStormCandidatesCSV, isWithinDays } from '@/lib/utils'
 import { useTracking } from '@/lib/useTracking'
 import { useStormTracking } from '@/lib/useStormTracking'
+import { useCases } from '@/lib/useCases'
 import Header from '@/components/Header'
 import StatsRow from '@/components/StatsRow'
 import FilterBar from '@/components/FilterBar'
@@ -21,6 +24,9 @@ import Tooltip from '@/components/Tooltip'
 import StormWatchStatsRow from '@/components/StormWatchStatsRow'
 import StormWatchTable from '@/components/StormWatchTable'
 import StormWatchDrawer from '@/components/StormWatchDrawer'
+import CasesTable from '@/components/CasesTable'
+import CaseFilterBar from '@/components/CaseFilterBar'
+import CaseDrawer from '@/components/CaseDrawer'
 
 const DEFAULT_FILTERS: FilterState = {
   zip: '',
@@ -44,11 +50,21 @@ const DEFAULT_STORM_FILTERS: StormFilterState = {
   candidateType: 'All',
 }
 
+const DEFAULT_CASE_FILTERS: CaseFilterState = {
+  search: '',
+  statusGroup: 'All',
+  insuranceCompany: '',
+  perilType: '',
+  dateRange: 'all',
+}
+
 export default function App() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [stormFilters, setStormFilters] = useState<StormFilterState>(DEFAULT_STORM_FILTERS)
+  const [caseFilters, setCaseFilters] = useState<CaseFilterState>(DEFAULT_CASE_FILTERS)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [selectedStormCandidate, setSelectedStormCandidate] = useState<StormCandidate | null>(null)
+  const [selectedCase, setSelectedCase] = useState<Case | null>(null)
   const [rawLeads, setRawLeads] = useState<Lead[]>([])
   const [rawStormCandidates, setRawStormCandidates] = useState<StormCandidate[]>([])
   const [lastScraped, setLastScraped] = useState<string | null>(null)
@@ -56,6 +72,7 @@ export default function App() {
 
   const { trackingMap, saveTracking } = useTracking()
   const { trackingMap: stormTrackingMap, saveTracking: saveStormTracking } = useStormTracking()
+  const { cases, saveCase } = useCases()
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -63,7 +80,9 @@ export default function App() {
     ? 'analytics'
     : location.pathname === '/storm-watch'
       ? 'storm-watch'
-      : 'leads'
+      : location.pathname === '/cases'
+        ? 'cases'
+        : 'leads'
 
   useEffect(() => {
     fetch('/leads.json')
@@ -102,6 +121,7 @@ export default function App() {
   useEffect(() => {
     setSelectedLead(null)
     setSelectedStormCandidate(null)
+    setSelectedCase(null)
   }, [location.pathname])
 
   const leads = useMemo(() => {
@@ -193,6 +213,54 @@ export default function App() {
     })
   }, [stormCandidates, stormFilters])
 
+  // Case filter options derived from loaded data
+  const availableInsurers = useMemo(
+    () => Array.from(new Set(cases.map((c) => c.insuranceCompany).filter(Boolean) as string[])).sort(),
+    [cases],
+  )
+  const availablePerils = useMemo(
+    () => Array.from(new Set(cases.map((c) => c.perilType).filter(Boolean) as string[])).sort(),
+    [cases],
+  )
+
+  const filteredCases = useMemo(() => {
+    return cases.filter((c) => {
+      // Search
+      if (caseFilters.search) {
+        const q = caseFilters.search.toLowerCase()
+        if (!c.clientName.toLowerCase().includes(q) && !c.lossAddress.toLowerCase().includes(q)) return false
+      }
+
+      // Status group
+      if (caseFilters.statusGroup !== 'All') {
+        if (caseFilters.statusGroup === 'Open' && !c.statusPhase.startsWith('OpenPhase:')) return false
+        if (caseFilters.statusGroup === 'Settled' && c.statusPhase !== 'Settled') return false
+        if (caseFilters.statusGroup === 'Litigation' && c.statusPhase !== 'Litigation') return false
+        if (caseFilters.statusGroup === 'Closed' && c.statusPhase !== 'Closed w/o Pay') return false
+      }
+
+      // Insurance company
+      if (caseFilters.insuranceCompany && c.insuranceCompany !== caseFilters.insuranceCompany) return false
+
+      // Peril type
+      if (caseFilters.perilType && c.perilType !== caseFilters.perilType) return false
+
+      // Date range (based on date_logged)
+      if (caseFilters.dateRange !== 'all') {
+        const days = parseInt(caseFilters.dateRange, 10)
+        if (!isWithinDays(c.dateLogged, days)) return false
+      }
+
+      return true
+    })
+  }, [cases, caseFilters])
+
+  // Keep selectedCase in sync with cases data (e.g. after saveCase)
+  const syncedSelectedCase = useMemo(() => {
+    if (!selectedCase) return null
+    return cases.find((c) => c.id === selectedCase.id) ?? selectedCase
+  }, [selectedCase, cases])
+
   const leadStats = useMemo(
     () => ({
       totalLeads: leads.length,
@@ -264,11 +332,22 @@ export default function App() {
     }
   }
 
-  const headerTotalCount = activeTab === 'storm-watch' ? stormCandidates.length : leads.length
+  const headerTotalCount = activeTab === 'storm-watch'
+    ? stormCandidates.length
+    : activeTab === 'cases'
+      ? cases.length
+      : leads.length
   const headerLastUpdated = activeTab === 'storm-watch' ? lastStormGenerated : lastScraped
   const headerExport = activeTab === 'storm-watch'
     ? () => downloadStormCandidatesCSV(filteredStormCandidates)
-    : () => downloadCSV(filteredLeads)
+    : activeTab === 'cases'
+      ? undefined
+      : () => downloadCSV(filteredLeads)
+  const headerEntityLabel = activeTab === 'storm-watch'
+    ? 'storm candidates'
+    : activeTab === 'cases'
+      ? 'cases'
+      : 'leads'
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
@@ -276,14 +355,16 @@ export default function App() {
         totalCount={headerTotalCount}
         lastScraped={headerLastUpdated}
         onExport={headerExport}
-        entityLabel={activeTab === 'storm-watch' ? 'storm candidates' : 'leads'}
+        entityLabel={headerEntityLabel}
       />
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pb-24">
         <div className="py-6">
           {activeTab === 'storm-watch'
             ? <StormWatchStatsRow stats={stormStats} />
-            : <StatsRow stats={leadStats} />}
+            : activeTab === 'cases'
+              ? null
+              : <StatsRow stats={leadStats} />}
         </div>
 
         <div className="flex gap-1 mb-6 border-b border-slate-200">
@@ -313,7 +394,20 @@ export default function App() {
               Storm Watch
             </button>
           </Tooltip>
-          <Tooltip text="Pipeline summary — total leads, high-priority count, absentee owners, and underpaid flags. Use this to track the health and volume of your lead pipeline over time." position="bottom">
+          <Tooltip text="Active client cases imported from your CRM — track claim status, process milestones, fees collected, and timeline for each case." position="bottom">
+            <button
+              onClick={() => navigate('/cases')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
+                activeTab === 'cases'
+                  ? 'border-navy-900 text-navy-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              Cases
+            </button>
+          </Tooltip>
+          <Tooltip text="Pipeline summary — total leads, high-priority count, absentee owners, underpaid flags, and revenue analytics from your closed cases." position="bottom">
             <button
               onClick={() => navigate('/analytics')}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors duration-150 ${
@@ -368,7 +462,28 @@ export default function App() {
               </>
             }
           />
-          <Route path="/analytics" element={<Analytics leads={leads} />} />
+          <Route
+            path="/cases"
+            element={
+              <>
+                <CaseFilterBar
+                  filters={caseFilters}
+                  onChange={setCaseFilters}
+                  onClear={() => setCaseFilters(DEFAULT_CASE_FILTERS)}
+                  availableInsurers={availableInsurers}
+                  availablePerils={availablePerils}
+                />
+                <div className="mt-4">
+                  <CasesTable
+                    cases={filteredCases}
+                    onSelectCase={setSelectedCase}
+                    selectedCaseId={syncedSelectedCase?.id}
+                  />
+                </div>
+              </>
+            }
+          />
+          <Route path="/analytics" element={<Analytics leads={leads} cases={cases} />} />
         </Routes>
       </main>
 
@@ -387,6 +502,14 @@ export default function App() {
           onClose={() => setSelectedStormCandidate(null)}
           onUpdateStatus={handleUpdateStormStatus}
           onUpdateTracking={handleUpdateStormTracking}
+        />
+      )}
+
+      {syncedSelectedCase && (
+        <CaseDrawer
+          kase={syncedSelectedCase}
+          onClose={() => setSelectedCase(null)}
+          onSave={saveCase}
         />
       )}
     </div>

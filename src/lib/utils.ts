@@ -53,6 +53,8 @@ export function damageTypeColor(type: DamageType): string {
       return 'bg-red-100 text-red-800 border-red-200';
     case 'Structural':
       return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'Accidental Discharge':
+      return 'bg-teal-100 text-teal-800 border-teal-200';
   }
 }
 

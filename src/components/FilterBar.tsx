@@ -16,6 +16,7 @@ const DAMAGE_TYPES: Array<DamageType | 'All'> = [
   'Roof',
   'Fire',
   'Structural',
+  'Accidental Discharge',
 ]
 
 const SCORE_TIERS = ['All', 'High', 'Medium', 'Low'] as const

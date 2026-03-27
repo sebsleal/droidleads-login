@@ -104,7 +104,12 @@ def _parse(data: dict, folio_number: str) -> dict[str, Any] | None:
     year_built_str = prop_info.get("YearBuilt") or prop_info.get("ActualYearBuilt") or ""
     try:
         year_built = int(str(year_built_str).strip())
-        roof_age = _dt.date.today().year - year_built
+        current_year = _dt.date.today().year
+        if 1800 < year_built <= current_year:
+            roof_age = current_year - year_built
+        else:
+            year_built = None
+            roof_age = None
     except (ValueError, TypeError):
         year_built = None
         roof_age = None

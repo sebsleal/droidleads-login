@@ -1,6 +1,6 @@
 import { Mail, Phone, AlertCircle, ChevronRight } from 'lucide-react'
 import type { Lead } from '@/types'
-import { formatDate, damageTypeColor, cn } from '@/lib/utils'
+import { formatDate, damageTypeColor, cn, displayOwnerName } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
 
 interface LeadsTableProps {
@@ -116,7 +116,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
 
                 {/* Owner */}
                 <td className="px-3 py-3.5">
-                  <span className="font-medium text-slate-700 whitespace-nowrap">{lead.ownerName}</span>
+                  <span className="font-medium text-slate-700 whitespace-nowrap">{displayOwnerName(lead.ownerName)}</span>
                 </td>
 
                 {/* Damage type */}

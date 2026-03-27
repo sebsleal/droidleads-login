@@ -58,6 +58,22 @@ export function damageTypeColor(type: DamageType): string {
   }
 }
 
+const PA_PLACEHOLDER_NAMES = new Set([
+  'reference only',
+  'see name',
+  'no name',
+  'unknown',
+  'unavailable',
+]);
+
+/** Returns the owner name, or a clean fallback if the PA returned a placeholder. */
+export function displayOwnerName(name: string | null | undefined): string {
+  if (!name || PA_PLACEHOLDER_NAMES.has(name.trim().toLowerCase())) {
+    return 'Owner Unknown';
+  }
+  return name;
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',

@@ -15,6 +15,30 @@ from typing import Any
 
 TEMPLATE_PREFIX = "TEMPLATE:"
 
+# Words that indicate a corporate entity or placeholder — not a real last name
+_CORP_SUFFIXES = {"llc", "inc", "corp", "ltd", "lp", "pa", "na", "co", "pllc"}
+_SKIP_NAMES = {"reference only"}
+
+
+def _salutation_name(owner_name: str | None) -> str:
+    """Return an appropriate name to use in a salutation.
+
+    - Returns 'Property Owner' for blanks, corporate entities, or placeholder names.
+    - Returns the last word for normal personal names.
+    """
+    if not owner_name:
+        return "Property Owner"
+    name = owner_name.strip()
+    if name.lower() in _SKIP_NAMES:
+        return "Property Owner"
+    parts = name.split()
+    if not parts:
+        return "Property Owner"
+    last = parts[-1].lower().rstrip(".,")
+    if last in _CORP_SUFFIXES:
+        return "Property Owner"
+    return parts[-1]
+
 
 def is_template_message(message: str | None) -> bool:
     return (message or "").strip().startswith(TEMPLATE_PREFIX)
@@ -35,7 +59,7 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
         f"Related storm: {lead['storm_event']}" if lead.get("storm_event") else ""
     )
 
-    last_name = (lead.get("owner_name") or "Property Owner").split()[-1]
+    last_name = _salutation_name(lead.get("owner_name"))
 
     return f"""You are a professional public adjuster outreach specialist for Claim Remedy Adjusters in Miami, FL.
 
@@ -66,7 +90,7 @@ def _fallback_template(lead: dict[str, Any]) -> str:
     Claude Code automation detects the 'TEMPLATE:' prefix and replaces
     this with a personalised message during its enrichment pass.
     """
-    last_name = (lead.get("owner_name") or "Property Owner").split()[-1]
+    last_name = _salutation_name(lead.get("owner_name"))
     address = lead.get("address", "your property")
     damage = lead.get("damage_type", "storm")
     storm = lead.get("storm_event", "")

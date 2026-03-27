@@ -15,9 +15,19 @@ import {
   DollarSign,
   Building2,
   ShieldAlert,
+  ExternalLink,
+  Users,
 } from "lucide-react";
 import type { Lead, LLCOfficer } from "@/types";
 import { formatDate, damageTypeColor, cn, displayOwnerName } from "@/lib/utils";
+
+const LLC_KEYWORDS = ["LLC", "L.L.C", "INC", "CORP", "LTD", "TRUST", "HOLDINGS",
+  "PROPERTIES", "REALTY", "INVESTMENTS", "GROUP", "PARTNERS", "VENTURES"];
+
+function isBusinessEntity(name: string): boolean {
+  const upper = name.toUpperCase();
+  return LLC_KEYWORDS.some((kw) => upper.includes(kw));
+}
 import ScoreBadge from "@/components/ScoreBadge";
 import Tooltip from "@/components/Tooltip";
 
@@ -182,6 +192,17 @@ export default function LeadDrawer({
                 {lead.damageType}
               </span>
             </Tooltip>
+            {isBusinessEntity(lead.ownerName) && (
+              <Tooltip
+                text="This property is owned by a business entity (LLC, Corp, Trust, etc.). See the LLC Principals section below for registered officers and Sunbiz lookup."
+                position="bottom"
+              >
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200 cursor-help">
+                  <Building2 className="w-3 h-3" />
+                  Business Entity
+                </span>
+              </Tooltip>
+            )}
             {lead.homestead === true && (
               <Tooltip
                 text="The owner lives here as their primary residence (homestead exemption on file). Owner-occupied properties often have more at stake in a claim."
@@ -536,44 +557,82 @@ export default function LeadDrawer({
             )}
           </section>
 
-          {/* LLC Principals */}
-          {(lead.llcOfficers && lead.llcOfficers.length > 0) && (
+          {/* LLC Principals — always visible for business entities */}
+          {isBusinessEntity(lead.ownerName) && (
             <section>
-              <Tooltip
-                text="Officers, directors, and members registered with Florida's Division of Corporations (Sunbiz). These are the actual humans behind the LLC — the right people to contact about an insurance claim."
-                position="bottom"
-              >
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 cursor-help inline-block underline decoration-dotted decoration-slate-300">
-                  LLC Principals
-                </h3>
-              </Tooltip>
+              <div className="flex items-center justify-between mb-4">
+                <Tooltip
+                  text="Officers, directors, and members registered with Florida's Division of Corporations (Sunbiz). These are the actual humans behind the LLC — the right people to contact about an insurance claim."
+                  position="bottom"
+                >
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-help inline-flex items-center gap-1.5 underline decoration-dotted decoration-slate-300">
+                    <Users className="w-3.5 h-3.5" />
+                    LLC Principals
+                  </h3>
+                </Tooltip>
+                <a
+                  href={`https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?SearchTerm=${encodeURIComponent(lead.ownerName)}&SearchType=EntityName&SearchStatus=Active&ListPage=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] text-violet-600 hover:text-violet-800 font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View on Sunbiz
+                </a>
+              </div>
+
+              {/* Registered agent row */}
               {lead.registeredAgentName && (
-                <div className="mb-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500">
-                  <span className="font-semibold text-slate-600">Registered Agent:</span>{" "}
-                  {lead.registeredAgentName}
-                  {lead.registeredAgentAddress && (
-                    <span className="text-slate-400"> — {lead.registeredAgentAddress}</span>
-                  )}
+                <div className="mb-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500 flex items-start gap-2">
+                  <Building2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-slate-400" />
+                  <div>
+                    <span className="font-semibold text-slate-600">Registered Agent: </span>
+                    {lead.registeredAgentName}
+                    {lead.registeredAgentAddress && (
+                      <span className="text-slate-400 block mt-0.5">{lead.registeredAgentAddress}</span>
+                    )}
+                  </div>
                 </div>
               )}
-              <div className="space-y-2">
-                {lead.llcOfficers.map((officer: LLCOfficer, i: number) => (
-                  <div
-                    key={i}
-                    className="flex items-start justify-between gap-3 py-2 px-3 rounded-lg bg-blue-50/60 border border-blue-100"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 leading-snug">{officer.name}</p>
-                      {officer.address && (
-                        <p className="text-xs text-slate-400 mt-0.5 truncate">{officer.address}</p>
-                      )}
+
+              {/* Officers list */}
+              {lead.llcOfficers && lead.llcOfficers.length > 0 ? (
+                <div className="space-y-2">
+                  {lead.llcOfficers.map((officer: LLCOfficer, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-start justify-between gap-3 py-2.5 px-3 rounded-lg bg-violet-50/60 border border-violet-100"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 leading-snug">{officer.name}</p>
+                        {officer.address && (
+                          <p className="text-xs text-slate-400 mt-0.5">{officer.address}</p>
+                        )}
+                      </div>
+                      <span className="flex-shrink-0 text-[10px] font-medium bg-violet-100 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {officer.title}
+                      </span>
                     </div>
-                    <span className="flex-shrink-0 text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      {officer.title}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-50 rounded-lg px-4 py-3 border border-slate-200">
+                  <Users className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    No officers on file yet —{" "}
+                    <a
+                      href={`https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?SearchTerm=${encodeURIComponent(lead.ownerName)}&SearchType=EntityName&SearchStatus=Active&ListPage=1`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-violet-600 hover:underline font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      look up on Sunbiz
+                    </a>
+                  </span>
+                </div>
+              )}
             </section>
           )}
 

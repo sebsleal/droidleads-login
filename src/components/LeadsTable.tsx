@@ -1,7 +1,9 @@
+import { useState, useCallback } from 'react'
 import { Mail, Phone, AlertCircle, ChevronRight } from 'lucide-react'
 import type { Lead } from '@/types'
 import { formatDate, damageTypeColor, cn, displayOwnerName } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
+import ScoreBreakdownPopover from '@/components/ScoreBreakdownPopover'
 
 interface LeadsTableProps {
   leads: Lead[]
@@ -18,7 +20,22 @@ const STATUS_STYLES: Record<Lead['status'], string> = {
 
 const TH = 'text-left px-3 py-2.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-[0.08em]'
 
+interface ScorePopoverState {
+  lead: Lead
+  anchorRect: DOMRect
+}
+
 export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: LeadsTableProps) {
+  const [scorePopover, setScorePopover] = useState<ScorePopoverState | null>(null)
+
+  const handleScoreClick = useCallback((e: React.MouseEvent, lead: Lead) => {
+    e.stopPropagation()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setScorePopover(prev =>
+      prev?.lead.id === lead.id ? null : { lead, anchorRect: rect }
+    )
+  }, [])
+
   if (leads.length === 0) {
     return (
       <div className="card flex flex-col items-center justify-center py-20 text-center">
@@ -124,7 +141,13 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
 
                 {/* Score */}
                 <td className="px-3 py-3">
-                  <ScoreBadge score={lead.score} size="sm" />
+                  <button
+                    onClick={(e) => handleScoreClick(e, lead)}
+                    className="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none"
+                    title="Click to see score breakdown"
+                  >
+                    <ScoreBadge score={lead.score} size="sm" />
+                  </button>
                 </td>
 
                 {/* Date */}
@@ -167,6 +190,15 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
           </tbody>
         </table>
       </div>
+
+      {scorePopover && (
+        <ScoreBreakdownPopover
+          score={scorePopover.lead.score}
+          breakdown={scorePopover.lead.scoreBreakdown}
+          anchorRect={scorePopover.anchorRect}
+          onClose={() => setScorePopover(null)}
+        />
+      )}
     </div>
   )
 }

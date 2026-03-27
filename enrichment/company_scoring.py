@@ -203,20 +203,30 @@ Respond with ONLY:
 """
 
 
-def _algorithmic_score(lead: dict[str, Any]) -> int:
+def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
+    """Compute score and return (score, breakdown_dict) with per-factor detail."""
     from datetime import date
 
     score = 30
+    factors: list[dict] = []
+
+    def add(delta: int, label: str, note: str = "") -> None:
+        nonlocal score
+        score += delta
+        factors.append({"label": label, "delta": delta, "note": note})
 
     damage_type = lead.get("damage_type") or lead.get("damageType")
     peril_signal = get_peril_signal(damage_type)
-    if peril_signal:
-        score += int(peril_signal["score_modifier"])
+    if peril_signal and int(peril_signal["score_modifier"]) != 0:
+        add(int(peril_signal["score_modifier"]), f"{damage_type} damage type",
+            "Based on historical settlement rate & avg payout from closed claims")
 
     insurer_name = lead.get("insurance_company") or lead.get("insuranceCompany")
     insurer_signal = get_insurer_risk(insurer_name)
-    if insurer_signal:
-        score += int(insurer_signal["score_modifier"])
+    if insurer_signal and int(insurer_signal["score_modifier"]) != 0:
+        label = insurer_name if insurer_name else "Known insurer"
+        add(int(insurer_signal["score_modifier"]), f"Insurer: {label}",
+            insurer_signal.get("label", ""))
 
     try:
         permit_date = date.fromisoformat(
@@ -224,102 +234,100 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
         )
         days_ago = (date.today() - permit_date).days
         if days_ago <= 30:
-            score += 18
+            add(18, "Permit filed within 30 days", "Fresh damage — highest urgency")
         elif days_ago <= 60:
-            score += 10
+            add(10, "Permit filed within 60 days", "Recent damage — high urgency")
         elif days_ago <= 90:
-            score += 4
+            add(4, "Permit filed within 90 days", "Moderate recency")
     except ValueError:
         pass
 
     permit_type = (lead.get("permit_type") or lead.get("permitType") or "").lower()
-    if any(
-        keyword in permit_type
-        for keyword in [
-            "replacement",
-            "structural",
-            "foundation",
-            "full roof",
-            "mitigation",
-        ]
-    ):
-        score += 12
+    if any(kw in permit_type for kw in ["replacement", "structural", "foundation", "full roof", "mitigation"]):
+        add(12, "Major permit scope", f'"{permit_type}" indicates full replacement or structural work')
     elif "repair" in permit_type or "roof" in permit_type:
-        score += 6
+        add(6, "Repair/roof permit", f'"{permit_type}" indicates repair-level work')
 
-    if lead.get("contact_email") or lead.get("contact_phone"):
-        score += 12
-    elif (lead.get("contact") or {}).get("email") or (lead.get("contact") or {}).get(
-        "phone"
-    ):
-        score += 12
+    has_contact = (
+        lead.get("contact_email") or lead.get("contact_phone")
+        or (lead.get("contact") or {}).get("email")
+        or (lead.get("contact") or {}).get("phone")
+    )
+    if has_contact:
+        add(12, "Contact info available", "Owner can be reached directly")
 
     if lead.get("storm_event") or lead.get("stormEvent"):
-        score += 8
+        add(8, "Linked to storm event", "Permit correlates with a named storm or weather event")
 
     source_detail = lead.get("source_detail") or lead.get("sourceDetail")
     if source_detail == "storm_first":
-        score += 6
+        add(6, "Storm-first lead", "Storm preceded the permit — strong insurance claim signal")
 
     permit_status = lead.get("permit_status") or lead.get("permitStatus") or "Active"
     if permit_status in {"Owner-Builder", "No Contractor"}:
-        score += 18
+        add(18, f"Permit status: {permit_status}", "No licensed contractor — owner likely underpaid or self-managing")
     elif permit_status == "Stalled":
-        score += 12
+        add(12, "Permit stalled", "Work halted — possible underpayment or dispute")
 
     if lead.get("underpaid_flag") or lead.get("underpaidFlag"):
-        score += 10
+        add(10, "Underpayment flag", "Permit value below local median — owner may have accepted a low settlement")
 
-    prior_permit_count = (
-        lead.get("prior_permit_count") or lead.get("priorPermitCount") or 0
-    )
+    prior_permit_count = lead.get("prior_permit_count") or lead.get("priorPermitCount") or 0
     if prior_permit_count >= 1:
-        score += 8
+        add(8, f"Repeat damage ({prior_permit_count} prior permit{'s' if prior_permit_count > 1 else ''})",
+            "Multiple claims history — likely still under-indemnified")
 
     if lead.get("homestead"):
-        score += 6
+        add(6, "Homesteaded property", "Primary residence — owner has personal stake in outcome")
 
     if lead.get("absentee_owner") or lead.get("absenteeOwner"):
-        score += 8
+        add(8, "Absentee owner", "Owner not on-site — property may be under-managed and underclaimed")
 
     roof_age = lead.get("roof_age") or lead.get("roofAge") or 0
     if roof_age and roof_age > 15:
-        score += 8
+        add(8, f"Aging building ({roof_age} yrs)", "Older structure increases damage severity and claim potential")
 
     if lead.get("fema_declaration_number") or lead.get("femaDeclarationNumber"):
-        score += 6
+        decl = lead.get("fema_declaration_number") or lead.get("femaDeclarationNumber")
+        add(6, f"FEMA declaration ({decl})", "Federally declared disaster area — strengthens claim basis")
 
-    # Higher assessed value = higher claim potential = larger PA fee
     assessed = lead.get("assessed_value") or lead.get("assessedValue") or 0
     try:
         assessed = float(assessed)
         if assessed >= 600_000:
-            score += 8
+            add(8, f"High-value property (${assessed:,.0f})", "Higher assessed value = larger potential claim & PA fee")
         elif assessed >= 300_000:
-            score += 4
+            add(4, f"Mid-value property (${assessed:,.0f})", "Above-median assessed value")
     except (TypeError, ValueError):
         pass
 
-    # High permit value = more extensive documented damage
     permit_value = lead.get("permit_value") or lead.get("permitValue") or 0
     try:
         permit_value = float(permit_value)
         if permit_value >= 50_000:
-            score += 6
+            add(6, f"Large permit scope (${permit_value:,.0f})", "Documented damage cost suggests significant underpayment exposure")
         elif permit_value >= 20_000:
-            score += 3
+            add(3, f"Moderate permit scope (${permit_value:,.0f})", "Non-trivial documented repair cost")
     except (TypeError, ValueError):
         pass
 
-    return min(max(score, 0), 100)
+    total = min(max(score, 0), 100)
+    breakdown = {"base": 30, "factors": factors, "total": total}
+    return total, breakdown
+
+
+def _algorithmic_score(lead: dict[str, Any]) -> int:
+    score, _ = _score_with_breakdown(lead)
+    return score
 
 
 def score_leads_batch(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            **apply_company_signals({**lead}),
-            "score": _algorithmic_score(lead),
-            "score_reasoning": "Hybrid score from company outcomes plus operational heuristics.",
-        }
-        for lead in leads
-    ]
+    result = []
+    for lead in leads:
+        lead = apply_company_signals({**lead})
+        score, breakdown = _score_with_breakdown(lead)
+        lead["score"] = score
+        lead["score_breakdown"] = breakdown
+        lead["score_reasoning"] = "Hybrid score from company outcomes plus operational heuristics."
+        result.append(lead)
+    return result

@@ -8,6 +8,7 @@ legacy hand-tuned scoring logic.
 
 from enrichment.company_scoring import (
     _algorithmic_score,
+    _score_with_breakdown,
     apply_company_signals,
     build_score_prompt,
     get_insurer_risk,
@@ -16,6 +17,7 @@ from enrichment.company_scoring import (
 
 __all__ = [
     "_algorithmic_score",
+    "_score_with_breakdown",
     "apply_company_signals",
     "build_score_prompt",
     "get_insurer_risk",

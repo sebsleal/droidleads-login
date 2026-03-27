@@ -9,7 +9,7 @@ from statistics import median as stat_median
 from typing import Any
 
 from enrichment.outreach_prompt import generate_outreach_batch, is_template_message
-from enrichment.score_prompt import _algorithmic_score, apply_company_signals
+from enrichment.score_prompt import _score_with_breakdown, apply_company_signals
 from scrapers.dedup import make_hash
 from scrapers.fema import build_fema_windows, fetch_fl_declarations, match_fema
 from scrapers.parcels import MIAMI_DADE_ZIPS, fetch_parcels_by_zip
@@ -460,6 +460,7 @@ def serialize_lead_for_ui(lead: dict[str, Any]) -> dict[str, Any]:
         "stormEvent": lead.get("storm_event") or "",
         "outreachMessage": lead.get("outreach_message") or "",
         "scoreReasoning": lead.get("score_reasoning") or "",
+        "scoreBreakdown": lead.get("score_breakdown"),
         "source": lead.get("source") or "permit",
         "sourceDetail": lead.get("source_detail") or "permit",
         "contactedAt": lead.get("contacted_at"),
@@ -560,7 +561,7 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
 
     for lead in all_leads:
         apply_company_signals(lead)
-        lead["score"] = _algorithmic_score(lead)
+        lead["score"], lead["score_breakdown"] = _score_with_breakdown(lead)
 
     all_leads = sort_leads(all_leads)
 
@@ -572,7 +573,7 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
         all_leads = enrich_with_voter_data(all_leads, top_n=200)
         for lead in all_leads:
             apply_company_signals(lead)
-            lead["score"] = _algorithmic_score(lead)
+            lead["score"], lead["score_breakdown"] = _score_with_breakdown(lead)
         all_leads = sort_leads(all_leads)
     except Exception as exc:
         print(f"[lead-pipeline] Contact enrichment failed: {exc}")

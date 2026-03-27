@@ -19,6 +19,18 @@ export type StormWatchStatus =
 
 export type ScoreTier = "high" | "medium" | "low";
 
+export interface ScoreBreakdownFactor {
+  label: string
+  delta: number
+  note?: string
+}
+
+export interface ScoreBreakdown {
+  base: number
+  factors: ScoreBreakdownFactor[]
+  total: number
+}
+
 export const COUNTY_LABELS: Record<CountySlug, string> = {
   "miami-dade": "Miami-Dade",
   broward: "Broward",
@@ -47,6 +59,7 @@ export interface Lead {
   stormEvent: string;
   outreachMessage: string;
   scoreReasoning?: string;
+  scoreBreakdown?: ScoreBreakdown;
   source?: "permit" | "storm";
   sourceDetail?: "permit" | "storm_event" | "storm_first";
   contactedAt?: string;

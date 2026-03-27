@@ -8,7 +8,7 @@ and prints rich context so Codex can write personalized outreach messages.
 Codex then:
 1. Writes a warm, personalized 3-4 sentence message for each lead
 2. Calls update_outreach(lead_id, message) for each one
-3. git add public/leads.json && git commit -m "chore: enrich outreach messages [skip ci]" && git push
+3. git add public/leads.json && git commit -m "chore: enrich outreach messages" && git push
 
 Usage:
     python3 enrich_leads.py
@@ -118,7 +118,7 @@ Rules:
 - Do NOT use generic phrases like "I hope this message finds you well"
 
 For each lead, call: update_outreach("LEAD_ID", "your message here")
-Then commit: git add public/leads.json && git commit -m "chore: enrich outreach messages [skip ci]" && git push
+Then commit: git add public/leads.json && git commit -m "chore: enrich outreach messages" && git push
 """)
 
 

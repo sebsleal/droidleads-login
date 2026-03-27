@@ -21,11 +21,12 @@ Official references:
 - Replaces `TEMPLATE:` outreach placeholders in `public/leads.json`
 - Runs `npm run build`
 - Commits and pushes the enriched lead copy
+- Allows the hosting platform to redeploy so the top-left "Updated" time reflects the latest data
 
 ## Recommended Safeguards
 
 - Run it on `main` only if you are comfortable with direct data commits.
 - If you want a review step, change the prompt so it pushes to a separate branch instead of `main`.
-- Keep `[skip ci]` in the commit message if you do not want deploy loops from data-only refreshes.
+- Do not use `[skip ci]` on these data commits if you want the live site to redeploy and pick up the new timestamp/data.
 - Use GitHub Actions or another server-side job for `run_scraper.py`.
 - Use `SUPABASE_SERVICE_ROLE_KEY` for scraper/import automation only. Do not point the browser or enrichment automation at the service-role key.

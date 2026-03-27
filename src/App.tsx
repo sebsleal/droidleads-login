@@ -102,7 +102,8 @@ export default function App() {
           : "leads";
 
   useEffect(() => {
-    fetch("/leads.json")
+    const cacheBust = Date.now();
+    fetch(`/leads.json?_=${cacheBust}`, { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error("no leads.json");
         return response.json();
@@ -119,7 +120,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch("/storm_candidates.json")
+    const cacheBust = Date.now();
+    fetch(`/storm_candidates.json?_=${cacheBust}`, { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error("no storm_candidates.json");
         return response.json();

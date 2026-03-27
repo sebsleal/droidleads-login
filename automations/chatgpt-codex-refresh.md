@@ -27,7 +27,7 @@ Work in the checked-out repo and complete the enrichment end to end:
 5. Run `npm run build` after changes.
 6. If build passes, commit only the intended changed files with:
    `git add public/leads.json`
-   `git commit -m "chore: enrich outreach messages [skip ci]"`
+   `git commit -m "chore: enrich outreach messages"`
 7. Push the branch with `git push origin main`.
 8. In the final message, summarize:
    - how many leads were enriched

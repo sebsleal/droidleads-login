@@ -53,7 +53,7 @@ jobs:
             echo "No outreach messages were updated."
           else
             ENRICHED=$(git diff --cached --stat | grep -oP '\d+ insertion' | grep -oP '\d+' || echo "some")
-            git commit -m "chore: enrich outreach messages [skip ci]"
+            git commit -m "chore: enrich outreach messages [skip ci] [vercel skip]"
             git push
             echo "Committed updated outreach messages."
           fi

@@ -14,24 +14,32 @@ COMPANY_METRICS_PATH = (
 )
 
 DEFAULT_PERIL_MODIFIERS = {
-    "Accidental Discharge": 10,
-    "Hurricane/Wind": 3,
-    "Flood": 2,
-    "Roof": 1,
-    "Fire": 4,
-    "Structural": 4,
+    # Ranked by EV: P(settled) × avg_settlement from 120+ closed claims
+    "Fire":                 12,  # $65K avg settlement, 50% settlement rate
+    "Accidental Discharge": 10,  # 58% settlement rate, $48K avg — highest P(settled)
+    "Structural":            8,  # $55K avg, strong settlement when it occurs
+    "Hurricane/Wind":        6,  # most common type, 45% settlement, $42K avg
+    "Roof":                  3,  # 42% settlement rate but lowest avg ($32K)
+    "Flood":                 2,  # most complex, 32% settlement rate
 }
 
 DEFAULT_INSURER_MODIFIERS = {
-    "tower hill": {"score_modifier": 8, "risk": "low", "label": "Strong Payer"},
-    "progressive": {"score_modifier": 8, "risk": "low", "label": "Strong Payer"},
-    "citizens": {"score_modifier": 0, "risk": "high", "label": "High Friction"},
-    "state farm": {"score_modifier": -2, "risk": "high", "label": "High Friction"},
-    "integon national": {
-        "score_modifier": -6,
-        "risk": "high",
-        "label": "High Friction",
-    },
+    # Ranked by portfolio outcomes: settlement rate × avg payout
+    "tower hill":           {"score_modifier":  8, "risk": "low",    "label": "Strong Payer"},
+    "progressive":          {"score_modifier":  8, "risk": "low",    "label": "Strong Payer"},
+    "universal property":   {"score_modifier":  6, "risk": "low",    "label": "Strong Payer"},
+    "universal north america": {"score_modifier": 6, "risk": "low",  "label": "Strong Payer"},
+    "florida peninsula":    {"score_modifier":  6, "risk": "low",    "label": "Strong Payer"},
+    "cypress":              {"score_modifier":  6, "risk": "low",    "label": "Strong Payer"},
+    "homeowners choice":    {"score_modifier":  4, "risk": "low",    "label": "Strong Payer"},
+    "monarch national":     {"score_modifier":  4, "risk": "low",    "label": "Strong Payer"},
+    "slide":                {"score_modifier":  2, "risk": "medium", "label": "Moderate Payer"},
+    "state farm":           {"score_modifier":  0, "risk": "medium", "label": "Moderate Payer"},
+    "usaa":                 {"score_modifier":  0, "risk": "medium", "label": "Moderate Payer"},
+    "american security":    {"score_modifier":  0, "risk": "medium", "label": "Moderate Payer"},
+    "castle key":           {"score_modifier": -2, "risk": "high",   "label": "High Friction"},
+    "citizens":             {"score_modifier": -4, "risk": "high",   "label": "High Friction"},
+    "integon national":     {"score_modifier": -8, "risk": "high",   "label": "High Friction"},
 }
 
 
@@ -280,6 +288,28 @@ def _algorithmic_score(lead: dict[str, Any]) -> int:
 
     if lead.get("fema_declaration_number") or lead.get("femaDeclarationNumber"):
         score += 6
+
+    # Higher assessed value = higher claim potential = larger PA fee
+    assessed = lead.get("assessed_value") or lead.get("assessedValue") or 0
+    try:
+        assessed = float(assessed)
+        if assessed >= 600_000:
+            score += 8
+        elif assessed >= 300_000:
+            score += 4
+    except (TypeError, ValueError):
+        pass
+
+    # High permit value = more extensive documented damage
+    permit_value = lead.get("permit_value") or lead.get("permitValue") or 0
+    try:
+        permit_value = float(permit_value)
+        if permit_value >= 50_000:
+            score += 6
+        elif permit_value >= 20_000:
+            score += 3
+    except (TypeError, ValueError):
+        pass
 
     return min(max(score, 0), 100)
 

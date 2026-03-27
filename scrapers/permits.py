@@ -72,7 +72,8 @@ COUNTY_CONFIGS: dict[str, dict] = {
         "inspection_field":  "LASTUPDATEDATE",
         "city_field":        None,           # full address already includes city
         "default_city":      "Fort Lauderdale",
-        "enabled": False,   # flip to True to activate Fort Lauderdale permits
+        "date_format":       "epoch_ms",   # APPROVEDT is Unix epoch milliseconds
+        "enabled": True,    # Fort Lauderdale permits — confirmed working, 91K+ records
     },
     "palm-beach": {
         # No public unauthenticated building permit API exists for Palm Beach County.
@@ -108,6 +109,11 @@ DAMAGE_KEYWORDS = [
     "roof", "reroof", "re-roof", "hurricane", "flood", "fire", "structural",
     "wind damage", "water damage", "storm", "shingle", "shutter", "elevation",
     "mitigation", "rebuild", "foundation", "wall repair", "window", "door replacement",
+    # Accidental Discharge / plumbing — high-value claim type
+    "discharge", "accidental", "pipe", "plumbing", "water intrusion", "leak",
+    "mold", "sewage", "overflow", "toilet", "bathroom", "ac leak", "a/c leak",
+    # Additional structural
+    "collapse", "sinkhole", "retaining wall",
 ]
 
 
@@ -121,21 +127,27 @@ def classify_damage_type(permit_type: str, work_desc: str) -> str:
 
     if any(w in text for w in ["fire", "smoke", "arson"]):
         return "Fire"
-    if any(w in text for w in ["flood", "water damage", "water intrusion", "inundation",
-                                "surge", "elevation", "mitigation"]):
+    # Accidental Discharge — plumbing/water/mold claims (highest settlement rate)
+    if any(w in text for w in ["discharge", "accidental", "pipe burst", "pipe break",
+                                "water intrusion", "overflow", "toilet", "bathroom",
+                                "sewage", "ac leak", "a/c leak", "mold", "sewer"]):
+        return "Accidental Discharge"
+    if any(w in text for w in ["flood", "water damage", "inundation", "surge",
+                                "elevation", "mitigation"]):
         return "Flood"
     if any(w in text for w in ["hurricane", "wind", "storm", "shutter", "soffit"]):
         return "Hurricane/Wind"
     if any(w in text for w in ["structural", "foundation", "load-bearing", "masonry",
-                                "block wall", "retaining", "wall repair"]):
+                                "block wall", "retaining", "wall repair", "collapse",
+                                "sinkhole"]):
         return "Structural"
     if any(w in text for w in ["roof", "shingle", "decking", "re-deck", "redeck",
                                 "reroof", "re-roof"]):
         return "Roof"
     if any(w in text for w in ["window", "door"]):
         return "Hurricane/Wind"
-    if any(w in text for w in ["plumbing", "pipe"]):
-        return "Flood"
+    if any(w in text for w in ["plumbing", "pipe", "leak"]):
+        return "Accidental Discharge"
 
     return "Roof"
 
@@ -163,12 +175,19 @@ def scrape_damage_permits(
         print(f"[permits] County '{county}' has no URL configured — skipping")
         return []
 
-    since = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    since_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
     where_field = config["where_field"]
+    date_field = config["date_field"]
+    date_format = config.get("date_format", "iso")
 
     kw_clauses = [f"{where_field} LIKE '%{kw}%'" for kw in DAMAGE_KEYWORDS]
-    date_field = config["date_field"]
-    where = f"{date_field} >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
+
+    if date_format == "epoch_ms":
+        since_epoch_ms = int(since_dt.timestamp() * 1000)
+        where = f"{date_field} >= {since_epoch_ms} AND ({' OR '.join(kw_clauses)})"
+    else:
+        since = since_dt.strftime("%Y-%m-%d")
+        where = f"{date_field} >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
 
     base_params = {
         "where": where,
@@ -206,12 +225,14 @@ def scrape_damage_permits(
     folio_field      = config["folio_field"]
     phone_field      = config["phone_field"]
     contractor_field = config["contractor_field"]
+    value_field      = config.get("value_field")
     city_field       = config["city_field"]
     default_city     = config["default_city"]
+    date_format      = config.get("date_format", "iso")
 
     for feat in all_features:
         attrs = feat.get("attributes", {})
-        permit_type = (attrs.get("PermitType") or attrs.get("WorkType") or "").strip()
+        permit_type = (attrs.get("PermitType") or attrs.get("PERMITTYPE") or attrs.get("WorkType") or "").strip()
         work_desc = (attrs.get(where_field) or "").strip()
 
         if not is_damage_related(permit_type, work_desc):
@@ -226,12 +247,35 @@ def scrape_damage_permits(
         owner_name = raw_owner.strip().title() or "Property Owner"
 
         address = (attrs.get(addr_field) or "Unknown Address").strip().title()
-        permit_date = (attrs.get(date_field) or "")[:10]
+
+        # Date: ISO string or epoch milliseconds depending on county
+        raw_date = attrs.get(date_field)
+        if date_format == "epoch_ms" and raw_date:
+            try:
+                permit_date = datetime.fromtimestamp(
+                    int(raw_date) / 1000, tz=timezone.utc
+                ).strftime("%Y-%m-%d")
+            except (TypeError, ValueError, OSError):
+                permit_date = ""
+        else:
+            permit_date = (raw_date or "")[:10]
+
         city = (attrs.get(city_field) or default_city if city_field else default_city)
         city = (city or default_city).strip().title() or default_city
         folio = (attrs.get(folio_field) or "").strip()
         phone = (attrs.get(phone_field) or "").strip() if phone_field else None
         phone = phone or None
+        contractor = (attrs.get(contractor_field) or "").strip() if contractor_field else None
+
+        # Permit value — important for underpayment detection and scoring
+        permit_value = 0
+        if value_field:
+            raw_val = attrs.get(value_field)
+            if raw_val is not None:
+                try:
+                    permit_value = float(raw_val)
+                except (TypeError, ValueError):
+                    permit_value = 0
 
         damage_type = classify_damage_type(permit_type, work_desc)
 
@@ -244,6 +288,8 @@ def scrape_damage_permits(
             "damage_type": damage_type,
             "permit_type": work_desc.title() or permit_type.title(),
             "permit_date": permit_date,
+            "permit_value": permit_value,
+            "contractor_name": contractor,
             "storm_event": "",
             "source": "permit",
             "status": "New",

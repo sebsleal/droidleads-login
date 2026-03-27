@@ -94,7 +94,7 @@ def main():
         if lead.get("underpaidFlag"):
             print(f"    Flag:     LIKELY UNDERPAID — permit value below ZIP median")
         if lead.get("roofAge") and lead["roofAge"] > 15:
-            print(f"    Roof Age: ~{lead['roofAge']} years (aging roof)")
+            print(f"    Building Age: ~{lead['roofAge']} years (aging building)")
         if lead.get("priorPermitCount") and lead["priorPermitCount"] >= 2:
             print(
                 f"    History:  {lead['priorPermitCount']} prior permits at this address (repeat damage)"

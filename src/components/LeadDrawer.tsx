@@ -157,7 +157,7 @@ export default function LeadDrawer({
           {/* Score + damage type + homestead badge */}
           <div className="flex items-center gap-2.5 mt-3 flex-wrap">
             <Tooltip
-              text="Lead priority score (0–100). 85+ = High priority. Calculated from damage type, storm event match, FEMA declaration, permit status, roof age, absentee owner, and contact availability."
+              text="Lead priority score (0–100). 85+ = High priority. Calculated from damage type, storm event match, FEMA declaration, permit status, building age, absentee owner, and contact availability."
               position="bottom"
             >
               <span className="cursor-help">
@@ -443,9 +443,9 @@ export default function LeadDrawer({
                 )}
                 {lead.roofAge != null && (
                   <div className="flex justify-between items-center">
-                    <Tooltip text="Estimated roof age based on the year the property was built. Roofs older than 15 years are frequently undervalued by insurers — older roofs may have pre-existing wear that adjusters can document to support a larger claim.">
+                    <Tooltip text="Estimated building age based on the year of construction from Property Appraiser records. Older buildings are more likely to have aging roofs, outdated systems, and higher claim value potential.">
                       <span className="text-slate-500 cursor-help underline decoration-dotted decoration-slate-400">
-                        Est. Roof Age
+                        Est. Building Age
                       </span>
                     </Tooltip>
                     <div className="flex items-center gap-1.5">
@@ -453,7 +453,7 @@ export default function LeadDrawer({
                         {lead.roofAge} yrs
                       </span>
                       {lead.roofAge > 15 && (
-                        <Tooltip text="This roof is over 15 years old and may be undervalued in the insurance settlement.">
+                        <Tooltip text="This building is over 15 years old. Older structures are more likely to have wear-related damage that insurers may undervalue.">
                           <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded-full cursor-help">
                             Aging
                           </span>

@@ -137,7 +137,7 @@ export function downloadCSV(leads: Lead[]) {
     'Permit Status',
     'Contractor Name',
     'Permit Value',
-    'Roof Age',
+    'Building Age',
     'Prior Permit Count',
   ];
 

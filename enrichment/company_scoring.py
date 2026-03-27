@@ -128,7 +128,7 @@ def company_context_lines(lead: dict[str, Any]) -> list[str]:
             absentee = lead.get("absenteeOwner")
         lines.append(f"- Absentee owner: {'Yes' if absentee else 'No'}")
     if lead.get("roof_age") or lead.get("roofAge"):
-        lines.append(f"- Roof age: {lead.get('roof_age') or lead.get('roofAge')} years")
+        lines.append(f"- Building age: {lead.get('roof_age') or lead.get('roofAge')} years")
     if lead.get("permit_status") or lead.get("permitStatus"):
         lines.append(
             f"- Permit status: {lead.get('permit_status') or lead.get('permitStatus')}"

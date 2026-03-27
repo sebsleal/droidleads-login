@@ -60,18 +60,26 @@ export function damageTypeColor(type: DamageType): string {
 
 const PA_PLACEHOLDER_NAMES = new Set([
   'reference only',
+  'property owner',
   'see name',
   'no name',
   'unknown',
   'unavailable',
+  'ref only',
 ]);
 
-/** Returns the owner name, or a clean fallback if the PA returned a placeholder. */
-export function displayOwnerName(name: string | null | undefined): string {
-  if (!name || PA_PLACEHOLDER_NAMES.has(name.trim().toLowerCase())) {
-    return 'Owner Unknown';
+/** Returns { display, isPlaceholder } so callers can style unknown names differently. */
+export function displayOwnerName(name: string | null | undefined): { display: string; isPlaceholder: boolean } {
+  if (!name) return { display: 'Owner Unknown', isPlaceholder: true };
+  const normalized = name.trim().toLowerCase();
+  if (
+    PA_PLACEHOLDER_NAMES.has(normalized) ||
+    normalized.startsWith('ref only/') ||
+    normalized.startsWith('reference only/')
+  ) {
+    return { display: 'Owner Unknown', isPlaceholder: true };
   }
-  return name;
+  return { display: name, isPlaceholder: false };
 }
 
 export function formatDate(iso: string): string {

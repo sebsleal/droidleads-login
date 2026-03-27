@@ -116,7 +116,14 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
 
                 {/* Owner */}
                 <td className="px-3 py-3.5">
-                  <span className="font-medium text-slate-700 whitespace-nowrap">{displayOwnerName(lead.ownerName)}</span>
+                  {(() => {
+                    const { display, isPlaceholder } = displayOwnerName(lead.ownerName);
+                    return (
+                      <span className={isPlaceholder ? 'text-slate-400 italic text-sm' : 'font-medium text-slate-700 whitespace-nowrap'}>
+                        {display}
+                      </span>
+                    );
+                  })()}
                 </td>
 
                 {/* Damage type */}

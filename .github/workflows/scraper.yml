@@ -18,12 +18,12 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: "3.11"
           cache: "pip"
@@ -47,6 +47,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit — data unchanged."
           else
-            git commit -m "chore: refresh leads $(date -u '+%Y-%m-%d')"
+            git commit -m "chore: refresh leads $(date -u '+%Y-%m-%d') [skip ci]"
             git push
           fi

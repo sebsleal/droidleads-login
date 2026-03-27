@@ -126,7 +126,7 @@ export default function LeadDrawer({
         ref={drawerRef}
         tabIndex={-1}
         role="dialog"
-        aria-label={`Lead details: ${displayOwnerName(lead.ownerName)}`}
+        aria-label={`Lead details: ${displayOwnerName(lead.ownerName).display}`}
         className="fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] lg:w-[520px] bg-white shadow-drawer
                    flex flex-col animate-slide-in focus:outline-none overflow-hidden"
       >
@@ -134,9 +134,14 @@ export default function LeadDrawer({
         <div className="flex-shrink-0 px-6 py-5 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-900 leading-snug truncate">
-                {displayOwnerName(lead.ownerName)}
-              </h2>
+              {(() => {
+                const { display, isPlaceholder } = displayOwnerName(lead.ownerName);
+                return (
+                  <h2 className={`text-lg leading-snug truncate ${isPlaceholder ? 'font-normal text-slate-400 italic' : 'font-bold text-slate-900'}`}>
+                    {display}
+                  </h2>
+                );
+              })()}
               <div className="flex items-center gap-1.5 mt-1 text-sm text-slate-500">
                 <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">
@@ -749,7 +754,7 @@ interface DetailRowProps {
 }
 
 function DetailRow({ icon, label, value, tooltip }: DetailRowProps) {
-  if (value === null || value === undefined || value === "") return null;
+  if (value === null || value === undefined || value === "" || value === false) return null;
   return (
     <div className="flex items-start gap-3">
       <span className="mt-3.5 text-slate-400 flex-shrink-0">{icon}</span>

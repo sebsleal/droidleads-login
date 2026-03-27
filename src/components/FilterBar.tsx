@@ -19,7 +19,6 @@ const DAMAGE_TYPES: Array<DamageType | 'All'> = [
   'Accidental Discharge',
 ]
 
-const SCORE_TIERS = ['All', 'High', 'Medium', 'Low'] as const
 const DATE_RANGES = [
   { value: '7', label: 'Last 7 days' },
   { value: '30', label: 'Last 30 days' },
@@ -55,33 +54,43 @@ interface ToggleProps {
   activeColor?: string
 }
 
-function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-900' }: ToggleProps) {
+function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-800' }: ToggleProps) {
   return (
     <Tooltip text={tooltipText}>
-      <label className="flex items-center gap-2 cursor-pointer select-none group">
+      <label className="flex items-center gap-1.5 cursor-pointer select-none group">
         <div
           className={cn(
-            'relative w-8 h-[18px] rounded-full transition-colors duration-200 flex-shrink-0',
+            'relative w-7 h-[16px] rounded-full transition-colors duration-200 flex-shrink-0',
             checked ? activeColor : 'bg-zinc-200'
           )}
           onClick={onToggle}
         >
           <div
             className={cn(
-              'absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200',
-              checked ? 'translate-x-[14px]' : 'translate-x-0'
+              'absolute top-[2px] left-[2px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200',
+              checked ? 'translate-x-[11px]' : 'translate-x-0'
             )}
           />
         </div>
         <span
           className={cn(
-            'text-[13px] font-medium transition-colors whitespace-nowrap',
-            checked ? 'text-zinc-900' : 'text-zinc-500 group-hover:text-zinc-700'
+            'text-[12px] font-medium transition-colors whitespace-nowrap',
+            checked ? 'text-zinc-900' : 'text-zinc-400 group-hover:text-zinc-600'
           )}
         >
           {label}
         </span>
       </label>
+    </Tooltip>
+  )
+}
+
+function FilterLabel({ text, tooltip }: { text: string; tooltip: string }) {
+  return (
+    <Tooltip text={tooltip}>
+      <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-[0.08em] whitespace-nowrap cursor-help">
+        {text}
+      </span>
     </Tooltip>
   )
 }
@@ -94,37 +103,32 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
   }
 
   return (
-    <div className="bg-white border border-zinc-100 rounded-lg px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-
+    <div className="bg-white border border-zinc-100 rounded-lg divide-y divide-zinc-50">
+      {/* Row 1: dropdowns */}
+      <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap">
         {/* ZIP */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Filter leads by ZIP code. Only shows properties located in that ZIP.">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">ZIP</label>
-          </Tooltip>
+          <FilterLabel text="ZIP" tooltip="Filter leads by ZIP code. Only shows properties in that ZIP." />
           <input
             type="text"
             placeholder="33125"
             maxLength={5}
             value={filters.zip}
             onChange={(e) => update('zip', e.target.value.replace(/\D/g, ''))}
-            className="w-24 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[13px] text-zinc-700
-                       focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
+            className="w-20 rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[13px] text-zinc-700
+                       focus:bg-white focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
                        placeholder:text-zinc-300 transition-colors"
           />
         </div>
 
-        <div className="w-px h-5 bg-zinc-100" />
+        <div className="w-px h-4 bg-zinc-100 flex-shrink-0" />
 
-        {/* Damage */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Filter by the type of property damage on the permit — e.g. hurricane wind, flood, roof replacement, fire, or structural.">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Damage</label>
-          </Tooltip>
+          <FilterLabel text="Damage" tooltip="Filter by the type of property damage on the permit." />
           <select
             value={filters.damageType}
             onChange={(e) => update('damageType', e.target.value as FilterState['damageType'])}
-            className="select-input w-44"
+            className="select-input w-40"
           >
             {DAMAGE_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
@@ -132,15 +136,12 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           </select>
         </div>
 
-        {/* County */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Filter by county. Covers Miami-Dade, Broward (Fort Lauderdale area), and Palm Beach (West Palm Beach area).">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">County</label>
-          </Tooltip>
+          <FilterLabel text="County" tooltip="Filter by county — Miami-Dade, Broward, or Palm Beach." />
           <select
             value={filters.county}
             onChange={(e) => update('county', e.target.value as FilterState['county'])}
-            className="select-input w-36"
+            className="select-input w-32"
           >
             {COUNTY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -148,33 +149,26 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           </select>
         </div>
 
-        {/* Score */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Filter by lead priority score. High = 85 or above (hottest leads). Medium = 70–84. Low = below 70.">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Score</label>
-          </Tooltip>
+          <FilterLabel text="Score" tooltip="Filter by lead priority score. High ≥ 85, Medium 70–84, Low < 70." />
           <select
             value={filters.scoreTier}
             onChange={(e) => update('scoreTier', e.target.value as FilterState['scoreTier'])}
-            className="select-input w-36"
+            className="select-input w-32"
           >
-            {SCORE_TIERS.map((t) => (
-              <option key={t} value={t}>
-                {t === 'All' ? 'All scores' : t === 'High' ? 'High (≥85)' : t === 'Medium' ? 'Medium (70–84)' : 'Low (<70)'}
-              </option>
-            ))}
+            <option value="All">All scores</option>
+            <option value="High">High (≥ 85)</option>
+            <option value="Medium">Medium (70–84)</option>
+            <option value="Low">Low (&lt; 70)</option>
           </select>
         </div>
 
-        {/* Date range */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Filter by when the damage permit was filed. Use shorter ranges to see the most recent opportunities first.">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Date</label>
-          </Tooltip>
+          <FilterLabel text="Date" tooltip="Filter by permit filing date. Use shorter ranges to see the most recent leads first." />
           <select
             value={filters.dateRange}
             onChange={(e) => update('dateRange', e.target.value as FilterState['dateRange'])}
-            className="select-input w-36"
+            className="select-input w-32"
           >
             {DATE_RANGES.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
@@ -182,24 +176,31 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           </select>
         </div>
 
-        {/* Sort order */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Sort leads by permit date — newest first shows the most recent filings at the top, oldest first for chronological order.">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Sort</label>
-          </Tooltip>
+          <FilterLabel text="Sort" tooltip="Sort leads by permit date — newest first shows the most recently filed at the top." />
           <select
             value={filters.sortOrder}
             onChange={(e) => update('sortOrder', e.target.value as FilterState['sortOrder'])}
-            className="select-input w-36"
+            className="select-input w-32"
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
           </select>
         </div>
 
-        <div className="w-px h-5 bg-zinc-100" />
+        {hasActiveFilters && (
+          <button
+            onClick={onClear}
+            className="ml-auto flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-zinc-700 transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Clear
+          </button>
+        )}
+      </div>
 
-        {/* Toggles */}
+      {/* Row 2: toggles */}
+      <div className="px-4 py-2.5 flex items-center gap-5 flex-wrap">
         <Toggle
           label="Has contact"
           checked={filters.hasContact}
@@ -207,7 +208,7 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           tooltipText="Only show leads where we found a phone number or email for the property owner."
         />
         <Toggle
-          label="Absentee"
+          label="Absentee owner"
           checked={filters.absenteeOwner}
           onToggle={() => update('absenteeOwner', !filters.absenteeOwner)}
           tooltipText="Only show leads where the owner's mailing address is out of state."
@@ -221,30 +222,19 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           activeColor="bg-red-500"
         />
         <Toggle
-          label="No Contractor"
+          label="No contractor"
           checked={filters.noContractor}
           onToggle={() => update('noContractor', !filters.noContractor)}
-          tooltipText="Only show leads where no licensed contractor is listed on the permit (Owner-Builder or No Contractor status)."
+          tooltipText="Only show leads where no licensed contractor is listed (Owner-Builder or No Contractor status)."
           activeColor="bg-blue-500"
         />
         <Toggle
-          label="Pre-Permit"
+          label="Pre-permit"
           checked={filters.stormFirst}
           onToggle={() => update('stormFirst', !filters.stormFirst)}
-          tooltipText="Only show storm-first leads — properties in storm-affected areas that have NOT filed a permit yet."
+          tooltipText="Only show storm-first leads — properties in storm-affected areas that have not yet filed a permit."
           activeColor="bg-emerald-500"
         />
-
-        {/* Clear */}
-        {hasActiveFilters && (
-          <button
-            onClick={onClear}
-            className="ml-auto flex items-center gap-1 text-[12px] font-medium text-zinc-400 hover:text-zinc-700 transition-colors"
-          >
-            <X className="w-3 h-3" />
-            Clear
-          </button>
-        )}
       </div>
     </div>
   )

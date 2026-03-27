@@ -10,116 +10,105 @@ interface LeadsTableProps {
 }
 
 const STATUS_STYLES: Record<Lead['status'], string> = {
-  New: 'bg-blue-50 text-blue-700 border-blue-200',
-  Contacted: 'bg-amber-50 text-amber-700 border-amber-200',
-  Converted: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Closed: 'bg-slate-100 text-slate-500 border-slate-200',
+  New: 'bg-blue-50 text-blue-600 border-blue-100',
+  Contacted: 'bg-amber-50 text-amber-600 border-amber-100',
+  Converted: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  Closed: 'bg-zinc-100 text-zinc-400 border-zinc-200',
 }
+
+const TH = 'text-left px-3 py-2.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-[0.08em]'
 
 export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: LeadsTableProps) {
   if (leads.length === 0) {
     return (
       <div className="card flex flex-col items-center justify-center py-20 text-center">
-        <AlertCircle className="w-10 h-10 text-slate-300 mb-3" />
-        <p className="text-slate-500 font-medium">No leads yet</p>
-        <p className="text-slate-400 text-sm mt-1">Run the scheduled task to pull fresh leads from Miami-Dade</p>
+        <AlertCircle className="w-8 h-8 text-zinc-200 mb-3" />
+        <p className="text-zinc-500 font-medium text-[14px]">No leads found</p>
+        <p className="text-zinc-400 text-[13px] mt-1">Try adjusting your filters</p>
       </div>
     )
   }
 
   return (
     <div className="card overflow-hidden">
-      {/* Table header row + result count */}
-      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-700">
-          <span className="text-zinc-900 font-semibold score-number">{leads.length}</span>{' '}
-          {leads.length === 1 ? 'lead' : 'leads'} found
+      {/* Count bar */}
+      <div className="px-4 py-2.5 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/50">
+        <p className="text-[13px] text-zinc-500">
+          <span className="text-zinc-900 font-semibold score-number">{leads.length.toLocaleString()}</span>
+          {' '}{leads.length === 1 ? 'lead' : 'leads'} found
         </p>
-        <p className="text-xs text-slate-400">Click a row to view details</p>
+        <p className="text-[11px] text-zinc-300">Click a row to view details</p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/60">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-6">
-                #
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Property Address
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Owner Name
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Damage Type
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Score
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Date
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Contact
-              </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Status
-              </th>
+            <tr className="border-b border-zinc-100 bg-zinc-50/40">
+              <th className={cn(TH, 'px-5 w-8')}>#</th>
+              <th className={TH}>Property Address</th>
+              <th className={TH}>Owner</th>
+              <th className={TH}>Damage</th>
+              <th className={TH}>Score</th>
+              <th className={TH}>Date</th>
+              <th className={TH}>Contact</th>
+              <th className={TH}>Status</th>
               <th className="w-8" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-zinc-50">
             {leads.map((lead, idx) => (
               <tr
                 key={lead.id}
                 onClick={() => onSelectLead(lead)}
                 className={cn(
                   'table-row-hover group',
-                  selectedLeadId === lead.id && 'bg-blue-50/60'
+                  selectedLeadId === lead.id && 'bg-blue-50/50'
                 )}
               >
                 {/* Index */}
-                <td className="px-5 py-3.5 text-slate-300 text-xs score-number">
+                <td className="px-5 py-3 text-zinc-300 text-[11px] score-number">
                   {idx + 1}
                 </td>
 
                 {/* Address */}
-                <td className="px-3 py-3.5">
-                  <div className="font-medium text-slate-900 truncate max-w-[200px]">
+                <td className="px-3 py-3">
+                  <div className="text-[13px] font-medium text-zinc-900 truncate max-w-[200px]">
                     {lead.propertyAddress}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">
+                  <div className="text-[11px] text-zinc-400 mt-0.5">
                     {lead.city}, FL {lead.zip}
                   </div>
                   {/* Flag pills */}
                   {(() => {
                     const pills: { label: string; color: string }[] = [];
-                    if (lead.underpaidFlag) pills.push({ label: 'Underpaid', color: 'bg-red-100 text-red-700 border border-red-200' });
-                    if (lead.absenteeOwner) pills.push({ label: 'Absentee', color: 'bg-amber-100 text-amber-700 border border-amber-200' });
-                    if (lead.permitStatus === 'Owner-Builder') pills.push({ label: 'Owner-Builder', color: 'bg-blue-100 text-blue-700 border border-blue-200' });
-                    if (lead.permitStatus === 'Stalled') pills.push({ label: 'Stalled', color: 'bg-orange-100 text-orange-700 border border-orange-200' });
-                    if (lead.permitStatus === 'No Contractor') pills.push({ label: 'No Contractor', color: 'bg-blue-100 text-blue-700 border border-blue-200' });
-                    if ((lead.roofAge ?? 0) > 15) pills.push({ label: 'Aging Building', color: 'bg-slate-100 text-slate-600 border border-slate-200' });
-                    if ((lead.priorPermitCount ?? 0) >= 1) pills.push({ label: 'Repeat', color: 'bg-purple-100 text-purple-700 border border-purple-200' });
+                    if (lead.underpaidFlag) pills.push({ label: 'Underpaid', color: 'bg-red-50 text-red-500 border border-red-100' });
+                    if (lead.absenteeOwner) pills.push({ label: 'Absentee', color: 'bg-amber-50 text-amber-500 border border-amber-100' });
+                    if (lead.permitStatus === 'Owner-Builder') pills.push({ label: 'Owner-Builder', color: 'bg-blue-50 text-blue-500 border border-blue-100' });
+                    if (lead.permitStatus === 'Stalled') pills.push({ label: 'Stalled', color: 'bg-orange-50 text-orange-500 border border-orange-100' });
+                    if (lead.permitStatus === 'No Contractor') pills.push({ label: 'No Contractor', color: 'bg-blue-50 text-blue-500 border border-blue-100' });
+                    if ((lead.roofAge ?? 0) > 15) pills.push({ label: 'Aging Building', color: 'bg-zinc-100 text-zinc-500 border border-zinc-200' });
+                    if ((lead.priorPermitCount ?? 0) >= 1) pills.push({ label: 'Repeat', color: 'bg-purple-50 text-purple-500 border border-purple-100' });
                     if (pills.length === 0) return null;
                     return (
-                      <div className="flex gap-1 mt-1 flex-wrap">
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
                         {pills.slice(0, 2).map(p => (
-                          <span key={p.label} className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${p.color}`}>{p.label}</span>
+                          <span key={p.label} className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${p.color}`}>{p.label}</span>
                         ))}
-                        {pills.length > 2 && <span className="text-[10px] text-slate-400">+{pills.length - 2}</span>}
+                        {pills.length > 2 && <span className="text-[10px] text-zinc-400">+{pills.length - 2}</span>}
                       </div>
                     );
                   })()}
                 </td>
 
                 {/* Owner */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-3">
                   {(() => {
                     const { display, isPlaceholder } = displayOwnerName(lead.ownerName);
                     return (
-                      <span className={isPlaceholder ? 'text-slate-400 italic text-sm' : 'font-medium text-slate-700 whitespace-nowrap'}>
+                      <span className={isPlaceholder
+                        ? 'text-zinc-300 italic text-[12px]'
+                        : 'text-[13px] font-medium text-zinc-700 whitespace-nowrap'
+                      }>
                         {display}
                       </span>
                     );
@@ -127,51 +116,51 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                 </td>
 
                 {/* Damage type */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-3">
                   <span className={cn('badge', damageTypeColor(lead.damageType))}>
                     {lead.damageType}
                   </span>
                 </td>
 
                 {/* Score */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-3">
                   <ScoreBadge score={lead.score} size="sm" />
                 </td>
 
                 {/* Date */}
-                <td className="px-3 py-3.5 text-slate-500 whitespace-nowrap">
+                <td className="px-3 py-3 text-[12px] text-zinc-400 whitespace-nowrap score-number">
                   {formatDate(lead.date)}
                 </td>
 
                 {/* Contact icons */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-3">
                   <div className="flex items-center gap-1.5">
                     {lead.contact?.email && (
-                      <span title={lead.contact.email} className="text-blue-400 hover:text-blue-600">
+                      <span title={lead.contact.email} className="text-blue-300 hover:text-blue-500 transition-colors">
                         <Mail className="w-3.5 h-3.5" />
                       </span>
                     )}
                     {lead.contact?.phone && (
-                      <span title={lead.contact.phone} className="text-green-500 hover:text-green-700">
+                      <span title={lead.contact.phone} className="text-emerald-400 hover:text-emerald-600 transition-colors">
                         <Phone className="w-3.5 h-3.5" />
                       </span>
                     )}
                     {!lead.contact && (
-                      <span className="text-slate-300 text-xs">—</span>
+                      <span className="text-zinc-200 text-[11px]">—</span>
                     )}
                   </div>
                 </td>
 
                 {/* Status */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-3">
                   <span className={cn('badge', STATUS_STYLES[lead.status])}>
                     {lead.status}
                   </span>
                 </td>
 
                 {/* Arrow */}
-                <td className="px-3 py-3.5">
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-400 transition-colors" />
+                <td className="px-3 py-3">
+                  <ChevronRight className="w-3.5 h-3.5 text-zinc-200 group-hover:text-zinc-400 transition-colors" />
                 </td>
               </tr>
             ))}

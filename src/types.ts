@@ -42,6 +42,12 @@ export interface ContactInfo {
   phone?: string;
 }
 
+export interface LLCOfficer {
+  name: string;
+  title: string;
+  address?: string;
+}
+
 export interface Lead {
   id: string;
   ownerName: string;
@@ -89,6 +95,10 @@ export interface Lead {
   insuranceCompany?: string;
   insurerRisk?: "high" | "medium" | "low";
   insurerRiskLabel?: string;
+  // LLC / business entity data (from Sunbiz lookup)
+  registeredAgentName?: string;
+  registeredAgentAddress?: string;
+  llcOfficers?: LLCOfficer[];
 }
 
 export interface FilterState {

@@ -485,6 +485,9 @@ def serialize_lead_for_ui(lead: dict[str, Any]) -> dict[str, Any]:
         "insurerRisk": lead.get("insurer_risk"),
         "insurerRiskLabel": lead.get("insurer_risk_label"),
         "dedupHash": lead.get("dedup_hash"),
+        "registeredAgentName": lead.get("registered_agent_name"),
+        "registeredAgentAddress": lead.get("registered_agent_address"),
+        "llcOfficers": lead.get("llc_officers") or [],
     }
     if contact:
         payload["contact"] = contact

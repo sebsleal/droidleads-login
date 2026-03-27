@@ -16,7 +16,7 @@ import {
   Building2,
   ShieldAlert,
 } from "lucide-react";
-import type { Lead } from "@/types";
+import type { Lead, LLCOfficer } from "@/types";
 import { formatDate, damageTypeColor, cn, displayOwnerName } from "@/lib/utils";
 import ScoreBadge from "@/components/ScoreBadge";
 import Tooltip from "@/components/Tooltip";
@@ -535,6 +535,47 @@ export default function LeadDrawer({
               </div>
             )}
           </section>
+
+          {/* LLC Principals */}
+          {(lead.llcOfficers && lead.llcOfficers.length > 0) && (
+            <section>
+              <Tooltip
+                text="Officers, directors, and members registered with Florida's Division of Corporations (Sunbiz). These are the actual humans behind the LLC — the right people to contact about an insurance claim."
+                position="bottom"
+              >
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+                  LLC Principals
+                </h3>
+              </Tooltip>
+              {lead.registeredAgentName && (
+                <div className="mb-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500">
+                  <span className="font-semibold text-slate-600">Registered Agent:</span>{" "}
+                  {lead.registeredAgentName}
+                  {lead.registeredAgentAddress && (
+                    <span className="text-slate-400"> — {lead.registeredAgentAddress}</span>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                {lead.llcOfficers.map((officer: LLCOfficer, i: number) => (
+                  <div
+                    key={i}
+                    className="flex items-start justify-between gap-3 py-2 px-3 rounded-lg bg-blue-50/60 border border-blue-100"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 leading-snug">{officer.name}</p>
+                      {officer.address && (
+                        <p className="text-xs text-slate-400 mt-0.5 truncate">{officer.address}</p>
+                      )}
+                    </div>
+                    <span className="flex-shrink-0 text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      {officer.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* AI Outreach Message */}
           <section>

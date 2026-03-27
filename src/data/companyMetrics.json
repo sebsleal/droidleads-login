@@ -1,0 +1,1005 @@
+{
+  "generated_at": "2026-03-27T16:12:52.310351+00:00",
+  "source_files": {
+    "claims_pdf": "All Claims.xlsx - Sheet1.pdf",
+    "tracker_pdf": "Client Process Tracking - Claim Tracker.pdf",
+    "graphs_pdf": "Data Analysis - Graphs.pdf"
+  },
+  "claims_summary": {
+    "record_count": 138,
+    "residential_rate": 1.0,
+    "status_distribution": [
+      {
+        "status": "Settled",
+        "count": 68
+      },
+      {
+        "status": "Litigation",
+        "count": 27
+      },
+      {
+        "status": "Closed w/o Pay",
+        "count": 7
+      },
+      {
+        "status": "OpenPhase: Estimating",
+        "count": 7
+      },
+      {
+        "status": "OpenPhase: Mortgage Processing",
+        "count": 7
+      },
+      {
+        "status": "OpenPhase: Appraisal",
+        "count": 6
+      },
+      {
+        "status": "OpenPhase: Inspection",
+        "count": 3
+      },
+      {
+        "status": "OpenPhase: Mediation",
+        "count": 3
+      },
+      {
+        "status": "OpenPhase: Negotiation",
+        "count": 3
+      },
+      {
+        "status": "OpenPhase: Under Review",
+        "count": 3
+      },
+      {
+        "status": "OpenPhase: Claim Originated",
+        "count": 2
+      },
+      {
+        "status": "OpenPhase: Initial Payment",
+        "count": 1
+      },
+      {
+        "status": "OpenPhase: Ready to Close",
+        "count": 1
+      }
+    ],
+    "loss_date_range": {
+      "start": "2022-09-27",
+      "end": "2025-06-11"
+    },
+    "date_logged_range": {
+      "start": "2024-02-07",
+      "end": "2025-06-13"
+    },
+    "total_fee_disbursed": 241240.13,
+    "monthly_fees": [
+      {
+        "month_key": "2024-02",
+        "label": "Feb 2024",
+        "fees": 22301.54,
+        "case_count": 11
+      },
+      {
+        "month_key": "2024-03",
+        "label": "Mar 2024",
+        "fees": 3544.28,
+        "case_count": 4
+      },
+      {
+        "month_key": "2024-04",
+        "label": "Apr 2024",
+        "fees": 12413.43,
+        "case_count": 5
+      },
+      {
+        "month_key": "2024-05",
+        "label": "May 2024",
+        "fees": 53188.59,
+        "case_count": 15
+      },
+      {
+        "month_key": "2024-06",
+        "label": "Jun 2024",
+        "fees": 9398.78,
+        "case_count": 11
+      },
+      {
+        "month_key": "2024-07",
+        "label": "Jul 2024",
+        "fees": 13706.49,
+        "case_count": 9
+      },
+      {
+        "month_key": "2024-08",
+        "label": "Aug 2024",
+        "fees": 4800.0,
+        "case_count": 7
+      },
+      {
+        "month_key": "2024-09",
+        "label": "Sep 2024",
+        "fees": 15049.99,
+        "case_count": 7
+      },
+      {
+        "month_key": "2024-10",
+        "label": "Oct 2024",
+        "fees": 28378.48,
+        "case_count": 10
+      },
+      {
+        "month_key": "2024-11",
+        "label": "Nov 2024",
+        "fees": 15886.58,
+        "case_count": 9
+      },
+      {
+        "month_key": "2024-12",
+        "label": "Dec 2024",
+        "fees": 10314.09,
+        "case_count": 4
+      },
+      {
+        "month_key": "2025-01",
+        "label": "Jan 2025",
+        "fees": 18779.91,
+        "case_count": 9
+      },
+      {
+        "month_key": "2025-02",
+        "label": "Feb 2025",
+        "fees": 18660.34,
+        "case_count": 6
+      },
+      {
+        "month_key": "2025-03",
+        "label": "Mar 2025",
+        "fees": 6879.31,
+        "case_count": 10
+      },
+      {
+        "month_key": "2025-04",
+        "label": "Apr 2025",
+        "fees": 7938.32,
+        "case_count": 10
+      },
+      {
+        "month_key": "2025-05",
+        "label": "May 2025",
+        "fees": 0.0,
+        "case_count": 9
+      },
+      {
+        "month_key": "2025-06",
+        "label": "Jun 2025",
+        "fees": 0.0,
+        "case_count": 2
+      }
+    ],
+    "peril_metrics": [
+      {
+        "peril": "Accidental Discharge",
+        "claim_family": "bathroom_water",
+        "sample_size": 101,
+        "settled_like_rate": 0.5248,
+        "litigation_rate": 0.1089,
+        "no_pay_rate": 0.0297,
+        "open_rate": 0.3366,
+        "known_outcome_rate": 0.6634,
+        "total_fees": 173781.36,
+        "average_paid_fee": 2896.36,
+        "expected_fee_per_case": 1720.61,
+        "paid_case_count": 60
+      },
+      {
+        "peril": "Hurricane/Wind",
+        "claim_family": "storm",
+        "sample_size": 34,
+        "settled_like_rate": 0.3824,
+        "litigation_rate": 0.4412,
+        "no_pay_rate": 0.1176,
+        "open_rate": 0.0588,
+        "known_outcome_rate": 0.9412,
+        "total_fees": 55427.59,
+        "average_paid_fee": 4263.66,
+        "expected_fee_per_case": 1630.22,
+        "paid_case_count": 13
+      },
+      {
+        "peril": "Roof",
+        "claim_family": "roof_leak",
+        "sample_size": 1,
+        "settled_like_rate": 0.0,
+        "litigation_rate": 1.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 0.0,
+        "average_paid_fee": 0.0,
+        "expected_fee_per_case": 0.0,
+        "paid_case_count": 0
+      },
+      {
+        "peril": "Structural",
+        "claim_family": "structural",
+        "sample_size": 1,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 5549.9,
+        "average_paid_fee": 5549.9,
+        "expected_fee_per_case": 5549.9,
+        "paid_case_count": 1
+      },
+      {
+        "peril": "Fire",
+        "claim_family": "fire",
+        "sample_size": 1,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 6481.28,
+        "average_paid_fee": 6481.28,
+        "expected_fee_per_case": 6481.28,
+        "paid_case_count": 1
+      }
+    ],
+    "insurer_metrics": [
+      {
+        "insurer": "Progressive",
+        "sample_size": 16,
+        "settled_like_rate": 0.4375,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.5625,
+        "known_outcome_rate": 0.4375,
+        "total_fees": 36709.71,
+        "average_paid_fee": 4588.71,
+        "expected_fee_per_case": 2294.36,
+        "paid_case_count": 8
+      },
+      {
+        "insurer": "Citizens",
+        "sample_size": 32,
+        "settled_like_rate": 0.4062,
+        "litigation_rate": 0.2812,
+        "no_pay_rate": 0.1562,
+        "open_rate": 0.1562,
+        "known_outcome_rate": 0.8438,
+        "total_fees": 36000.83,
+        "average_paid_fee": 2769.29,
+        "expected_fee_per_case": 1125.03,
+        "paid_case_count": 13
+      },
+      {
+        "insurer": "Tower Hill",
+        "sample_size": 12,
+        "settled_like_rate": 0.5,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.5,
+        "known_outcome_rate": 0.5,
+        "total_fees": 35900.03,
+        "average_paid_fee": 5983.34,
+        "expected_fee_per_case": 2991.67,
+        "paid_case_count": 6
+      },
+      {
+        "insurer": "Universal Property",
+        "sample_size": 12,
+        "settled_like_rate": 0.5833,
+        "litigation_rate": 0.25,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.1667,
+        "known_outcome_rate": 0.8333,
+        "total_fees": 20481.09,
+        "average_paid_fee": 2048.11,
+        "expected_fee_per_case": 1706.76,
+        "paid_case_count": 10
+      },
+      {
+        "insurer": "Homeowners Choice",
+        "sample_size": 7,
+        "settled_like_rate": 0.4286,
+        "litigation_rate": 0.2857,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.2857,
+        "known_outcome_rate": 0.7143,
+        "total_fees": 18531.84,
+        "average_paid_fee": 4632.96,
+        "expected_fee_per_case": 2647.41,
+        "paid_case_count": 4
+      },
+      {
+        "insurer": "Universal North America",
+        "sample_size": 5,
+        "settled_like_rate": 0.4,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.6,
+        "known_outcome_rate": 0.4,
+        "total_fees": 17335.36,
+        "average_paid_fee": 8667.68,
+        "expected_fee_per_case": 3467.07,
+        "paid_case_count": 2
+      },
+      {
+        "insurer": "Slide",
+        "sample_size": 10,
+        "settled_like_rate": 0.6,
+        "litigation_rate": 0.2,
+        "no_pay_rate": 0.1,
+        "open_rate": 0.1,
+        "known_outcome_rate": 0.9,
+        "total_fees": 16980.47,
+        "average_paid_fee": 2425.78,
+        "expected_fee_per_case": 1698.05,
+        "paid_case_count": 7
+      },
+      {
+        "insurer": "Monarch National",
+        "sample_size": 4,
+        "settled_like_rate": 0.75,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.25,
+        "known_outcome_rate": 0.75,
+        "total_fees": 8471.25,
+        "average_paid_fee": 2823.75,
+        "expected_fee_per_case": 2117.81,
+        "paid_case_count": 3
+      },
+      {
+        "insurer": "State Farm",
+        "sample_size": 9,
+        "settled_like_rate": 0.2222,
+        "litigation_rate": 0.5556,
+        "no_pay_rate": 0.1111,
+        "open_rate": 0.1111,
+        "known_outcome_rate": 0.8889,
+        "total_fees": 7567.94,
+        "average_paid_fee": 3783.97,
+        "expected_fee_per_case": 840.88,
+        "paid_case_count": 2
+      },
+      {
+        "insurer": "Heritage",
+        "sample_size": 3,
+        "settled_like_rate": 0.6667,
+        "litigation_rate": 0.3333,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 6400.0,
+        "average_paid_fee": 3200.0,
+        "expected_fee_per_case": 2133.33,
+        "paid_case_count": 2
+      },
+      {
+        "insurer": "Florida Peninsula",
+        "sample_size": 5,
+        "settled_like_rate": 0.8,
+        "litigation_rate": 0.2,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 6145.12,
+        "average_paid_fee": 1536.28,
+        "expected_fee_per_case": 1229.02,
+        "paid_case_count": 4
+      },
+      {
+        "insurer": "Cypress",
+        "sample_size": 2,
+        "settled_like_rate": 0.5,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.5,
+        "known_outcome_rate": 0.5,
+        "total_fees": 5549.9,
+        "average_paid_fee": 5549.9,
+        "expected_fee_per_case": 2774.95,
+        "paid_case_count": 1
+      },
+      {
+        "insurer": "Castle Key",
+        "sample_size": 3,
+        "settled_like_rate": 0.3333,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.6667,
+        "known_outcome_rate": 0.3333,
+        "total_fees": 5002.92,
+        "average_paid_fee": 1667.64,
+        "expected_fee_per_case": 1667.64,
+        "paid_case_count": 3
+      },
+      {
+        "insurer": "USAA",
+        "sample_size": 3,
+        "settled_like_rate": 0.6667,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.3333,
+        "known_outcome_rate": 0.6667,
+        "total_fees": 4737.11,
+        "average_paid_fee": 2368.55,
+        "expected_fee_per_case": 1579.04,
+        "paid_case_count": 2
+      },
+      {
+        "insurer": "Orange Insurance Exchange",
+        "sample_size": 2,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 4450.0,
+        "average_paid_fee": 2225.0,
+        "expected_fee_per_case": 2225.0,
+        "paid_case_count": 2
+      },
+      {
+        "insurer": "VYRD Insurance Company",
+        "sample_size": 1,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 4211.78,
+        "average_paid_fee": 4211.78,
+        "expected_fee_per_case": 4211.78,
+        "paid_case_count": 1
+      },
+      {
+        "insurer": "American Security",
+        "sample_size": 3,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 3681.67,
+        "average_paid_fee": 1840.84,
+        "expected_fee_per_case": 1227.22,
+        "paid_case_count": 2
+      },
+      {
+        "insurer": "Southern Oak",
+        "sample_size": 1,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 1557.65,
+        "average_paid_fee": 1557.65,
+        "expected_fee_per_case": 1557.65,
+        "paid_case_count": 1
+      },
+      {
+        "insurer": "Trident Insurance Group",
+        "sample_size": 1,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 925.4,
+        "average_paid_fee": 925.4,
+        "expected_fee_per_case": 925.4,
+        "paid_case_count": 1
+      },
+      {
+        "insurer": "Underwriters at Lloyd's",
+        "sample_size": 1,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 600.06,
+        "average_paid_fee": 600.06,
+        "expected_fee_per_case": 600.06,
+        "paid_case_count": 1
+      },
+      {
+        "insurer": "Integon National",
+        "sample_size": 3,
+        "settled_like_rate": 0.0,
+        "litigation_rate": 1.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 0.0,
+        "average_paid_fee": 0.0,
+        "expected_fee_per_case": 0.0,
+        "paid_case_count": 0
+      },
+      {
+        "insurer": "American Integrity",
+        "sample_size": 1,
+        "settled_like_rate": 0.0,
+        "litigation_rate": 1.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 0.0,
+        "known_outcome_rate": 1.0,
+        "total_fees": 0.0,
+        "average_paid_fee": 0.0,
+        "expected_fee_per_case": 0.0,
+        "paid_case_count": 0
+      },
+      {
+        "insurer": "Loggerhead",
+        "sample_size": 2,
+        "settled_like_rate": 0.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "open_rate": 1.0,
+        "known_outcome_rate": 0.0,
+        "total_fees": 0.0,
+        "average_paid_fee": 0.0,
+        "expected_fee_per_case": 0.0,
+        "paid_case_count": 0
+      }
+    ],
+    "notes": [
+      "Estimated loss is blank in the PDF extract and is excluded from the scoring model.",
+      "Rates are computed against all extracted cases, not only closed files."
+    ]
+  },
+  "workflow_summary": {
+    "record_count": 143,
+    "status_distribution": [
+      {
+        "status": "Completed",
+        "count": 63
+      },
+      {
+        "status": "n/a",
+        "count": 47
+      },
+      {
+        "status": "Blank",
+        "count": 22
+      },
+      {
+        "status": "Litigation",
+        "count": 10
+      },
+      {
+        "status": "Appraisal",
+        "count": 1
+      }
+    ],
+    "claim_family_distribution": [
+      {
+        "claim_family": "bathroom_water",
+        "label": "Bathroom Water",
+        "count": 109
+      },
+      {
+        "claim_family": "storm",
+        "label": "Storm",
+        "count": 24
+      },
+      {
+        "claim_family": "roof_leak",
+        "label": "Roof Leak",
+        "count": 5
+      },
+      {
+        "claim_family": "fire",
+        "label": "Fire",
+        "count": 2
+      },
+      {
+        "claim_family": "plumbing",
+        "label": "Plumbing",
+        "count": 1
+      },
+      {
+        "claim_family": "structural",
+        "label": "Structural",
+        "count": 1
+      },
+      {
+        "claim_family": "water",
+        "label": "Water",
+        "count": 1
+      }
+    ],
+    "milestone_coverage": [
+      {
+        "milestone": "estimate",
+        "label": "Estimate",
+        "count": 100,
+        "coverage_rate": 0.6993
+      },
+      {
+        "milestone": "inspection",
+        "label": "Inspection",
+        "count": 70,
+        "coverage_rate": 0.4895
+      },
+      {
+        "milestone": "srl",
+        "label": "Srl",
+        "count": 41,
+        "coverage_rate": 0.2867
+      },
+      {
+        "milestone": "cdl_1",
+        "label": "Cdl 1",
+        "count": 57,
+        "coverage_rate": 0.3986
+      },
+      {
+        "milestone": "cdl_2",
+        "label": "Cdl 2",
+        "count": 27,
+        "coverage_rate": 0.1888
+      },
+      {
+        "milestone": "cdl_3",
+        "label": "Cdl 3",
+        "count": 13,
+        "coverage_rate": 0.0909
+      }
+    ],
+    "backlog_missing_stage": [
+      {
+        "milestone": "estimate",
+        "label": "Estimate",
+        "count": 25
+      },
+      {
+        "milestone": "inspection",
+        "label": "Inspection",
+        "count": 44
+      },
+      {
+        "milestone": "srl",
+        "label": "Srl",
+        "count": 57
+      },
+      {
+        "milestone": "cdl_1",
+        "label": "Cdl 1",
+        "count": 37
+      },
+      {
+        "milestone": "cdl_2",
+        "label": "Cdl 2",
+        "count": 57
+      },
+      {
+        "milestone": "cdl_3",
+        "label": "Cdl 3",
+        "count": 64
+      }
+    ],
+    "stage_durations": [
+      {
+        "stage": "overall_cycle",
+        "label": "Completed Cycle",
+        "sample_size": 40,
+        "average_days": 25.2,
+        "median_days": 21.0
+      },
+      {
+        "stage": "inspection_to_srl",
+        "label": "Inspection to SRL",
+        "sample_size": 36,
+        "average_days": 24.3,
+        "median_days": 20.0
+      },
+      {
+        "stage": "cdl_1_to_cdl_2",
+        "label": "CDL 1 to CDL 2",
+        "sample_size": 26,
+        "average_days": 10.6,
+        "median_days": 7.0
+      },
+      {
+        "stage": "cdl_2_to_cdl_3",
+        "label": "CDL 2 to CDL 3",
+        "sample_size": 11,
+        "average_days": 7.1,
+        "median_days": 7.0
+      }
+    ],
+    "claim_family_metrics": [
+      {
+        "claim_family": "bathroom_water",
+        "label": "Bathroom Water",
+        "sample_size": 109,
+        "completed_rate": 0.4862,
+        "litigation_rate": 0.0367,
+        "backlog_rate": 0.4679,
+        "average_cycle_days": 25.2,
+        "median_cycle_days": 21.0
+      },
+      {
+        "claim_family": "storm",
+        "label": "Storm",
+        "sample_size": 24,
+        "completed_rate": 0.2917,
+        "litigation_rate": 0.25,
+        "backlog_rate": 0.4583,
+        "average_cycle_days": 0.0,
+        "median_cycle_days": 0.0
+      },
+      {
+        "claim_family": "roof_leak",
+        "label": "Roof Leak",
+        "sample_size": 5,
+        "completed_rate": 0.4,
+        "litigation_rate": 0.0,
+        "backlog_rate": 0.6,
+        "average_cycle_days": 0.0,
+        "median_cycle_days": 0.0
+      },
+      {
+        "claim_family": "fire",
+        "label": "Fire",
+        "sample_size": 2,
+        "completed_rate": 0.0,
+        "litigation_rate": 0.0,
+        "backlog_rate": 1.0,
+        "average_cycle_days": 0.0,
+        "median_cycle_days": 0.0
+      },
+      {
+        "claim_family": "water",
+        "label": "Water",
+        "sample_size": 1,
+        "completed_rate": 0.0,
+        "litigation_rate": 0.0,
+        "backlog_rate": 1.0,
+        "average_cycle_days": 0.0,
+        "median_cycle_days": 0.0
+      },
+      {
+        "claim_family": "plumbing",
+        "label": "Plumbing",
+        "sample_size": 1,
+        "completed_rate": 0.0,
+        "litigation_rate": 0.0,
+        "backlog_rate": 1.0,
+        "average_cycle_days": 0.0,
+        "median_cycle_days": 0.0
+      },
+      {
+        "claim_family": "structural",
+        "label": "Structural",
+        "sample_size": 1,
+        "completed_rate": 1.0,
+        "litigation_rate": 0.0,
+        "backlog_rate": 0.0,
+        "average_cycle_days": 0.0,
+        "median_cycle_days": 0.0
+      }
+    ],
+    "bottlenecks": [
+      {
+        "label": "Cdl 3",
+        "kind": "backlog_missing",
+        "count": 64
+      },
+      {
+        "label": "Srl",
+        "kind": "backlog_missing",
+        "count": 57
+      },
+      {
+        "label": "Cdl 2",
+        "kind": "backlog_missing",
+        "count": 57
+      },
+      {
+        "label": "Inspection",
+        "kind": "backlog_missing",
+        "count": 44
+      }
+    ]
+  },
+  "join_summary": {
+    "claims_unique_names": 116,
+    "tracker_unique_names": 131,
+    "exact_name_overlap": 47
+  },
+  "scoring_model": {
+    "formula": {
+      "peril_modifier": "12*expected_fee_index + 8*settled_rate - 10*litigation_rate - 6*no_pay_rate + workflow_bonus",
+      "insurer_modifier": "10*expected_fee_index + 6*settled_rate - 12*litigation_rate - 8*no_pay_rate",
+      "notes": [
+        "expected_fee_index scales each peril or insurer against the highest extracted expected fee per case.",
+        "workflow_bonus is capped at 6 points and comes from tracker backlog/cycle-time pressure by claim family."
+      ]
+    },
+    "peril_weights": {
+      "Accidental Discharge": {
+        "claim_family": "bathroom_water",
+        "sample_size": 101,
+        "settled_like_rate": 0.5248,
+        "litigation_rate": 0.1089,
+        "no_pay_rate": 0.0297,
+        "expected_fee_per_case": 1720.61,
+        "workflow_priority_bonus": 3.87,
+        "score_modifier": 10
+      },
+      "Hurricane/Wind": {
+        "claim_family": "storm",
+        "sample_size": 34,
+        "settled_like_rate": 0.3824,
+        "litigation_rate": 0.4412,
+        "no_pay_rate": 0.1176,
+        "expected_fee_per_case": 1630.22,
+        "workflow_priority_bonus": 1.83,
+        "score_modifier": 3
+      }
+    },
+    "insurer_modifiers": {
+      "Progressive": {
+        "sample_size": 16,
+        "settled_like_rate": 0.4375,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 2294.36,
+        "score_modifier": 8,
+        "risk": "low",
+        "label": "Strong Payer"
+      },
+      "Citizens": {
+        "sample_size": 32,
+        "settled_like_rate": 0.4062,
+        "litigation_rate": 0.2812,
+        "no_pay_rate": 0.1562,
+        "expected_fee_per_case": 1125.03,
+        "score_modifier": 0,
+        "risk": "high",
+        "label": "High Friction"
+      },
+      "Tower Hill": {
+        "sample_size": 12,
+        "settled_like_rate": 0.5,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 2991.67,
+        "score_modifier": 10,
+        "risk": "low",
+        "label": "Strong Payer"
+      },
+      "Universal Property": {
+        "sample_size": 12,
+        "settled_like_rate": 0.5833,
+        "litigation_rate": 0.25,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 1706.76,
+        "score_modifier": 5,
+        "risk": "medium",
+        "label": "Balanced Outcomes"
+      },
+      "Homeowners Choice": {
+        "sample_size": 7,
+        "settled_like_rate": 0.4286,
+        "litigation_rate": 0.2857,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 2647.41,
+        "score_modifier": 5,
+        "risk": "medium",
+        "label": "Balanced Outcomes"
+      },
+      "Universal North America": {
+        "sample_size": 5,
+        "settled_like_rate": 0.4,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 3467.07,
+        "score_modifier": 11,
+        "risk": "low",
+        "label": "Strong Payer"
+      },
+      "Slide": {
+        "sample_size": 10,
+        "settled_like_rate": 0.6,
+        "litigation_rate": 0.2,
+        "no_pay_rate": 0.1,
+        "expected_fee_per_case": 1698.05,
+        "score_modifier": 4,
+        "risk": "medium",
+        "label": "Balanced Outcomes"
+      },
+      "Monarch National": {
+        "sample_size": 4,
+        "settled_like_rate": 0.75,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 2117.81,
+        "score_modifier": 10,
+        "risk": "low",
+        "label": "Strong Payer"
+      },
+      "State Farm": {
+        "sample_size": 9,
+        "settled_like_rate": 0.2222,
+        "litigation_rate": 0.5556,
+        "no_pay_rate": 0.1111,
+        "expected_fee_per_case": 840.88,
+        "score_modifier": -4,
+        "risk": "high",
+        "label": "High Friction"
+      },
+      "Heritage": {
+        "sample_size": 3,
+        "settled_like_rate": 0.6667,
+        "litigation_rate": 0.3333,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 2133.33,
+        "score_modifier": 5,
+        "risk": "medium",
+        "label": "Balanced Outcomes"
+      },
+      "Florida Peninsula": {
+        "sample_size": 5,
+        "settled_like_rate": 0.8,
+        "litigation_rate": 0.2,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 1229.02,
+        "score_modifier": 5,
+        "risk": "medium",
+        "label": "Balanced Outcomes"
+      },
+      "Castle Key": {
+        "sample_size": 3,
+        "settled_like_rate": 0.3333,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 1667.64,
+        "score_modifier": 6,
+        "risk": "medium",
+        "label": "Balanced Outcomes"
+      },
+      "USAA": {
+        "sample_size": 3,
+        "settled_like_rate": 0.6667,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 1579.04,
+        "score_modifier": 8,
+        "risk": "low",
+        "label": "Strong Payer"
+      },
+      "American Security": {
+        "sample_size": 3,
+        "settled_like_rate": 1.0,
+        "litigation_rate": 0.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 1227.22,
+        "score_modifier": 9,
+        "risk": "low",
+        "label": "Strong Payer"
+      },
+      "Integon National": {
+        "sample_size": 3,
+        "settled_like_rate": 0.0,
+        "litigation_rate": 1.0,
+        "no_pay_rate": 0.0,
+        "expected_fee_per_case": 0.0,
+        "score_modifier": -12,
+        "risk": "high",
+        "label": "High Friction"
+      }
+    }
+  },
+  "validation_notes": [
+    "Raw PDFs are not committed. This JSON contains aggregate, sanitized business metrics only.",
+    "Data Analysis - Graphs.pdf is chart-only in this environment and is treated as a manual validation artifact."
+  ]
+}

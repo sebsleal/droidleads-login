@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   MapPin,
@@ -9,68 +9,76 @@ import {
   Target,
   MessageSquare,
   Map,
-} from 'lucide-react'
-import type { StormCandidate, StormWatchStatus } from '@/types'
-import { COUNTY_LABELS } from '@/types'
-import { cn, formatDate } from '@/lib/utils'
-import ScoreBadge from '@/components/ScoreBadge'
+} from "lucide-react";
+import type { StormCandidate, StormWatchStatus } from "@/types";
+import { COUNTY_LABELS } from "@/types";
+import { cn, formatDate } from "@/lib/utils";
+import ScoreBadge from "@/components/ScoreBadge";
 
-type TrackingPatch = Partial<Pick<StormCandidate, 'status' | 'notes' | 'contactedAt' | 'permitFiledAt' | 'closedAt'>>
+type TrackingPatch = Partial<
+  Pick<
+    StormCandidate,
+    "status" | "notes" | "contactedAt" | "permitFiledAt" | "closedAt"
+  >
+>;
 
 interface StormWatchDrawerProps {
-  candidate: StormCandidate
-  onClose: () => void
-  onUpdateStatus: (id: string, status: StormWatchStatus) => void
-  onUpdateTracking?: (id: string, patch: TrackingPatch) => void
+  candidate: StormCandidate;
+  onClose: () => void;
+  onUpdateStatus: (id: string, status: StormWatchStatus) => void;
+  onUpdateTracking?: (id: string, patch: TrackingPatch) => void;
+  readOnly?: boolean;
 }
 
 const STATUS_OPTIONS: StormWatchStatus[] = [
-  'Watching',
-  'Researching',
-  'Outreach Ready',
-  'Contacted',
-  'Permit Filed',
-  'Closed',
-]
+  "Watching",
+  "Researching",
+  "Outreach Ready",
+  "Contacted",
+  "Permit Filed",
+  "Closed",
+];
 
 const STATUS_ACTIVE: Record<StormWatchStatus, string> = {
-  Watching: 'bg-slate-700 text-white border-slate-700',
-  Researching: 'bg-blue-600 text-white border-blue-600',
-  'Outreach Ready': 'bg-indigo-600 text-white border-indigo-600',
-  Contacted: 'bg-amber-500 text-white border-amber-500',
-  'Permit Filed': 'bg-emerald-600 text-white border-emerald-600',
-  Closed: 'bg-slate-400 text-white border-slate-400',
-}
+  Watching: "bg-slate-700 text-white border-slate-700",
+  Researching: "bg-blue-600 text-white border-blue-600",
+  "Outreach Ready": "bg-indigo-600 text-white border-indigo-600",
+  Contacted: "bg-amber-500 text-white border-amber-500",
+  "Permit Filed": "bg-emerald-600 text-white border-emerald-600",
+  Closed: "bg-slate-400 text-white border-slate-400",
+};
 
-const STATUS_INACTIVE = 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+const STATUS_INACTIVE =
+  "bg-white text-slate-600 border-slate-200 hover:bg-slate-50";
 
 export default function StormWatchDrawer({
   candidate,
   onClose,
   onUpdateStatus,
   onUpdateTracking,
+  readOnly = false,
 }: StormWatchDrawerProps) {
-  const [notesValue, setNotesValue] = useState(candidate.notes ?? '')
-  const drawerRef = useRef<HTMLDivElement>(null)
+  const [notesValue, setNotesValue] = useState(candidate.notes ?? "");
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setNotesValue(candidate.notes ?? '')
-  }, [candidate.id, candidate.notes])
+    setNotesValue(candidate.notes ?? "");
+  }, [candidate.id, candidate.notes]);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === "Escape") onClose();
     }
 
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose])
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
   useEffect(() => {
-    drawerRef.current?.focus()
-  }, [candidate.id])
+    drawerRef.current?.focus();
+  }, [candidate.id]);
 
-  const hasPreciseLocation = Boolean(candidate.city || candidate.zip)
+  const hasPreciseLocation = Boolean(candidate.city || candidate.zip);
 
   return (
     <>
@@ -98,8 +106,8 @@ export default function StormWatchDrawer({
                 <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">
                   {COUNTY_LABELS[candidate.county]}
-                  {candidate.city ? `, ${candidate.city}` : ''}
-                  {candidate.zip ? ` ${candidate.zip}` : ''}
+                  {candidate.city ? `, ${candidate.city}` : ""}
+                  {candidate.zip ? ` ${candidate.zip}` : ""}
                 </span>
               </div>
             </div>
@@ -115,13 +123,17 @@ export default function StormWatchDrawer({
 
           <div className="flex items-center gap-2.5 mt-3 flex-wrap">
             <ScoreBadge score={candidate.score} size="md" showLabel />
-            <span className={cn(
-              'badge',
-              candidate.candidateType === 'area'
-                ? 'bg-sky-50 text-sky-700 border-sky-200'
-                : 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            )}>
-              {candidate.candidateType === 'area' ? 'Area-based candidate' : 'Property candidate'}
+            <span
+              className={cn(
+                "badge",
+                candidate.candidateType === "area"
+                  ? "bg-sky-50 text-sky-700 border-sky-200"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200",
+              )}
+            >
+              {candidate.candidateType === "area"
+                ? "Area-based candidate"
+                : "Property candidate"}
             </span>
             {candidate.femaDeclarationNumber && (
               <span className="badge bg-orange-50 text-orange-700 border-orange-200">
@@ -132,15 +144,27 @@ export default function StormWatchDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          {candidate.candidateType === 'area' && (
+          {readOnly && (
+            <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-800">
+                Storm Watch edits are disabled in browser anon mode. Secure
+                writes should happen through a server-side or authenticated
+                path.
+              </p>
+            </section>
+          )}
+          {candidate.candidateType === "area" && (
             <section className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
               <div className="flex items-start gap-3">
                 <Map className="w-4 h-4 text-sky-700 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-sky-900">Area-based opportunity</p>
+                  <p className="text-sm font-semibold text-sky-900">
+                    Area-based opportunity
+                  </p>
                   <p className="text-sm text-sky-800 mt-1">
-                    This record represents an impacted area, not a verified property lead. Use it to guide research,
-                    canvassing, and later property-level enrichment.
+                    This record represents an impacted area, not a verified
+                    property lead. Use it to guide research, canvassing, and
+                    later property-level enrichment.
                   </p>
                 </div>
               </div>
@@ -177,8 +201,8 @@ export default function StormWatchDrawer({
                 label="City / ZIP"
                 value={
                   hasPreciseLocation
-                    ? `${candidate.city || 'Unknown'}${candidate.zip ? ` ${candidate.zip}` : ''}`
-                    : 'Not available on this area-level candidate'
+                    ? `${candidate.city || "Unknown"}${candidate.zip ? ` ${candidate.zip}` : ""}`
+                    : "Not available on this area-level candidate"
                 }
               />
               <DetailRow
@@ -186,8 +210,8 @@ export default function StormWatchDrawer({
                 label="FEMA"
                 value={
                   candidate.femaDeclarationNumber
-                    ? `${candidate.femaDeclarationNumber}${candidate.femaIncidentType ? ` · ${candidate.femaIncidentType}` : ''}`
-                    : 'No FEMA declaration match'
+                    ? `${candidate.femaDeclarationNumber}${candidate.femaIncidentType ? ` · ${candidate.femaIncidentType}` : ""}`
+                    : "No FEMA declaration match"
                 }
               />
               <DetailRow
@@ -204,7 +228,8 @@ export default function StormWatchDrawer({
             </h3>
             <div className="bg-slate-50 rounded-xl border border-slate-200 px-4 py-4">
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {candidate.narrative || 'No NOAA narrative was available for this event.'}
+                {candidate.narrative ||
+                  "No NOAA narrative was available for this event."}
               </p>
             </div>
           </section>
@@ -258,15 +283,27 @@ export default function StormWatchDrawer({
                   <MessageSquare className="w-4 h-4" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs text-slate-400 block mb-1">Notes</span>
+                  <span className="text-xs text-slate-400 block mb-1">
+                    Notes
+                  </span>
                   <textarea
                     rows={4}
                     placeholder="Add Storm Watch notes..."
                     value={notesValue}
+                    disabled={readOnly}
                     onChange={(event) => setNotesValue(event.target.value)}
-                    onBlur={() => onUpdateTracking?.(candidate.id, { notes: notesValue.trim() })}
-                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5
-                               resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onBlur={() =>
+                      onUpdateTracking?.(candidate.id, {
+                        notes: notesValue.trim(),
+                      })
+                    }
+                    className={cn(
+                      "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none",
+                      "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                      readOnly
+                        ? "cursor-not-allowed bg-slate-50 text-slate-400"
+                        : "",
+                    )}
                   />
                 </div>
               </div>
@@ -281,10 +318,14 @@ export default function StormWatchDrawer({
               {STATUS_OPTIONS.map((status) => (
                 <button
                   key={status}
+                  disabled={readOnly}
                   onClick={() => onUpdateStatus(candidate.id, status)}
                   className={cn(
-                    'py-2 rounded-lg text-sm font-medium border transition-all duration-150',
-                    candidate.status === status ? STATUS_ACTIVE[status] : STATUS_INACTIVE,
+                    "py-2 rounded-lg text-sm font-medium border transition-all duration-150",
+                    candidate.status === status
+                      ? STATUS_ACTIVE[status]
+                      : STATUS_INACTIVE,
+                    readOnly ? "cursor-not-allowed opacity-60" : "",
                   )}
                 >
                   {status}
@@ -305,13 +346,13 @@ export default function StormWatchDrawer({
         </div>
       </div>
     </>
-  )
+  );
 }
 
 interface DetailRowProps {
-  icon: React.ReactNode
-  label: string
-  value: React.ReactNode
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
 }
 
 function DetailRow({ icon, label, value }: DetailRowProps) {
@@ -323,5 +364,5 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
         <span className="text-sm text-slate-800 font-medium">{value}</span>
       </div>
     </div>
-  )
+  );
 }

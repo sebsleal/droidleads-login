@@ -13,6 +13,16 @@ replaces them with personalised messages — no API key needed on the server.
 
 from typing import Any
 
+TEMPLATE_PREFIX = "TEMPLATE:"
+
+
+def is_template_message(message: str | None) -> bool:
+    return (message or "").strip().startswith(TEMPLATE_PREFIX)
+
+
+def needs_outreach_enrichment(message: str | None) -> bool:
+    return not (message or "").strip() or is_template_message(message)
+
 
 def build_outreach_prompt(lead: dict[str, Any]) -> str:
     """
@@ -22,9 +32,7 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
     full context when writing a personalised outreach message.
     """
     storm_line = (
-        f"Related storm: {lead['storm_event']}"
-        if lead.get("storm_event")
-        else ""
+        f"Related storm: {lead['storm_event']}" if lead.get("storm_event") else ""
     )
 
     last_name = (lead.get("owner_name") or "Property Owner").split()[-1]
@@ -65,7 +73,7 @@ def _fallback_template(lead: dict[str, Any]) -> str:
 
     storm_line = f" related to {storm}" if storm else ""
 
-    return (
+    body = (
         f"Dear {last_name}, our records indicate your property at {address} may have "
         f"sustained {damage.lower()} damage{storm_line}. "
         f"As a licensed Florida public adjuster, Claim Remedy Adjusters specializes in "
@@ -73,6 +81,7 @@ def _fallback_template(lead: dict[str, Any]) -> str:
         f"We'd love to schedule a free property inspection to ensure you receive every "
         f"dollar you deserve. Please call or text us at (800) 555-0100."
     )
+    return f"{TEMPLATE_PREFIX} {body}"
 
 
 def generate_outreach_batch(leads: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -88,7 +97,7 @@ def generate_outreach_batch(leads: list[dict[str, Any]]) -> list[dict[str, Any]]
 
     for lead in leads:
         existing = lead.get("outreach_message") or ""
-        needs_message = not existing or existing.startswith("TEMPLATE:")
+        needs_message = needs_outreach_enrichment(existing)
 
         if needs_message:
             results.append({**lead, "outreach_message": _fallback_template(lead)})

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   MapPin,
@@ -13,77 +13,80 @@ import {
   AlertTriangle,
   Clock,
   MessageSquare,
-} from 'lucide-react'
-import type { Case, CaseStatusPhase } from '@/types'
-import { cn, formatDate } from '@/lib/utils'
-import { caseStatusColor, caseStatusLabel } from '@/components/CasesTable'
-import Tooltip from '@/components/Tooltip'
+} from "lucide-react";
+import type { Case, CaseStatusPhase } from "@/types";
+import { cn, formatDate } from "@/lib/utils";
+import { caseStatusColor, caseStatusLabel } from "@/components/CasesTable";
+import Tooltip from "@/components/Tooltip";
 
-type CasePatch = Partial<Pick<
-  Case,
-  | 'statusPhase'
-  | 'feeDisbursed'
-  | 'estimatedLoss'
-  | 'feeRate'
-  | 'lor'
-  | 'plumbingInvoice'
-  | 'waterMitigation'
-  | 'estimateDate'
-  | 'inspectionDate'
-  | 'srlDate'
-  | 'cdl1Date'
-  | 'cdl2Date'
-  | 'cdl3Date'
-  | 'notes'
->>
+type CasePatch = Partial<
+  Pick<
+    Case,
+    | "statusPhase"
+    | "feeDisbursed"
+    | "estimatedLoss"
+    | "feeRate"
+    | "lor"
+    | "plumbingInvoice"
+    | "waterMitigation"
+    | "estimateDate"
+    | "inspectionDate"
+    | "srlDate"
+    | "cdl1Date"
+    | "cdl2Date"
+    | "cdl3Date"
+    | "notes"
+  >
+>;
 
 interface CaseDrawerProps {
-  kase: Case
-  onClose: () => void
-  onSave: (id: string, patch: CasePatch) => void
+  kase: Case;
+  onClose: () => void;
+  onSave: (id: string, patch: CasePatch) => void;
+  readOnly?: boolean;
 }
 
 const STATUS_OPTIONS: CaseStatusPhase[] = [
-  'OpenPhase: Claim Originated',
-  'OpenPhase: Estimating',
-  'OpenPhase: Inspection',
-  'OpenPhase: Under Review',
-  'OpenPhase: Negotiation',
-  'OpenPhase: Appraisal',
-  'OpenPhase: Mediation',
-  'OpenPhase: Mortgage Processing',
-  'OpenPhase: Initial Payment',
-  'OpenPhase: Recovering Depreciation',
-  'OpenPhase: Ready to Close',
-  'OpenPhase: Settled',
-  'Settled',
-  'Appraisal',
-  'Litigation',
-  'Closed w/o Pay',
-]
+  "OpenPhase: Claim Originated",
+  "OpenPhase: Estimating",
+  "OpenPhase: Inspection",
+  "OpenPhase: Under Review",
+  "OpenPhase: Negotiation",
+  "OpenPhase: Appraisal",
+  "OpenPhase: Mediation",
+  "OpenPhase: Mortgage Processing",
+  "OpenPhase: Initial Payment",
+  "OpenPhase: Recovering Depreciation",
+  "OpenPhase: Ready to Close",
+  "OpenPhase: Settled",
+  "Settled",
+  "Appraisal",
+  "Litigation",
+  "Closed w/o Pay",
+];
 
 // ---------------------------------------------------------------------------
 // Timeline
 // ---------------------------------------------------------------------------
 
 interface TimelineStep {
-  label: string
-  date: string | undefined
-  isBool?: boolean
-  boolValue?: boolean
+  label: string;
+  date: string | undefined;
+  isBool?: boolean;
+  boolValue?: boolean;
 }
 
 function getTimelineSteps(kase: Case): TimelineStep[] {
   return [
-    { label: 'Claim Logged', date: kase.dateLogged },
-    { label: 'LOR Signed', date: undefined, isBool: true, boolValue: kase.lor },
-    { label: 'Inspection', date: kase.inspectionDate },
-    { label: 'Estimate', date: kase.estimateDate },
-    { label: 'SRL Filed', date: kase.srlDate },
-    { label: 'CDL 1', date: kase.cdl1Date },
-    { label: 'CDL 2', date: kase.cdl2Date },
-    { label: 'CDL 3', date: kase.cdl3Date },
-  ]
+    { label: "Claim Logged", date: kase.dateLogged },
+    { label: "LOR Signed", date: undefined, isBool: true, boolValue: kase.lor },
+    { label: "Inspection", date: kase.inspectionDate },
+    { label: "Estimate", date: kase.estimateDate },
+    { label: "SRL Filed", date: kase.srlDate },
+    { label: "CDL 1", date: kase.cdl1Date },
+    { label: "CDL 2", date: kase.cdl2Date },
+    { label: "CDL 3", date: kase.cdl3Date },
+  ];
 }
 
 function getDaysInCurrentStage(kase: Case): number {
@@ -95,21 +98,25 @@ function getDaysInCurrentStage(kase: Case): number {
     kase.estimateDate,
     kase.inspectionDate,
     kase.dateLogged,
-  ].find((d) => d != null)
-  if (!lastDate) return 0
-  return Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
+  ].find((d) => d != null);
+  if (!lastDate) return 0;
+  return Math.floor(
+    (Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24),
+  );
 }
 
 function CaseTimeline({ kase }: { kase: Case }) {
-  const steps = getTimelineSteps(kase)
-  const daysInStage = getDaysInCurrentStage(kase)
-  const isStalled = daysInStage > 30 && !['Settled', 'Litigation', 'Closed w/o Pay'].includes(kase.statusPhase)
+  const steps = getTimelineSteps(kase);
+  const daysInStage = getDaysInCurrentStage(kase);
+  const isStalled =
+    daysInStage > 30 &&
+    !["Settled", "Litigation", "Closed w/o Pay"].includes(kase.statusPhase);
 
   // Find index of last completed step
-  let lastCompletedIdx = -1
+  let lastCompletedIdx = -1;
   steps.forEach((s, i) => {
-    if (s.isBool ? s.boolValue : s.date) lastCompletedIdx = i
-  })
+    if (s.isBool ? s.boolValue : s.date) lastCompletedIdx = i;
+  });
 
   return (
     <div>
@@ -123,39 +130,60 @@ function CaseTimeline({ kase }: { kase: Case }) {
       )}
       <div className="relative">
         {steps.map((step, i) => {
-          const completed = step.isBool ? !!step.boolValue : !!step.date
-          const isCurrent = i === lastCompletedIdx + 1
-          const isPast = i <= lastCompletedIdx
-          const isFuture = i > lastCompletedIdx + 1
+          const completed = step.isBool ? !!step.boolValue : !!step.date;
+          const isCurrent = i === lastCompletedIdx + 1;
+          const isPast = i <= lastCompletedIdx;
+          const isFuture = i > lastCompletedIdx + 1;
 
           return (
-            <div key={step.label} className="flex items-start gap-3 mb-3 last:mb-0">
+            <div
+              key={step.label}
+              className="flex items-start gap-3 mb-3 last:mb-0"
+            >
               {/* Dot + connector */}
               <div className="flex flex-col items-center flex-shrink-0">
-                <div className={cn(
-                  'w-2.5 h-2.5 rounded-full mt-0.5 flex-shrink-0',
-                  completed ? 'bg-emerald-500' : isCurrent ? 'bg-blue-500' : 'bg-slate-200',
-                )} />
+                <div
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full mt-0.5 flex-shrink-0",
+                    completed
+                      ? "bg-emerald-500"
+                      : isCurrent
+                        ? "bg-blue-500"
+                        : "bg-slate-200",
+                  )}
+                />
                 {i < steps.length - 1 && (
-                  <div className={cn(
-                    'w-0.5 h-5 mt-1',
-                    isPast ? 'bg-emerald-200' : 'bg-slate-100',
-                  )} />
+                  <div
+                    className={cn(
+                      "w-0.5 h-5 mt-1",
+                      isPast ? "bg-emerald-200" : "bg-slate-100",
+                    )}
+                  />
                 )}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0 pb-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={cn(
-                    'text-xs font-medium',
-                    completed ? 'text-emerald-700' : isCurrent ? 'text-blue-700' : 'text-slate-400',
-                  )}>
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      completed
+                        ? "text-emerald-700"
+                        : isCurrent
+                          ? "text-blue-700"
+                          : "text-slate-400",
+                    )}
+                  >
                     {step.label}
                   </span>
                   {completed && step.date && (
                     <span className="text-xs text-slate-400">
-                      {new Date(step.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                      {new Date(step.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "2-digit",
+                      })}
                     </span>
                   )}
                   {completed && step.isBool && (
@@ -173,41 +201,46 @@ function CaseTimeline({ kase }: { kase: Case }) {
                 </div>
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Main drawer
 // ---------------------------------------------------------------------------
 
-export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
-  const [notesValue, setNotesValue] = useState(kase.notes ?? '')
-  const drawerRef = useRef<HTMLDivElement>(null)
+export default function CaseDrawer({
+  kase,
+  onClose,
+  onSave,
+  readOnly = false,
+}: CaseDrawerProps) {
+  const [notesValue, setNotesValue] = useState(kase.notes ?? "");
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setNotesValue(kase.notes ?? '')
-  }, [kase.id, kase.notes])
+    setNotesValue(kase.notes ?? "");
+  }, [kase.id, kase.notes]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === "Escape") onClose();
     }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose])
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
   useEffect(() => {
-    drawerRef.current?.focus()
-  }, [kase.id])
+    drawerRef.current?.focus();
+  }, [kase.id]);
 
   const pipelineValue =
     kase.estimatedLoss != null && kase.feeRate != null
       ? Math.round(kase.estimatedLoss * kase.feeRate)
-      : null
+      : null;
 
   return (
     <>
@@ -251,7 +284,7 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
 
           {/* Status + peril badges */}
           <div className="flex items-center gap-2.5 mt-3 flex-wrap">
-            <span className={cn('badge', caseStatusColor(kase.statusPhase))}>
+            <span className={cn("badge", caseStatusColor(kase.statusPhase))}>
               {caseStatusLabel(kase.statusPhase)}
             </span>
             {kase.perilType && (
@@ -259,12 +292,23 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
                 {kase.perilType}
               </span>
             )}
-            <span className="text-xs text-slate-400 ml-auto">#{kase.fileNumber}</span>
+            <span className="text-xs text-slate-400 ml-auto">
+              #{kase.fileNumber}
+            </span>
           </div>
         </div>
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {readOnly && (
+            <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-800">
+                Case edits are disabled in browser anon mode. Keep the app
+                read-only until you add a secure server-side or authenticated
+                write path.
+              </p>
+            </section>
+          )}
 
           {/* Case Details */}
           <section>
@@ -357,7 +401,9 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-slate-50 rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-slate-900 score-number">
-                  {kase.feeRate != null ? `${Math.round(kase.feeRate * 100)}%` : '—'}
+                  {kase.feeRate != null
+                    ? `${Math.round(kase.feeRate * 100)}%`
+                    : "—"}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">Fee Rate</p>
               </div>
@@ -365,20 +411,20 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
                 <p className="text-lg font-bold text-emerald-700 score-number">
                   {kase.feeDisbursed != null && kase.feeDisbursed > 0
                     ? `$${kase.feeDisbursed.toLocaleString()}`
-                    : '—'}
+                    : "—"}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">Collected</p>
               </div>
               <div className="bg-slate-50 rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-blue-700 score-number">
-                  {pipelineValue != null && kase.statusPhase !== 'Settled'
+                  {pipelineValue != null && kase.statusPhase !== "Settled"
                     ? `$${pipelineValue.toLocaleString()}`
                     : kase.estimatedLoss != null
                       ? `$${kase.estimatedLoss.toLocaleString()}`
-                      : '—'}
+                      : "—"}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {kase.statusPhase === 'Settled' ? 'Est. Loss' : 'Pipeline'}
+                  {kase.statusPhase === "Settled" ? "Est. Loss" : "Pipeline"}
                 </p>
               </div>
             </div>
@@ -386,27 +432,54 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
 
           {/* Process Checklist */}
           <section>
-            <Tooltip text="Track which documents and milestones have been completed for this case. Click to toggle." position="bottom">
+            <Tooltip
+              text="Track which documents and milestones have been completed for this case. Click to toggle."
+              position="bottom"
+            >
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
                 Process Checklist
               </h3>
             </Tooltip>
             <div className="space-y-2">
-              {([
-                { key: 'lor', label: 'LOR Signed', value: kase.lor },
-                { key: 'plumbingInvoice', label: 'Plumbing Invoice', value: kase.plumbingInvoice },
-                { key: 'waterMitigation', label: 'Water Mitigation', value: kase.waterMitigation },
-              ] as const).map(({ key, label, value }) => (
+              {(
+                [
+                  { key: "lor", label: "LOR Signed", value: kase.lor },
+                  {
+                    key: "plumbingInvoice",
+                    label: "Plumbing Invoice",
+                    value: kase.plumbingInvoice,
+                  },
+                  {
+                    key: "waterMitigation",
+                    label: "Water Mitigation",
+                    value: kase.waterMitigation,
+                  },
+                ] as const
+              ).map(({ key, label, value }) => (
                 <button
                   key={key}
-                  onClick={() => onSave(kase.id, { [key]: !value } as CasePatch)}
-                  className="flex items-center gap-2.5 w-full text-left hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
-                >
-                  {value
-                    ? <CheckSquare className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    : <Square className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                  disabled={readOnly}
+                  onClick={() =>
+                    onSave(kase.id, { [key]: !value } as CasePatch)
                   }
-                  <span className={cn('text-sm', value ? 'text-emerald-700 font-medium' : 'text-slate-500')}>
+                  className={cn(
+                    "flex items-center gap-2.5 w-full text-left rounded-lg px-2 py-1.5 transition-colors",
+                    readOnly
+                      ? "cursor-not-allowed opacity-60"
+                      : "hover:bg-slate-50",
+                  )}
+                >
+                  {value ? (
+                    <CheckSquare className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <Square className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                  )}
+                  <span
+                    className={cn(
+                      "text-sm",
+                      value ? "text-emerald-700 font-medium" : "text-slate-500",
+                    )}
+                  >
                     {label}
                   </span>
                 </button>
@@ -416,7 +489,10 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
 
           {/* Timeline */}
           <section>
-            <Tooltip text="Process timeline showing completed milestones and current stage. A blue badge shows days in the current stage — over 30 days triggers a stall warning." position="bottom">
+            <Tooltip
+              text="Process timeline showing completed milestones and current stage. A blue badge shows days in the current stage — over 30 days triggers a stall warning."
+              position="bottom"
+            >
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
                 Timeline
               </h3>
@@ -431,15 +507,23 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
             </h3>
             <select
               value={kase.statusPhase}
-              onChange={(e) => onSave(kase.id, { statusPhase: e.target.value as CaseStatusPhase })}
+              disabled={readOnly}
+              onChange={(e) =>
+                onSave(kase.id, {
+                  statusPhase: e.target.value as CaseStatusPhase,
+                })
+              }
               className={cn(
-                'w-full rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                "w-full rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500",
                 caseStatusColor(kase.statusPhase),
+                readOnly ? "cursor-not-allowed opacity-60" : "",
               )}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           </section>
@@ -456,12 +540,16 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
               rows={3}
               placeholder="Add case notes…"
               value={notesValue}
+              disabled={readOnly}
               onChange={(e) => setNotesValue(e.target.value)}
               onBlur={() => {
-                onSave(kase.id, { notes: notesValue.trim() || undefined })
+                onSave(kase.id, { notes: notesValue.trim() || undefined });
               }}
-              className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5
-                         resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={cn(
+                "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                readOnly ? "cursor-not-allowed bg-slate-50 text-slate-400" : "",
+              )}
             />
           </section>
 
@@ -491,13 +579,13 @@ export default function CaseDrawer({ kase, onClose, onSave }: CaseDrawerProps) {
         </div>
       </div>
     </>
-  )
+  );
 }
 
 interface DetailRowProps {
-  icon: React.ReactNode
-  label: string
-  value: React.ReactNode
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
 }
 
 function DetailRow({ icon, label, value }: DetailRowProps) {
@@ -509,5 +597,5 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
         <span className="text-sm text-slate-800 font-medium">{value}</span>
       </div>
     </div>
-  )
+  );
 }

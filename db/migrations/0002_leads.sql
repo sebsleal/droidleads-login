@@ -1,16 +1,5 @@
--- Claim Remedy Adjusters — canonical snapshot for leads + storm tracking.
--- Prefer the ordered migrations in db/migrations/, but this file mirrors the
--- current schema for manual setup in a fresh environment.
-
-create extension if not exists "pgcrypto";
-
-create or replace function public.update_updated_at_column()
-returns trigger as $$
-begin
-    new.updated_at = now();
-    return new;
-end;
-$$ language plpgsql;
+-- Canonical leads table.
+-- This is the single persistence model for lead tracking.
 
 create table if not exists public.leads (
     id                       text primary key default gen_random_uuid()::text,
@@ -58,8 +47,65 @@ create table if not exists public.leads (
     insurer_risk_label       text,
     enriched_at              timestamptz,
     created_at               timestamptz not null default now(),
-    updated_at               timestamptz not null default now(),
-    constraint leads_damage_type_check check (
+    updated_at               timestamptz not null default now()
+);
+
+alter table public.leads add column if not exists source_detail text not null default 'permit';
+alter table public.leads add column if not exists homestead boolean;
+alter table public.leads add column if not exists owner_mailing_address text;
+alter table public.leads add column if not exists assessed_value numeric;
+alter table public.leads add column if not exists permit_status text;
+alter table public.leads add column if not exists contractor_name text;
+alter table public.leads add column if not exists permit_value numeric;
+alter table public.leads add column if not exists underpaid_flag boolean not null default false;
+alter table public.leads add column if not exists absentee_owner boolean;
+alter table public.leads add column if not exists prior_permit_count integer not null default 0;
+alter table public.leads add column if not exists roof_age integer;
+alter table public.leads add column if not exists insurance_company text;
+alter table public.leads add column if not exists insurer_risk text;
+alter table public.leads add column if not exists insurer_risk_label text;
+
+update public.leads
+set damage_type = 'Accidental Discharge'
+where lower(coalesce(damage_type, '')) in (
+    'bathroom',
+    'bath',
+    'm bath',
+    'h bath',
+    'hall bath',
+    'plumbing failure',
+    'pipe break',
+    'a/c leak',
+    'ac leak',
+    'water mold',
+    'plumbing mold',
+    'bathroom mold'
+);
+
+update public.leads
+set source = 'storm'
+where source = 'storm-first';
+
+update public.leads
+set source_detail = case
+    when source = 'permit' then 'permit'
+    when source = 'storm' and permit_type = 'Pre-Permit Storm Opportunity' then 'storm_first'
+    when source = 'storm' then 'storm_event'
+    else 'permit'
+end
+where source_detail is null
+   or source_detail not in ('permit', 'storm_event', 'storm_first');
+
+alter table public.leads
+    drop constraint if exists leads_damage_type_check,
+    drop constraint if exists leads_status_check,
+    drop constraint if exists leads_source_check,
+    drop constraint if exists leads_source_detail_check,
+    drop constraint if exists leads_insurer_risk_check,
+    drop constraint if exists leads_permit_status_check;
+
+alter table public.leads
+    add constraint leads_damage_type_check check (
         damage_type in (
             'Hurricane/Wind',
             'Flood',
@@ -69,48 +115,26 @@ create table if not exists public.leads (
             'Accidental Discharge'
         )
     ),
-    constraint leads_status_check check (
+    add constraint leads_status_check check (
         status in ('New', 'Contacted', 'Converted', 'Closed')
     ),
-    constraint leads_source_check check (
+    add constraint leads_source_check check (
         source in ('permit', 'storm')
     ),
-    constraint leads_source_detail_check check (
+    add constraint leads_source_detail_check check (
         source_detail in ('permit', 'storm_event', 'storm_first')
     ),
-    constraint leads_insurer_risk_check check (
+    add constraint leads_insurer_risk_check check (
         insurer_risk is null or insurer_risk in ('high', 'medium', 'low')
     ),
-    constraint leads_permit_status_check check (
+    add constraint leads_permit_status_check check (
         permit_status is null or permit_status in (
             'No Contractor',
             'Owner-Builder',
             'Stalled',
             'Active'
         )
-    )
-);
-
-create table if not exists public.storm_tracking (
-    candidate_id       text primary key,
-    status             text not null default 'Watching',
-    notes              text,
-    contacted_at       timestamptz,
-    permit_filed_at    timestamptz,
-    closed_at          timestamptz,
-    created_at         timestamptz not null default now(),
-    updated_at         timestamptz not null default now(),
-    constraint storm_tracking_status_check check (
-        status in (
-            'Watching',
-            'Researching',
-            'Outreach Ready',
-            'Contacted',
-            'Permit Filed',
-            'Closed'
-        )
-    )
-);
+    );
 
 create unique index if not exists leads_dedup_hash_unique_idx on public.leads (dedup_hash);
 create index if not exists leads_zip_idx on public.leads (zip);
@@ -127,52 +151,10 @@ create index if not exists leads_zip_damage_idx on public.leads (zip, damage_typ
 create index if not exists leads_unenriched_idx
     on public.leads (created_at)
     where outreach_message like 'TEMPLATE:%' or coalesce(outreach_message, '') = '';
-create index if not exists storm_tracking_status_idx on public.storm_tracking (status);
-create index if not exists storm_tracking_updated_at_idx on public.storm_tracking (updated_at desc);
 
 drop trigger if exists set_leads_updated_at on public.leads;
+
 create trigger set_leads_updated_at
 before update on public.leads
 for each row
 execute function public.update_updated_at_column();
-
-drop trigger if exists set_storm_tracking_updated_at on public.storm_tracking;
-create trigger set_storm_tracking_updated_at
-before update on public.storm_tracking
-for each row
-execute function public.update_updated_at_column();
-
-alter table public.leads enable row level security;
-alter table public.storm_tracking enable row level security;
-
-drop policy if exists service_role_full_access on public.leads;
-drop policy if exists authenticated_read on public.leads;
-drop policy if exists leads_service_role_full_access on public.leads;
-drop policy if exists leads_dashboard_read_only on public.leads;
-drop policy if exists storm_tracking_service_role_full_access on public.storm_tracking;
-drop policy if exists storm_tracking_dashboard_read on public.storm_tracking;
-drop policy if exists storm_tracking_dashboard_write on public.storm_tracking;
-drop policy if exists storm_tracking_dashboard_update on public.storm_tracking;
-drop policy if exists storm_tracking_dashboard_read_only on public.storm_tracking;
-
-create policy leads_service_role_full_access on public.leads
-    for all
-    to service_role
-    using (true)
-    with check (true);
-
-create policy leads_dashboard_read_only on public.leads
-    for select
-    to anon, authenticated
-    using (true);
-
-create policy storm_tracking_service_role_full_access on public.storm_tracking
-    for all
-    to service_role
-    using (true)
-    with check (true);
-
-create policy storm_tracking_dashboard_read_only on public.storm_tracking
-    for select
-    to anon, authenticated
-    using (true);

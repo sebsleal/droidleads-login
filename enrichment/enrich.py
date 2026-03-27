@@ -14,10 +14,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import Client, create_client
 
+from enrichment.outreach_prompt import _fallback_template, needs_outreach_enrichment
 from enrichment.score_prompt import _algorithmic_score
-from enrichment.outreach_prompt import _fallback_template
 
 load_dotenv()
 
@@ -25,9 +25,15 @@ BATCH_SIZE = 10
 
 
 def get_supabase() -> Client:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_url or not service_role_key:
+        raise RuntimeError(
+            "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before running enrichment"
+        )
     return create_client(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_KEY"],
+        supabase_url,
+        service_role_key,
     )
 
 
@@ -36,19 +42,24 @@ def fetch_unenriched_leads(
     batch_size: int = BATCH_SIZE,
 ) -> list[dict[str, Any]]:
     """
-    Fetch leads that have not yet had outreach messages generated.
-    Criteria: enriched_at is null (never touched by this runner).
+    Fetch leads that still need placeholder or personalised outreach.
+    Criteria: outreach_message is blank or still starts with TEMPLATE:.
     """
     try:
         response = (
             supabase.table("leads")
             .select("*")
-            .is_("enriched_at", "null")
             .order("created_at", desc=False)
-            .limit(batch_size)
+            .limit(max(batch_size * 5, batch_size))
             .execute()
         )
-        return response.data or []
+        rows = response.data or []
+        pending = [
+            row
+            for row in rows
+            if needs_outreach_enrichment(row.get("outreach_message"))
+        ]
+        return pending[:batch_size]
     except Exception as e:
         print(f"[enrich] Could not fetch unenriched leads: {e}")
         return []
@@ -66,12 +77,14 @@ def update_lead(
     enriched_at timestamp in Supabase.
     """
     try:
-        supabase.table("leads").update({
-            "score": score,
-            "outreach_message": outreach_message,
-            "score_reasoning": score_reasoning,
-            "enriched_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", lead_id).execute()
+        supabase.table("leads").update(
+            {
+                "score": score,
+                "outreach_message": outreach_message,
+                "score_reasoning": score_reasoning,
+                "enriched_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("id", lead_id).execute()
         return True
     except Exception as e:
         print(f"[enrich] Failed to update lead {lead_id}: {e}")
@@ -157,7 +170,9 @@ def run_enrichment(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Score leads and write TEMPLATE: outreach placeholders")
+    parser = argparse.ArgumentParser(
+        description="Score leads and write TEMPLATE: outreach placeholders"
+    )
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()

@@ -18,6 +18,8 @@ import json
 import os
 import sys
 
+from enrichment.outreach_prompt import needs_outreach_enrichment
+
 LEADS_PATH = os.path.join(os.path.dirname(__file__), "public", "leads.json")
 
 
@@ -39,8 +41,7 @@ def main():
     leads = data.get("leads", [])
 
     needs_enrichment = [
-        l for l in leads
-        if not l.get("outreachMessage") or l.get("outreachMessage", "").startswith("TEMPLATE:")
+        lead for lead in leads if needs_outreach_enrichment(lead.get("outreachMessage"))
     ]
     already_enriched = len(leads) - len(needs_enrichment)
 
@@ -56,19 +57,21 @@ def main():
     for i, lead in enumerate(needs_enrichment, 1):
         county = lead.get("county", "miami-dade")
         county_label = {
-            "miami-dade":  "Miami-Dade County",
-            "broward":     "Broward County",
-            "palm-beach":  "Palm Beach County",
+            "miami-dade": "Miami-Dade County",
+            "broward": "Broward County",
+            "palm-beach": "Palm Beach County",
         }.get(county, county.title())
 
         contact = lead.get("contact") or {}
-        fema_num  = lead.get("femaDeclarationNumber", "")
+        fema_num = lead.get("femaDeclarationNumber", "")
         fema_type = lead.get("femaIncidentType", "")
         fema_line = f" | FEMA {fema_num} ({fema_type})" if fema_num else ""
 
         city = lead.get("city") or "Miami"
         zip_code = lead.get("zip") or ""
-        location = f"{lead.get('propertyAddress', '')}, {city}, FL {zip_code}".strip(", ")
+        location = f"{lead.get('propertyAddress', '')}, {city}, FL {zip_code}".strip(
+            ", "
+        )
 
         print(f"\n[{i}] ID: {lead['id']}")
         print(f"    Owner:    {lead['ownerName']}")
@@ -77,7 +80,9 @@ def main():
         print(f"    Damage:   {lead['damageType']} | Permit: {lead['permitType']}")
         print(f"    Storm:    {lead.get('stormEvent') or 'N/A'}")
         print(f"    Score:    {lead['score']}")
-        print(f"    Contact:  email={contact.get('email', 'none')} | phone={contact.get('phone', 'none')}")
+        print(
+            f"    Contact:  email={contact.get('email', 'none')} | phone={contact.get('phone', 'none')}"
+        )
         if lead.get("homestead") is True:
             print(f"    Homestead: Yes (owner-occupied)")
         if lead.get("absenteeOwner"):
@@ -91,7 +96,9 @@ def main():
         if lead.get("roofAge") and lead["roofAge"] > 15:
             print(f"    Roof Age: ~{lead['roofAge']} years (aging roof)")
         if lead.get("priorPermitCount") and lead["priorPermitCount"] >= 2:
-            print(f"    History:  {lead['priorPermitCount']} prior permits at this address (repeat damage)")
+            print(
+                f"    History:  {lead['priorPermitCount']} prior permits at this address (repeat damage)"
+            )
         print(f"    Current:  {lead['outreachMessage'][:80]}...")
 
     print("\n--- END OF LEADS ---")

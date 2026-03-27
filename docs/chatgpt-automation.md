@@ -17,15 +17,15 @@ Official references:
 
 ## What The Automation Does
 
-- Runs `python3 run_scraper.py`
-- Refreshes `public/leads.json`
-- Refreshes `public/storm_candidates.json`
-- Uses `enrich_leads.py` to replace `TEMPLATE:` outreach messages
+- Runs `python3 enrich_leads.py`
+- Replaces `TEMPLATE:` outreach placeholders in `public/leads.json`
 - Runs `npm run build`
-- Commits and pushes the refreshed data
+- Commits and pushes the enriched lead copy
 
 ## Recommended Safeguards
 
 - Run it on `main` only if you are comfortable with direct data commits.
 - If you want a review step, change the prompt so it pushes to a separate branch instead of `main`.
 - Keep `[skip ci]` in the commit message if you do not want deploy loops from data-only refreshes.
+- Use GitHub Actions or another server-side job for `run_scraper.py`.
+- Use `SUPABASE_SERVICE_ROLE_KEY` for scraper/import automation only. Do not point the browser or enrichment automation at the service-role key.

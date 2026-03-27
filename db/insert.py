@@ -2,26 +2,29 @@
 Supabase upsert helper for leads.
 
 Uses dedup_hash as the conflict target so re-running the scraper
-never creates duplicate rows. On conflict, it updates score,
-outreach_message, and updated_at only — it does NOT overwrite
-status or contact info set by users.
+never creates duplicate rows. On conflict, it refreshes canonical lead data
+while preserving user-entered tracking fields unless the incoming payload
+explicitly carries a real replacement value.
 """
 
 import os
 from typing import Any
 
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import Client, create_client
 
 load_dotenv()
-
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 
 def get_client() -> Client:
     """Return an initialised Supabase client."""
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    supabase_url = os.environ.get("SUPABASE_URL")
+    service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_url or not service_role_key:
+        raise RuntimeError(
+            "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before using db.insert"
+        )
+    return create_client(supabase_url, service_role_key)
 
 
 def upsert_leads(
@@ -31,9 +34,10 @@ def upsert_leads(
     """
     Upsert a list of lead dicts into the Supabase `leads` table.
 
-    Conflict resolution is on the `dedup_hash` column. Existing rows
-    have score and outreach_message updated; status, contact info, and
-    owner name are preserved.
+    Conflict resolution is on the `dedup_hash` column. Existing rows are
+    refreshed with canonical scraper data, but user-entered tracking fields
+    are preserved unless the incoming payload explicitly provides a non-empty
+    replacement value.
 
     Args:
         leads: List of lead dicts with all required fields.
@@ -57,6 +61,7 @@ def upsert_leads(
     # re-run never overwrites data that an adjuster has manually entered.
     rows = []
     for lead in leads:
+
         def pick(*keys: str):
             for key in keys:
                 if key in lead:
@@ -79,9 +84,14 @@ def upsert_leads(
             "storm_event": lead.get("storm_event") or lead.get("stormEvent") or "",
             "score": lead.get("score") or 30,
             "source": lead.get("source") or "permit",
+            "source_detail": lead.get("source_detail")
+            or lead.get("sourceDetail")
+            or "permit",
             "contact_email": lead.get("contact_email") or None,
             "contact_phone": lead.get("contact_phone") or None,
-            "outreach_message": lead.get("outreach_message") or lead.get("outreachMessage") or "",
+            "outreach_message": lead.get("outreach_message")
+            or lead.get("outreachMessage")
+            or "",
             "score_reasoning": pick("score_reasoning", "scoreReasoning"),
             "noaa_episode_id": lead.get("noaa_episode_id") or None,
             "noaa_event_id": lead.get("noaa_event_id") or None,
@@ -89,6 +99,21 @@ def upsert_leads(
             "county": lead.get("county") or "miami-dade",
             "fema_declaration_number": lead.get("fema_declaration_number") or None,
             "fema_incident_type": lead.get("fema_incident_type") or None,
+            "homestead": lead.get("homestead"),
+            "owner_mailing_address": pick(
+                "owner_mailing_address", "ownerMailingAddress"
+            ),
+            "assessed_value": pick("assessed_value", "assessedValue"),
+            "permit_status": pick("permit_status", "permitStatus"),
+            "contractor_name": pick("contractor_name", "contractorName"),
+            "permit_value": pick("permit_value", "permitValue"),
+            "underpaid_flag": pick("underpaid_flag", "underpaidFlag"),
+            "absentee_owner": pick("absentee_owner", "absenteeOwner"),
+            "prior_permit_count": pick("prior_permit_count", "priorPermitCount"),
+            "roof_age": pick("roof_age", "roofAge"),
+            "insurance_company": pick("insurance_company", "insuranceCompany"),
+            "insurer_risk": pick("insurer_risk", "insurerRisk"),
+            "insurer_risk_label": pick("insurer_risk_label", "insurerRiskLabel"),
         }
 
         # Only include user-protected fields when they carry a real value so
@@ -140,7 +165,9 @@ def fetch_existing_hashes(supabase: Client | None = None) -> set[str]:
 
     try:
         response = supabase.table("leads").select("dedup_hash").execute()
-        return {row["dedup_hash"] for row in (response.data or []) if row.get("dedup_hash")}
+        return {
+            row["dedup_hash"] for row in (response.data or []) if row.get("dedup_hash")
+        }
     except Exception as e:
         print(f"[insert] Could not fetch existing hashes: {e}")
         return set()

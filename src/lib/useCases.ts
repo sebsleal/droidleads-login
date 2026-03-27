@@ -1,25 +1,27 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
-import type { CaseRecord } from '@/lib/supabase'
-import type { Case, CaseStatusPhase } from '@/types'
+import { useState, useEffect, useCallback } from "react";
+import { browserCanWrite, browserReadOnly, supabase } from "@/lib/supabase";
+import type { CaseRecord } from "@/lib/supabase";
+import type { Case, CaseStatusPhase } from "@/types";
 
-type CasePatch = Partial<Pick<
-  Case,
-  | 'statusPhase'
-  | 'feeDisbursed'
-  | 'estimatedLoss'
-  | 'feeRate'
-  | 'lor'
-  | 'plumbingInvoice'
-  | 'waterMitigation'
-  | 'estimateDate'
-  | 'inspectionDate'
-  | 'srlDate'
-  | 'cdl1Date'
-  | 'cdl2Date'
-  | 'cdl3Date'
-  | 'notes'
->>
+type CasePatch = Partial<
+  Pick<
+    Case,
+    | "statusPhase"
+    | "feeDisbursed"
+    | "estimatedLoss"
+    | "feeRate"
+    | "lor"
+    | "plumbingInvoice"
+    | "waterMitigation"
+    | "estimateDate"
+    | "inspectionDate"
+    | "srlDate"
+    | "cdl1Date"
+    | "cdl2Date"
+    | "cdl3Date"
+    | "notes"
+  >
+>;
 
 function recordToCase(r: CaseRecord): Case {
   return {
@@ -52,80 +54,86 @@ function recordToCase(r: CaseRecord): Case {
     notes: r.notes ?? undefined,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
-  }
+  };
 }
 
 export function useCases() {
-  const [cases, setCases] = useState<Case[]>([])
-  const [loading, setLoading] = useState(true)
+  const [cases, setCases] = useState<Case[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Fetch all cases on mount
   useEffect(() => {
     if (!supabase) {
-      setLoading(false)
-      return
+      setLoading(false);
+      return;
     }
 
     supabase
-      .from('cases')
-      .select('*')
-      .order('date_logged', { ascending: false })
+      .from("cases")
+      .select("*")
+      .order("date_logged", { ascending: false })
       .then(({ data, error }) => {
-        setLoading(false)
+        setLoading(false);
         if (error) {
-          console.warn('[cases] Failed to load cases:', error.message)
-          return
+          console.warn("[cases] Failed to load cases:", error.message);
+          return;
         }
-        setCases((data ?? []).map((r) => recordToCase(r as CaseRecord)))
-      })
-  }, [])
+        setCases((data ?? []).map((r) => recordToCase(r as CaseRecord)));
+      });
+  }, []);
 
   // Update a case field. Applies optimistic update immediately, syncs to Supabase.
   const saveCase = useCallback(async (id: string, patch: CasePatch) => {
+    if (!browserCanWrite || !supabase) return false;
+
     // Build DB row from camelCase patch
-    const dbPatch: Record<string, unknown> = {}
-    if (patch.statusPhase !== undefined) dbPatch.status_phase = patch.statusPhase
-    if (patch.feeDisbursed !== undefined) dbPatch.fee_disbursed = patch.feeDisbursed ?? null
-    if (patch.estimatedLoss !== undefined) dbPatch.estimated_loss = patch.estimatedLoss ?? null
-    if (patch.feeRate !== undefined) dbPatch.fee_rate = patch.feeRate ?? null
-    if (patch.lor !== undefined) dbPatch.lor = patch.lor
-    if (patch.plumbingInvoice !== undefined) dbPatch.plumbing_invoice = patch.plumbingInvoice
-    if (patch.waterMitigation !== undefined) dbPatch.water_mitigation = patch.waterMitigation
-    if (patch.estimateDate !== undefined) dbPatch.estimate_date = patch.estimateDate ?? null
-    if (patch.inspectionDate !== undefined) dbPatch.inspection_date = patch.inspectionDate ?? null
-    if (patch.srlDate !== undefined) dbPatch.srl_date = patch.srlDate ?? null
-    if (patch.cdl1Date !== undefined) dbPatch.cdl1_date = patch.cdl1Date ?? null
-    if (patch.cdl2Date !== undefined) dbPatch.cdl2_date = patch.cdl2Date ?? null
-    if (patch.cdl3Date !== undefined) dbPatch.cdl3_date = patch.cdl3Date ?? null
-    if (patch.notes !== undefined) dbPatch.notes = patch.notes ?? null
+    const dbPatch: Record<string, unknown> = {};
+    if (patch.statusPhase !== undefined)
+      dbPatch.status_phase = patch.statusPhase;
+    if (patch.feeDisbursed !== undefined)
+      dbPatch.fee_disbursed = patch.feeDisbursed ?? null;
+    if (patch.estimatedLoss !== undefined)
+      dbPatch.estimated_loss = patch.estimatedLoss ?? null;
+    if (patch.feeRate !== undefined) dbPatch.fee_rate = patch.feeRate ?? null;
+    if (patch.lor !== undefined) dbPatch.lor = patch.lor;
+    if (patch.plumbingInvoice !== undefined)
+      dbPatch.plumbing_invoice = patch.plumbingInvoice;
+    if (patch.waterMitigation !== undefined)
+      dbPatch.water_mitigation = patch.waterMitigation;
+    if (patch.estimateDate !== undefined)
+      dbPatch.estimate_date = patch.estimateDate ?? null;
+    if (patch.inspectionDate !== undefined)
+      dbPatch.inspection_date = patch.inspectionDate ?? null;
+    if (patch.srlDate !== undefined) dbPatch.srl_date = patch.srlDate ?? null;
+    if (patch.cdl1Date !== undefined)
+      dbPatch.cdl1_date = patch.cdl1Date ?? null;
+    if (patch.cdl2Date !== undefined)
+      dbPatch.cdl2_date = patch.cdl2Date ?? null;
+    if (patch.cdl3Date !== undefined)
+      dbPatch.cdl3_date = patch.cdl3Date ?? null;
+    if (patch.notes !== undefined) dbPatch.notes = patch.notes ?? null;
 
-    // Optimistic update
-    setCases((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...patch } : c))
-    )
+    setCases((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
-    if (!supabase) return
-
-    const { error } = await supabase
-      .from('cases')
-      .update(dbPatch)
-      .eq('id', id)
+    const { error } = await supabase.from("cases").update(dbPatch).eq("id", id);
 
     if (error) {
-      console.warn('[cases] Failed to save case:', error.message)
+      console.warn("[cases] Failed to save case:", error.message);
       // Revert to server state on failure
       const { data } = await supabase
-        .from('cases')
-        .select('*')
-        .eq('id', id)
-        .single()
+        .from("cases")
+        .select("*")
+        .eq("id", id)
+        .single();
       if (data) {
         setCases((prev) =>
-          prev.map((c) => (c.id === id ? recordToCase(data as CaseRecord) : c))
-        )
+          prev.map((c) => (c.id === id ? recordToCase(data as CaseRecord) : c)),
+        );
       }
+      return false;
     }
-  }, [])
+    return true;
+  }, []);
 
-  return { cases, saveCase, loading }
+  return { cases, saveCase, loading, readOnly: browserReadOnly };
 }

@@ -23,4 +23,5 @@ Storm Watch is a separate workflow from permit leads.
 ## Tracking
 
 - Storm Watch tracking persists separately in the `storm_tracking` table.
-- If Supabase environment variables are missing, the UI falls back to local optimistic state only.
+- Browser clients read Storm Watch tracking with the anon key, but writes are intentionally disabled by default.
+- Secure writes should happen through a server-side or authenticated path that uses the service-role key.

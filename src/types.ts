@@ -1,28 +1,28 @@
 export type DamageType =
-  | 'Hurricane/Wind'
-  | 'Flood'
-  | 'Roof'
-  | 'Fire'
-  | 'Structural'
-  | 'Accidental Discharge';
+  | "Hurricane/Wind"
+  | "Flood"
+  | "Roof"
+  | "Fire"
+  | "Structural"
+  | "Accidental Discharge";
 
-export type LeadStatus = 'New' | 'Contacted' | 'Converted' | 'Closed';
-export type CountySlug = 'miami-dade' | 'broward' | 'palm-beach';
-export type StormCandidateType = 'area' | 'property';
+export type LeadStatus = "New" | "Contacted" | "Converted" | "Closed";
+export type CountySlug = "miami-dade" | "broward" | "palm-beach";
+export type StormCandidateType = "area" | "property";
 export type StormWatchStatus =
-  | 'Watching'
-  | 'Researching'
-  | 'Outreach Ready'
-  | 'Contacted'
-  | 'Permit Filed'
-  | 'Closed';
+  | "Watching"
+  | "Researching"
+  | "Outreach Ready"
+  | "Contacted"
+  | "Permit Filed"
+  | "Closed";
 
-export type ScoreTier = 'high' | 'medium' | 'low';
+export type ScoreTier = "high" | "medium" | "low";
 
 export const COUNTY_LABELS: Record<CountySlug, string> = {
-  'miami-dade': 'Miami-Dade',
-  broward: 'Broward',
-  'palm-beach': 'Palm Beach',
+  "miami-dade": "Miami-Dade",
+  broward: "Broward",
+  "palm-beach": "Palm Beach",
 };
 
 export interface ContactInfo {
@@ -47,7 +47,8 @@ export interface Lead {
   stormEvent: string;
   outreachMessage: string;
   scoreReasoning?: string;
-  source?: string;
+  source?: "permit" | "storm";
+  sourceDetail?: "permit" | "storm_event" | "storm_first";
   contactedAt?: string;
   convertedAt?: string;
   claimValue?: number;
@@ -58,7 +59,7 @@ export interface Lead {
   ownerMailingAddress?: string;
   assessedValue?: number;
   // Permit intelligence
-  permitStatus?: 'No Contractor' | 'Owner-Builder' | 'Stalled' | 'Active';
+  permitStatus?: "No Contractor" | "Owner-Builder" | "Stalled" | "Active";
   contractorName?: string;
   permitValue?: number;
   underpaidFlag?: boolean;
@@ -69,25 +70,25 @@ export interface Lead {
   codeViolation?: boolean;
   // Multi-county + FEMA fields
   county?: CountySlug;
-  femaDeclarationNumber?: string;     // e.g. 'DR-4611'
-  femaIncidentType?: string;          // e.g. 'Hurricane' | 'Flood'
+  femaDeclarationNumber?: string; // e.g. 'DR-4611'
+  femaIncidentType?: string; // e.g. 'Hurricane' | 'Flood'
   // Insurer intelligence (from enrichment or CRM data)
   insuranceCompany?: string;
-  insurerRisk?: 'high' | 'medium' | 'low';
+  insurerRisk?: "high" | "medium" | "low";
   insurerRiskLabel?: string;
 }
 
 export interface FilterState {
   zip: string;
-  damageType: DamageType | 'All';
-  scoreTier: 'All' | 'High' | 'Medium' | 'Low';
-  dateRange: '7' | '30' | '90' | 'all';
+  damageType: DamageType | "All";
+  scoreTier: "All" | "High" | "Medium" | "Low";
+  dateRange: "7" | "30" | "90" | "all";
   hasContact: boolean;
   absenteeOwner: boolean;
   underpaid: boolean;
   noContractor: boolean;
   stormFirst: boolean;
-  county: 'All' | CountySlug;
+  county: "All" | CountySlug;
 }
 
 export interface StatsData {
@@ -121,12 +122,12 @@ export interface StormCandidate {
 }
 
 export interface StormFilterState {
-  county: 'All' | CountySlug;
-  eventType: 'All' | string;
-  femaTagged: 'All' | 'Tagged' | 'Untagged';
-  scoreTier: 'All' | 'High' | 'Medium' | 'Low';
-  dateRange: '30' | '90' | '365' | 'all';
-  candidateType: 'All' | StormCandidateType;
+  county: "All" | CountySlug;
+  eventType: "All" | string;
+  femaTagged: "All" | "Tagged" | "Untagged";
+  scoreTier: "All" | "High" | "Medium" | "Low";
+  dateRange: "30" | "90" | "365" | "all";
+  candidateType: "All" | StormCandidateType;
 }
 
 export interface StormStatsData {
@@ -141,22 +142,22 @@ export interface StormStatsData {
 // ---------------------------------------------------------------------------
 
 export type CaseStatusPhase =
-  | 'Settled'
-  | 'Litigation'
-  | 'Appraisal'
-  | 'Closed w/o Pay'
-  | 'OpenPhase: Estimating'
-  | 'OpenPhase: Inspection'
-  | 'OpenPhase: Appraisal'
-  | 'OpenPhase: Mortgage Processing'
-  | 'OpenPhase: Negotiation'
-  | 'OpenPhase: Mediation'
-  | 'OpenPhase: Initial Payment'
-  | 'OpenPhase: Under Review'
-  | 'OpenPhase: Claim Originated'
-  | 'OpenPhase: Recovering Depreciation'
-  | 'OpenPhase: Ready to Close'
-  | 'OpenPhase: Settled';
+  | "Settled"
+  | "Litigation"
+  | "Appraisal"
+  | "Closed w/o Pay"
+  | "OpenPhase: Estimating"
+  | "OpenPhase: Inspection"
+  | "OpenPhase: Appraisal"
+  | "OpenPhase: Mortgage Processing"
+  | "OpenPhase: Negotiation"
+  | "OpenPhase: Mediation"
+  | "OpenPhase: Initial Payment"
+  | "OpenPhase: Under Review"
+  | "OpenPhase: Claim Originated"
+  | "OpenPhase: Recovering Depreciation"
+  | "OpenPhase: Ready to Close"
+  | "OpenPhase: Settled";
 
 export interface Case {
   id: string;
@@ -172,8 +173,8 @@ export interface Case {
   phone?: string;
   email?: string;
   statusPhase: CaseStatusPhase;
-  feeRate?: number;         // 0.10 = 10%
-  feeDisbursed?: number;    // dollars actually received
+  feeRate?: number; // 0.10 = 10%
+  feeDisbursed?: number; // dollars actually received
   estimatedLoss?: number;
   dateLogged: string;
   // Process checklist
@@ -193,8 +194,8 @@ export interface Case {
 
 export interface CaseFilterState {
   search: string;
-  statusGroup: 'All' | 'Open' | 'Settled' | 'Litigation' | 'Closed';
+  statusGroup: "All" | "Open" | "Settled" | "Litigation" | "Closed";
   insuranceCompany: string;
   perilType: string;
-  dateRange: '30' | '90' | '365' | 'all';
+  dateRange: "30" | "90" | "365" | "all";
 }

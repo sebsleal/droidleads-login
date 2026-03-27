@@ -33,6 +33,7 @@ except ImportError:
 
 try:
     import openpyxl
+
     HAS_OPENPYXL = True
 except ImportError:
     HAS_OPENPYXL = False
@@ -136,6 +137,7 @@ def normalise_status(raw: str) -> str:
 # ---------------------------------------------------------------------------
 # Field parsers
 # ---------------------------------------------------------------------------
+
 
 def parse_date(value: Any) -> str | None:
     if not value:
@@ -268,7 +270,9 @@ def map_row(headers: list[str], row: dict) -> dict:
 
     # Parse typed fields
     mapped["loss_date"] = parse_date(mapped.get("loss_date"))
-    mapped["date_logged"] = parse_date(mapped.get("date_logged")) or date.today().strftime("%Y-%m-%d")
+    mapped["date_logged"] = parse_date(
+        mapped.get("date_logged")
+    ) or date.today().strftime("%Y-%m-%d")
     mapped["fee_rate"] = parse_fee_rate(mapped.get("fee_rate"))
     mapped["fee_disbursed"] = parse_currency(mapped.get("fee_disbursed"))
     mapped["estimated_loss"] = parse_currency(mapped.get("estimated_loss"))
@@ -281,6 +285,7 @@ def map_row(headers: list[str], row: dict) -> dict:
 # ---------------------------------------------------------------------------
 # File readers
 # ---------------------------------------------------------------------------
+
 
 def read_csv(filepath: str) -> list[dict]:
     with open(filepath, newline="", encoding="utf-8-sig") as f:
@@ -310,12 +315,15 @@ def read_xlsx(filepath: str) -> list[dict]:
 # Main import logic
 # ---------------------------------------------------------------------------
 
+
 def import_cases(filepath: str, dry_run: bool = False) -> None:
-    url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("VITE_SUPABASE_ANON_KEY")
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
     if not url or not key:
-        print("ERROR: Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.")
+        print(
+            "ERROR: Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables."
+        )
         sys.exit(1)
 
     # Read file
@@ -336,7 +344,9 @@ def import_cases(filepath: str, dry_run: bool = False) -> None:
             continue
         records.append(record)
 
-    print(f"Mapped {len(records)} valid records ({skipped} skipped — missing file_number)")
+    print(
+        f"Mapped {len(records)} valid records ({skipped} skipped — missing file_number)"
+    )
 
     if dry_run:
         print("\nDRY RUN — first 3 records:")
@@ -351,9 +361,11 @@ def import_cases(filepath: str, dry_run: bool = False) -> None:
 
     for i in range(0, len(records), batch_size):
         batch = records[i : i + batch_size]
-        result = client.table("cases").upsert(batch, on_conflict="file_number").execute()
+        result = (
+            client.table("cases").upsert(batch, on_conflict="file_number").execute()
+        )
         total_upserted += len(batch)
-        print(f"  Upserted rows {i+1}–{i+len(batch)}")
+        print(f"  Upserted rows {i + 1}–{i + len(batch)}")
 
     print(f"\nDone. {total_upserted} cases upserted into Supabase.")
 
@@ -361,7 +373,9 @@ def import_cases(filepath: str, dry_run: bool = False) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import CRM cases into Supabase")
     parser.add_argument("--file", required=True, help="Path to CSV or XLSX file")
-    parser.add_argument("--dry-run", action="store_true", help="Parse only, don't write to Supabase")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Parse only, don't write to Supabase"
+    )
     args = parser.parse_args()
 
     import_cases(args.file, dry_run=args.dry_run)

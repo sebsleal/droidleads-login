@@ -1,16 +1,4 @@
--- Claim Remedy Adjusters — canonical snapshot for active cases.
--- Prefer db/migrations/0003_cases.sql + 0005_rls_policies.sql, but this file
--- mirrors the current schema for manual setup in a fresh environment.
-
-create extension if not exists "pgcrypto";
-
-create or replace function public.update_updated_at_column()
-returns trigger as $$
-begin
-    new.updated_at = now();
-    return new;
-end;
-$$ language plpgsql;
+-- Canonical active-cases table.
 
 create table if not exists public.cases (
     id                   uuid primary key default gen_random_uuid(),
@@ -41,8 +29,27 @@ create table if not exists public.cases (
     cdl3_date            date,
     notes                text,
     created_at           timestamptz not null default now(),
-    updated_at           timestamptz not null default now(),
-    constraint cases_status_phase_check check (
+    updated_at           timestamptz not null default now()
+);
+
+update public.cases
+set status_phase = case
+    when lower(coalesce(status_phase, '')) in ('openphase: litigation', 'open phase: litigation') then 'Litigation'
+    when lower(coalesce(status_phase, '')) in ('closed without pay', 'closed without payment') then 'Closed w/o Pay'
+    else status_phase
+end
+where status_phase in (
+    'OpenPhase: Litigation',
+    'Open Phase: Litigation',
+    'Closed without pay',
+    'Closed without payment'
+);
+
+alter table public.cases
+    drop constraint if exists cases_status_phase_check;
+
+alter table public.cases
+    add constraint cases_status_phase_check check (
         status_phase in (
             'Settled',
             'Litigation',
@@ -61,8 +68,7 @@ create table if not exists public.cases (
             'OpenPhase: Ready to Close',
             'OpenPhase: Settled'
         )
-    )
-);
+    );
 
 create index if not exists cases_status_phase_idx on public.cases (status_phase);
 create index if not exists cases_insurance_company_idx on public.cases (insurance_company);
@@ -75,26 +81,8 @@ create index if not exists cases_open_idx
     where status_phase like 'OpenPhase:%';
 
 drop trigger if exists set_cases_updated_at on public.cases;
+
 create trigger set_cases_updated_at
 before update on public.cases
 for each row
 execute function public.update_updated_at_column();
-
-alter table public.cases enable row level security;
-
-drop policy if exists cases_service_role_full_access on public.cases;
-drop policy if exists cases_read on public.cases;
-drop policy if exists cases_write on public.cases;
-drop policy if exists cases_insert on public.cases;
-drop policy if exists cases_dashboard_read_only on public.cases;
-
-create policy cases_service_role_full_access on public.cases
-    for all
-    to service_role
-    using (true)
-    with check (true);
-
-create policy cases_dashboard_read_only on public.cases
-    for select
-    to anon, authenticated
-    using (true);

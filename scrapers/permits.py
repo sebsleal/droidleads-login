@@ -20,27 +20,32 @@ from typing import Any
 # ---------------------------------------------------------------------------
 COUNTY_CONFIGS: dict[str, dict] = {
     "miami-dade": {
-        # BuildingPermit_gdb — migrated from miamidade_permit_data (404 as of 2026-03)
-        # Date field ISSUDATE is Unix epoch milliseconds, same as Fort Lauderdale.
-        # No OwnerName or City in this service; owner enriched from PA lookup downstream.
         "url": (
             "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/"
-            "BuildingPermit_gdb/FeatureServer/0/query"
+            "miamidade_permit_data/FeatureServer/0/query"
         ),
-        "where_field":      "DESC1",
+        "where_field":      "DetailDescriptionComments",
         "out_fields": (
-            "ID,TYPE,ISSUDATE,ADDRESS,FOLIO,ESTVALUE,CONTRNAME,BPSTATUS,LSTINSDT,DESC1,APPTYPE"
+            "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
+            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone,"
+            "ContractorName,EstimatedValue,LastInspectionDate"
         ),
-        "date_field":        "ISSUDATE",
-        "address_field":     "ADDRESS",
-        "owner_field":       None,
-        "folio_field":       "FOLIO",
-        "phone_field":       None,
-        "contractor_field":  "CONTRNAME",
-        "value_field":       "ESTVALUE",
-        "inspection_field":  "LSTINSDT",
-        "city_field":        None,
+        "date_field":        "PermitIssuedDate",
+        "address_field":     "PropertyAddress",
+        "owner_field":       "OwnerName",
+        "folio_field":       "FolioNumber",
+        "phone_field":       "ContractorPhone",
+        "contractor_field":  "ContractorName",
+        "value_field":       "EstimatedValue",
+        "inspection_field":  "LastInspectionDate",
+        "city_field":        "City",
         "default_city":      "Miami",
+        # Service rejects WHERE clauses with 35 LIKE conditions (URL too long → 404).
+        # Use core keywords for the API query; full DAMAGE_KEYWORDS filtering applied locally.
+        "where_keywords": [
+            "roof", "reroof", "hurricane", "flood", "fire", "structural",
+            "water damage", "wind damage", "storm", "pipe", "discharge", "mold",
+        ],
         "enabled": True,
     },
     "broward": {

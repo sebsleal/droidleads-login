@@ -48,6 +48,36 @@ COUNTY_CONFIGS: dict[str, dict] = {
         ],
         "enabled": True,
     },
+    "miami-dade-gdb": {
+        # BuildingPermit_gdb — second Miami-Dade source, 262K records back to 1982.
+        # Complements miamidade_permit_data (different dataset, ~120K unique records).
+        # No OwnerName/City but PA lookup downstream fills those in via folio number.
+        # county_slug overrides the dict key so leads still appear as miami-dade in the UI.
+        "url": (
+            "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/"
+            "BuildingPermit_gdb/FeatureServer/0/query"
+        ),
+        "where_field":      "DESC1",
+        "out_fields": (
+            "ID,TYPE,ISSUDATE,ADDRESS,FOLIO,ESTVALUE,CONTRNAME,BPSTATUS,DESC1,APPTYPE"
+        ),
+        "date_field":       "ISSUDATE",
+        "address_field":    "ADDRESS",
+        "owner_field":      None,
+        "folio_field":      "FOLIO",
+        "phone_field":      None,
+        "contractor_field": "CONTRNAME",
+        "value_field":      "ESTVALUE",
+        "inspection_field": None,
+        "city_field":       None,
+        "default_city":     "Miami",
+        "county_slug":      "miami-dade",
+        "where_keywords": [
+            "roof", "reroof", "hurricane", "flood", "fire", "structural",
+            "water damage", "wind damage", "storm", "pipe", "discharge", "mold",
+        ],
+        "enabled": True,
+    },
     "broward": {
         # Fort Lauderdale BuildingPermitTracker — fresh data through 2026.
         # Previous endpoint (GeneralPurpose/gisdata/MapServer/27) was stale (last update 2021).
@@ -301,7 +331,7 @@ def scrape_damage_permits(
             "status": "New",
             "contact_email": None,
             "contact_phone": phone,
-            "county": county,
+            "county": config.get("county_slug", county),
         })
 
     print(f"[permits] {county}: fetched {len(all_features)} records, kept {len(results)} damage-related permits")

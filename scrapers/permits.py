@@ -20,60 +20,59 @@ from typing import Any
 # ---------------------------------------------------------------------------
 COUNTY_CONFIGS: dict[str, dict] = {
     "miami-dade": {
+        # BuildingPermit_gdb — migrated from miamidade_permit_data (404 as of 2026-03)
+        # Date field ISSUDATE is Unix epoch milliseconds, same as Fort Lauderdale.
+        # No OwnerName or City in this service; owner enriched from PA lookup downstream.
         "url": (
             "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/"
-            "miamidade_permit_data/FeatureServer/0/query"
+            "BuildingPermit_gdb/FeatureServer/0/query"
         ),
-        "where_field":      "DetailDescriptionComments",
+        "where_field":      "DESC1",
         "out_fields": (
-            "PermitIssuedDate,PermitNumber,PermitType,DetailDescriptionComments,"
-            "FolioNumber,OwnerName,PropertyAddress,City,ContractorPhone,"
-            "ContractorName,EstimatedValue,LastInspectionDate"
+            "ID,TYPE,ISSUDATE,ADDRESS,FOLIO,ESTVALUE,CONTRNAME,BPSTATUS,LSTINSDT,DESC1,APPTYPE"
         ),
-        "date_field":        "PermitIssuedDate",
-        "address_field":     "PropertyAddress",
-        "owner_field":       "OwnerName",
-        "folio_field":       "FolioNumber",
-        "phone_field":       "ContractorPhone",
-        "contractor_field":  "ContractorName",
-        "value_field":       "EstimatedValue",
-        "inspection_field":  "LastInspectionDate",
-        "city_field":        "City",
+        "date_field":        "ISSUDATE",
+        "address_field":     "ADDRESS",
+        "owner_field":       None,
+        "folio_field":       "FOLIO",
+        "phone_field":       None,
+        "contractor_field":  "CONTRNAME",
+        "value_field":       "ESTVALUE",
+        "inspection_field":  "LSTINSDT",
+        "city_field":        None,
         "default_city":      "Miami",
         "enabled": True,
     },
     "broward": {
-        # Fort Lauderdale city permits — confirmed working, 91K+ records.
-        # Field names verified via ?f=json on the service.
-        #
-        # NOTE: This is a MapServer (not FeatureServer). The query API is identical
-        #       but date range filtering uses epoch milliseconds, not DATE 'YYYY-MM-DD'.
-        #       The scraper's WHERE clause will need adjustment if you enable this —
-        #       see the comment in scrape_damage_permits() below.
-        #
-        # NOTE: Covers Fort Lauderdale only (largest city in Broward County ~200K people).
-        #       County-wide endpoint exists but is intermittently offline (503):
-        #         https://gis.broward.org/arcgis/rest/services/ePermits/ePermits/FeatureServer/0
-        #       Swap the url below to that when it's back online.
-        "url": "https://gis.fortlauderdale.gov/arcgis/rest/services/GeneralPurpose/gisdata/MapServer/27/query",
+        # Fort Lauderdale BuildingPermitTracker — fresh data through 2026.
+        # Previous endpoint (GeneralPurpose/gisdata/MapServer/27) was stale (last update 2021).
+        # County-wide Broward endpoint (gis.broward.org) is offline (403/503).
+        # Covers Fort Lauderdale only (~200K people, largest Broward city).
+        # SUBMITDT is the only reliable date field; APPROVEDT is null on most records.
+        "url": "https://gis.fortlauderdale.gov/arcgis/rest/services/BuildingPermitTracker/BuildingPermitTracker/MapServer/0/query",
         "where_field":       "PERMITDESC",
         "out_fields": (
-            "PERMITID,PERMITTYPE,PERMITDESC,PERMITSTAT,APPROVEDT,SUBMITDT,"
+            "PERMITID,PERMITTYPE,PERMITDESC,PERMITSTAT,SUBMITDT,"
             "PARCELID,FULLADDR,OWNERNAME,OWNERADDR,OWNERCITY,OWNERZIP,"
-            "CONTRACTOR,ESTCOST,USECLASS,LASTUPDATEDATE"
+            "CONTRACTOR,CONTRACTPH,ESTCOST,LASTUPDATEDATE"
         ),
-        "date_field":        "APPROVEDT",
+        "date_field":        "SUBMITDT",
         "address_field":     "FULLADDR",
         "owner_field":       "OWNERNAME",
         "folio_field":       "PARCELID",
-        "phone_field":       None,
+        "phone_field":       "CONTRACTPH",
         "contractor_field":  "CONTRACTOR",
         "value_field":       "ESTCOST",
         "inspection_field":  "LASTUPDATEDATE",
-        "city_field":        None,           # full address already includes city
+        "city_field":        None,
         "default_city":      "Fort Lauderdale",
-        "date_format":       "epoch_ms",   # APPROVEDT is Unix epoch milliseconds
-        "enabled": True,    # Fort Lauderdale permits — confirmed working, 91K+ records
+        # MapServer rejects WHERE clauses with >~15 LIKE conditions.
+        # Use a short core list for the API; full DAMAGE_KEYWORDS applied locally.
+        "where_keywords": [
+            "roof", "reroof", "hurricane", "flood", "fire", "structural",
+            "water damage", "wind", "storm", "mold", "pipe", "discharge",
+        ],
+        "enabled": True,
     },
     "palm-beach": {
         # No public unauthenticated building permit API exists for Palm Beach County.
@@ -180,7 +179,8 @@ def scrape_damage_permits(
     date_field = config["date_field"]
     date_format = config.get("date_format", "iso")
 
-    kw_clauses = [f"{where_field} LIKE '%{kw}%'" for kw in DAMAGE_KEYWORDS]
+    query_keywords = config.get("where_keywords", DAMAGE_KEYWORDS)
+    kw_clauses = [f"{where_field} LIKE '%{kw}%'" for kw in query_keywords]
 
     if date_format == "epoch_ms":
         since_epoch_ms = int(since_dt.timestamp() * 1000)
@@ -232,7 +232,7 @@ def scrape_damage_permits(
 
     for feat in all_features:
         attrs = feat.get("attributes", {})
-        permit_type = (attrs.get("PermitType") or attrs.get("PERMITTYPE") or attrs.get("WorkType") or "").strip()
+        permit_type = (attrs.get("PermitType") or attrs.get("PERMITTYPE") or attrs.get("WorkType") or attrs.get("TYPE") or "").strip()
         work_desc = (attrs.get(where_field) or "").strip()
 
         if not is_damage_related(permit_type, work_desc):
@@ -248,17 +248,18 @@ def scrape_damage_permits(
 
         address = (attrs.get(addr_field) or "Unknown Address").strip().title()
 
-        # Date: ISO string or epoch milliseconds depending on county
+        # Date: ArcGIS esriFieldTypeDate returns epoch_ms integers in responses
+        # regardless of how the WHERE clause is expressed.
         raw_date = attrs.get(date_field)
-        if date_format == "epoch_ms" and raw_date:
+        if isinstance(raw_date, (int, float)) and raw_date > 1_000_000_000:
             try:
                 permit_date = datetime.fromtimestamp(
-                    int(raw_date) / 1000, tz=timezone.utc
+                    raw_date / 1000, tz=timezone.utc
                 ).strftime("%Y-%m-%d")
             except (TypeError, ValueError, OSError):
                 permit_date = ""
         else:
-            permit_date = (raw_date or "")[:10]
+            permit_date = str(raw_date or "")[:10]
 
         city = (attrs.get(city_field) or default_city if city_field else default_city)
         city = (city or default_city).strip().title() or default_city

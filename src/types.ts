@@ -83,6 +83,7 @@ export interface FilterState {
   damageType: DamageType | "All";
   scoreTier: "All" | "High" | "Medium" | "Low";
   dateRange: "7" | "30" | "90" | "all";
+  sortOrder: "newest" | "oldest";
   hasContact: boolean;
   absenteeOwner: boolean;
   underpaid: boolean;

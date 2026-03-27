@@ -38,6 +38,7 @@ const DEFAULT_FILTERS: FilterState = {
   damageType: "All",
   scoreTier: "All",
   dateRange: "all",
+  sortOrder: "newest",
   hasContact: false,
   absenteeOwner: false,
   underpaid: false,
@@ -233,6 +234,9 @@ export default function App() {
         return false;
 
       return true;
+    }).sort((a, b) => {
+      const diff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      return filters.sortOrder === "oldest" ? -diff : diff;
     });
   }, [leads, filters]);
 

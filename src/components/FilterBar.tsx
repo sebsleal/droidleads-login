@@ -39,6 +39,7 @@ const isDefaultFilters = (f: FilterState) =>
   f.damageType === 'All' &&
   f.scoreTier === 'All' &&
   f.dateRange === 'all' &&
+  f.sortOrder === 'newest' &&
   !f.hasContact &&
   !f.absenteeOwner &&
   !f.underpaid &&
@@ -165,7 +166,7 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           </select>
         </div>
 
-        {/* Date */}
+        {/* Date range */}
         <div className="flex items-center gap-2">
           <Tooltip text="Filter by when the damage permit was filed. Use shorter ranges to see the most recent opportunities first.">
             <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Date</label>
@@ -178,6 +179,21 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             {DATE_RANGES.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
+          </select>
+        </div>
+
+        {/* Sort order */}
+        <div className="flex items-center gap-2">
+          <Tooltip text="Sort leads by permit date — newest first shows the most recent filings at the top, oldest first for chronological order.">
+            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Sort</label>
+          </Tooltip>
+          <select
+            value={filters.sortOrder}
+            onChange={(e) => update('sortOrder', e.target.value as FilterState['sortOrder'])}
+            className="select-input w-36"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
           </select>
         </div>
 

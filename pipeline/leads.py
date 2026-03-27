@@ -512,7 +512,7 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
         try:
             permit_leads.extend(
                 canonicalize_lead(lead)
-                for lead in scrape_damage_permits(county=county, max_records=500)
+                for lead in scrape_damage_permits(county=county, max_records=5000, lookback_days=365)
             )
         except Exception as exc:
             print(f"[lead-pipeline] Permit scrape failed for {county}: {exc}")

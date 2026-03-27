@@ -28,10 +28,10 @@ const DATE_RANGES = [
 ] as const
 
 const COUNTY_OPTIONS = [
-  { value: 'All',         label: 'All Counties' },
-  { value: 'miami-dade',  label: 'Miami-Dade' },
-  { value: 'broward',     label: 'Broward' },
-  { value: 'palm-beach',  label: 'Palm Beach' },
+  { value: 'All',        label: 'All Counties' },
+  { value: 'miami-dade', label: 'Miami-Dade' },
+  { value: 'broward',    label: 'Broward' },
+  { value: 'palm-beach', label: 'Palm Beach' },
 ] as const
 
 const isDefaultFilters = (f: FilterState) =>
@@ -46,6 +46,45 @@ const isDefaultFilters = (f: FilterState) =>
   !f.stormFirst &&
   f.county === 'All'
 
+interface ToggleProps {
+  label: string
+  checked: boolean
+  onToggle: () => void
+  tooltipText: string
+  activeColor?: string
+}
+
+function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-900' }: ToggleProps) {
+  return (
+    <Tooltip text={tooltipText}>
+      <label className="flex items-center gap-2 cursor-pointer select-none group">
+        <div
+          className={cn(
+            'relative w-8 h-[18px] rounded-full transition-colors duration-200 flex-shrink-0',
+            checked ? activeColor : 'bg-zinc-200'
+          )}
+          onClick={onToggle}
+        >
+          <div
+            className={cn(
+              'absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200',
+              checked ? 'translate-x-[14px]' : 'translate-x-0'
+            )}
+          />
+        </div>
+        <span
+          className={cn(
+            'text-[13px] font-medium transition-colors whitespace-nowrap',
+            checked ? 'text-zinc-900' : 'text-zinc-500 group-hover:text-zinc-700'
+          )}
+        >
+          {label}
+        </span>
+      </label>
+    </Tooltip>
+  )
+}
+
 export default function FilterBar({ filters, onChange, onClear }: FilterBarProps) {
   const hasActiveFilters = !isDefaultFilters(filters)
 
@@ -54,32 +93,32 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
   }
 
   return (
-    <div className="card px-4 py-3.5">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="bg-white border border-zinc-100 rounded-lg px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
 
         {/* ZIP */}
         <div className="flex items-center gap-2">
           <Tooltip text="Filter leads by ZIP code. Only shows properties located in that ZIP.">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">ZIP</label>
+            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">ZIP</label>
           </Tooltip>
           <input
             type="text"
-            placeholder="e.g. 33125"
+            placeholder="33125"
             maxLength={5}
             value={filters.zip}
             onChange={(e) => update('zip', e.target.value.replace(/\D/g, ''))}
-            className={cn(
-              'w-28 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700',
-              'shadow-sm focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-500/20',
-              'placeholder:text-slate-400 transition-colors'
-            )}
+            className="w-24 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[13px] text-zinc-700
+                       focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
+                       placeholder:text-zinc-300 transition-colors"
           />
         </div>
 
-        {/* Damage type */}
+        <div className="w-px h-5 bg-zinc-100" />
+
+        {/* Damage */}
         <div className="flex items-center gap-2">
           <Tooltip text="Filter by the type of property damage on the permit — e.g. hurricane wind, flood, roof replacement, fire, or structural.">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Damage</label>
+            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Damage</label>
           </Tooltip>
           <select
             value={filters.damageType}
@@ -87,9 +126,7 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             className="select-input w-44"
           >
             {DAMAGE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
         </div>
@@ -97,7 +134,7 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
         {/* County */}
         <div className="flex items-center gap-2">
           <Tooltip text="Filter by county. Covers Miami-Dade, Broward (Fort Lauderdale area), and Palm Beach (West Palm Beach area).">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">County</label>
+            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">County</label>
           </Tooltip>
           <select
             value={filters.county}
@@ -105,17 +142,15 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             className="select-input w-36"
           >
             {COUNTY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </div>
 
-        {/* Score tier */}
+        {/* Score */}
         <div className="flex items-center gap-2">
-          <Tooltip text="Filter by lead priority score. High = 85 or above (hottest leads). Medium = 70–84. Low = below 70. Score is calculated from damage type, FEMA match, permit status, and owner signals.">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Score</label>
+          <Tooltip text="Filter by lead priority score. High = 85 or above (hottest leads). Medium = 70–84. Low = below 70.">
+            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Score</label>
           </Tooltip>
           <select
             value={filters.scoreTier}
@@ -124,16 +159,16 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
           >
             {SCORE_TIERS.map((t) => (
               <option key={t} value={t}>
-                {t === 'All' ? 'All scores' : t === 'High' ? 'High (≥85)' : t === 'Medium' ? 'Medium (70-84)' : 'Low (<70)'}
+                {t === 'All' ? 'All scores' : t === 'High' ? 'High (≥85)' : t === 'Medium' ? 'Medium (70–84)' : 'Low (<70)'}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Date range */}
+        {/* Date */}
         <div className="flex items-center gap-2">
           <Tooltip text="Filter by when the damage permit was filed. Use shorter ranges to see the most recent opportunities first.">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap cursor-help underline decoration-dotted decoration-slate-400">Date</label>
+            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em] whitespace-nowrap cursor-help">Date</label>
           </Tooltip>
           <select
             value={filters.dateRange}
@@ -141,110 +176,57 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             className="select-input w-36"
           >
             {DATE_RANGES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
+              <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
         </div>
 
-        {/* Has contact toggle */}
-        <Tooltip text="Only show leads where we found a phone number or email for the property owner — so you can reach out immediately.">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <div className="relative">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={filters.hasContact}
-                onChange={(e) => update('hasContact', e.target.checked)}
-              />
-              <div className={cn(
-                'w-9 h-5 rounded-full border-2 transition-colors duration-200',
-                filters.hasContact
-                  ? 'bg-navy-900 border-navy-900'
-                  : 'bg-slate-200 border-slate-200'
-              )} />
-              <div className={cn(
-                'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200',
-                filters.hasContact ? 'translate-x-4' : 'translate-x-0'
-              )} />
-            </div>
-            <span className="text-xs font-medium text-slate-600 whitespace-nowrap">Has contact</span>
-          </label>
-        </Tooltip>
+        <div className="w-px h-5 bg-zinc-100" />
 
-        {/* Absentee Owner */}
-        <Tooltip text="Only show leads where the owner's mailing address is out of state. Absentee owners often haven't started repairs and are more likely to need a public adjuster — and everything can be handled remotely.">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={filters.absenteeOwner}
-              onClick={() => onChange({ ...filters, absenteeOwner: !filters.absenteeOwner })}
-              className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.absenteeOwner ? 'bg-amber-500 border-amber-500' : 'bg-white border-slate-300'}`}
-            >
-              <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.absenteeOwner ? 'translate-x-4' : 'translate-x-0'}`} />
-            </button>
-            <span className="text-sm text-slate-600">Absentee</span>
-          </label>
-        </Tooltip>
+        {/* Toggles */}
+        <Toggle
+          label="Has contact"
+          checked={filters.hasContact}
+          onToggle={() => update('hasContact', !filters.hasContact)}
+          tooltipText="Only show leads where we found a phone number or email for the property owner."
+        />
+        <Toggle
+          label="Absentee"
+          checked={filters.absenteeOwner}
+          onToggle={() => update('absenteeOwner', !filters.absenteeOwner)}
+          tooltipText="Only show leads where the owner's mailing address is out of state."
+          activeColor="bg-amber-500"
+        />
+        <Toggle
+          label="Underpaid"
+          checked={filters.underpaid}
+          onToggle={() => update('underpaid', !filters.underpaid)}
+          tooltipText="Only show leads where the permit value is below 60% of the ZIP code median — a strong underpayment signal."
+          activeColor="bg-red-500"
+        />
+        <Toggle
+          label="No Contractor"
+          checked={filters.noContractor}
+          onToggle={() => update('noContractor', !filters.noContractor)}
+          tooltipText="Only show leads where no licensed contractor is listed on the permit (Owner-Builder or No Contractor status)."
+          activeColor="bg-blue-500"
+        />
+        <Toggle
+          label="Pre-Permit"
+          checked={filters.stormFirst}
+          onToggle={() => update('stormFirst', !filters.stormFirst)}
+          tooltipText="Only show storm-first leads — properties in storm-affected areas that have NOT filed a permit yet."
+          activeColor="bg-emerald-500"
+        />
 
-        {/* Underpaid */}
-        <Tooltip text="Only show leads where the permit value is below 60% of the ZIP code median — a strong signal the insurance payout may have been too low. These owners may not realize they were shortchanged.">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={filters.underpaid}
-              onClick={() => onChange({ ...filters, underpaid: !filters.underpaid })}
-              className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.underpaid ? 'bg-red-500 border-red-500' : 'bg-white border-slate-300'}`}
-            >
-              <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.underpaid ? 'translate-x-4' : 'translate-x-0'}`} />
-            </button>
-            <span className="text-sm text-slate-600">Underpaid</span>
-          </label>
-        </Tooltip>
-
-        {/* No Contractor */}
-        <Tooltip text="Only show leads where no licensed contractor is listed on the permit (Owner-Builder or No Contractor status). These owners are likely navigating the insurance claim on their own and may need help.">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={filters.noContractor}
-              onClick={() => onChange({ ...filters, noContractor: !filters.noContractor })}
-              className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.noContractor ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300'}`}
-            >
-              <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.noContractor ? 'translate-x-4' : 'translate-x-0'}`} />
-            </button>
-            <span className="text-sm text-slate-600">No Contractor</span>
-          </label>
-        </Tooltip>
-
-        {/* Pre-Permit */}
-        <Tooltip text="Only show storm-first leads — properties in storm-affected areas that have NOT filed a permit yet. These are the highest-urgency opportunities: the owner may not have even started the claims process.">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={filters.stormFirst}
-              onClick={() => onChange({ ...filters, stormFirst: !filters.stormFirst })}
-              className={`w-9 h-5 rounded-full border-2 transition-colors ${filters.stormFirst ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'}`}
-            >
-              <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${filters.stormFirst ? 'translate-x-4' : 'translate-x-0'}`} />
-            </button>
-            <span className="text-sm text-slate-600">Pre-Permit</span>
-          </label>
-        </Tooltip>
-
-        {/* Clear filters */}
+        {/* Clear */}
         {hasActiveFilters && (
           <button
             onClick={onClear}
-            className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors ml-auto"
+            className="ml-auto flex items-center gap-1 text-[12px] font-medium text-zinc-400 hover:text-zinc-700 transition-colors"
           >
-            <X className="w-3.5 h-3.5" />
-            Clear filters
+            <X className="w-3 h-3" />
+            Clear
           </button>
         )}
       </div>

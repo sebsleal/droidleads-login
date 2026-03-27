@@ -53,7 +53,7 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
             onChange={(e) => update('search', e.target.value)}
             className={cn(
               'flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700',
-              'shadow-sm focus:border-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-500/20',
+              'focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10',
               'placeholder:text-slate-400 transition-colors',
             )}
           />

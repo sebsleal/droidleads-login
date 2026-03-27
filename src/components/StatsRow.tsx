@@ -1,72 +1,56 @@
-import { Users, Star, Home, AlertTriangle } from 'lucide-react'
 import type { StatsData } from '@/types'
-import { cn } from '@/lib/utils'
+
+interface StatItemProps {
+  label: string
+  value: number
+  subtext?: string
+  valueColor?: string
+}
+
+function StatItem({ label, value, subtext, valueColor = 'text-zinc-900' }: StatItemProps) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-[0.07em]">{label}</p>
+      <p className={`text-2xl font-semibold score-number leading-none ${valueColor}`}>
+        {value.toLocaleString()}
+      </p>
+      {subtext && <p className="text-[12px] text-zinc-400 mt-0.5">{subtext}</p>}
+    </div>
+  )
+}
 
 interface StatsRowProps {
   stats: StatsData
 }
 
-interface StatCardProps {
-  icon: React.ReactNode
-  label: string
-  value: string | number
-  subtext?: string
-  accent?: 'green' | 'amber' | 'blue' | 'red' | 'default'
-}
-
-function StatCard({ icon, label, value, subtext, accent = 'default' }: StatCardProps) {
-  const accentMap = {
-    green: 'text-green-600 bg-green-50',
-    amber: 'text-amber-600 bg-amber-50',
-    blue: 'text-blue-600 bg-blue-50',
-    red: 'text-red-600 bg-red-50',
-    default: 'text-slate-600 bg-slate-100',
-  }
-
-  return (
-    <div className="card px-5 py-4 flex items-start gap-4">
-      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', accentMap[accent])}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 mt-0.5 score-number leading-none">{value}</p>
-        {subtext && <p className="text-xs text-slate-400 mt-1">{subtext}</p>}
-      </div>
-    </div>
-  )
-}
-
 export default function StatsRow({ stats }: StatsRowProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard
-        icon={<Users className="w-5 h-5" />}
+    <div className="flex items-center gap-8 px-1 pb-6 border-b border-zinc-100">
+      <StatItem
         label="Total Leads"
         value={stats.totalLeads}
         subtext="in database"
-        accent="blue"
       />
-      <StatCard
-        icon={<Star className="w-5 h-5" />}
+      <div className="w-px h-10 bg-zinc-100" />
+      <StatItem
         label="High Priority"
         value={stats.highPriority}
         subtext="score ≥ 85"
-        accent="green"
+        valueColor="text-emerald-600"
       />
-      <StatCard
-        icon={<Home className="w-5 h-5" />}
+      <div className="w-px h-10 bg-zinc-100" />
+      <StatItem
         label="Absentee Owners"
         value={stats.absenteeOwners}
         subtext="out-of-state mailing"
-        accent="amber"
+        valueColor="text-amber-600"
       />
-      <StatCard
-        icon={<AlertTriangle className="w-5 h-5" />}
+      <div className="w-px h-10 bg-zinc-100" />
+      <StatItem
         label="Underpaid Flags"
         value={stats.underpaidFlags}
-        subtext="below zip median"
-        accent="red"
+        subtext="below ZIP median"
+        valueColor="text-red-500"
       />
     </div>
   )

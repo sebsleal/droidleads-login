@@ -70,7 +70,7 @@ export default function CasesTable({ cases, onSelectCase, selectedCaseId }: Case
               className={cn(
                 'w-full text-left px-5 py-4 transition-colors duration-100',
                 'hover:bg-slate-50/80 focus:outline-none focus:bg-blue-50/50',
-                isSelected && 'bg-blue-50/60 border-l-2 border-navy-700',
+                isSelected && 'bg-blue-50/60 border-l-2 border-zinc-700',
               )}
             >
               {/* Mobile layout */}

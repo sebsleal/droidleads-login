@@ -32,7 +32,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
       {/* Table header row + result count */}
       <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
         <p className="text-sm font-medium text-slate-700">
-          <span className="text-navy-900 font-bold score-number">{leads.length}</span>{' '}
+          <span className="text-zinc-900 font-semibold score-number">{leads.length}</span>{' '}
           {leads.length === 1 ? 'lead' : 'leads'} found
         </p>
         <p className="text-xs text-slate-400">Click a row to view details</p>

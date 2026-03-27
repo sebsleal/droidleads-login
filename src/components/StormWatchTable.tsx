@@ -40,7 +40,7 @@ export default function StormWatchTable({
     <div className="card overflow-hidden">
       <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
         <p className="text-sm font-medium text-slate-700">
-          <span className="text-navy-900 font-bold score-number">{candidates.length}</span>{' '}
+          <span className="text-zinc-900 font-semibold score-number">{candidates.length}</span>{' '}
           {candidates.length === 1 ? 'candidate' : 'candidates'} found
         </p>
         <p className="text-xs text-slate-400">Area-based opportunities stay separate from permit leads</p>

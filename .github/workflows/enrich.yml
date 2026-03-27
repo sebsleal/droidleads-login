@@ -1,0 +1,59 @@
+name: Enrich Outreach Messages
+
+on:
+  # Run automatically after the scraper finishes
+  workflow_run:
+    workflows: ["Refresh Leads & Storm Data"]
+    types: [completed]
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  enrich:
+    # Only run if the scraper succeeded (skip if it failed or was cancelled)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Pull the latest commit — the scraper may have just pushed new leads.json
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate API key
+        run: |
+          test -n "$ANTHROPIC_API_KEY" || { echo "Missing ANTHROPIC_API_KEY secret — skipping enrichment."; exit 0; }
+
+      - name: Run outreach enrichment
+        run: python3 enrich_outreach.py
+
+      - name: Commit enriched messages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/leads.json
+          if git diff --cached --quiet; then
+            echo "No outreach messages were updated."
+          else
+            ENRICHED=$(git diff --cached --stat | grep -oP '\d+ insertion' | grep -oP '\d+' || echo "some")
+            git commit -m "chore: enrich outreach messages [skip ci]"
+            git push
+            echo "Committed updated outreach messages."
+          fi

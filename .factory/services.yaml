@@ -1,0 +1,15 @@
+commands:
+  install_python: pip install -r requirements.txt
+  install_js: npm install
+  build: npm run build
+  test: python3 -m unittest discover -s tests -p 'test_*.py' -v
+  compileall: python3 -m compileall company_data pipeline enrichment db scripts run_scraper.py generate_leads.py enrich_leads.py
+  typecheck: npm run build
+
+services:
+  web:
+    start: cd /Users/seb/Documents/claim-remedy-leads-testing && PORT=5173 npx vite --port 5173
+    stop: lsof -ti :5173 | xargs kill 2>/dev/null || true
+    healthcheck: curl -sf http://localhost:5173
+    port: 5173
+    depends_on: []

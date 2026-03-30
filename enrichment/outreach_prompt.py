@@ -17,27 +17,56 @@ TEMPLATE_PREFIX = "TEMPLATE:"
 
 # Words that indicate a corporate entity or placeholder — not a real last name
 _CORP_SUFFIXES = {"llc", "inc", "corp", "ltd", "lp", "pa", "na", "co", "pllc"}
+_NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 _SKIP_NAMES = {"reference only"}
+
+
+def _normalize_name_token(value: str) -> str:
+    return value.strip().lower().rstrip(".,")
+
+
+def _format_salutation_value(value: str) -> str:
+    value = value.strip().rstrip(".,")
+    if not value:
+        return "Property Owner"
+    if value.isupper() or value.islower():
+        return value.title()
+    return value
 
 
 def _salutation_name(owner_name: str | None) -> str:
     """Return an appropriate name to use in a salutation.
 
     - Returns 'Property Owner' for blanks, corporate entities, or placeholder names.
-    - Returns the last word for normal personal names.
+    - Handles property-record names in "LAST, FIRST" format.
+    - Strips common personal suffixes like Jr./Sr./III.
+    - Preserves existing last-name behavior for normal personal names.
     """
     if not owner_name:
         return "Property Owner"
+
     name = owner_name.strip()
-    if name.lower() in _SKIP_NAMES:
+    if not name or name.lower() in _SKIP_NAMES:
         return "Property Owner"
-    parts = name.split()
+
+    normalized_parts = [_normalize_name_token(part) for part in name.replace(",", " ").split()]
+    if not normalized_parts:
+        return "Property Owner"
+    if any(part in _CORP_SUFFIXES for part in normalized_parts):
+        return "Property Owner"
+
+    if "," in name:
+        last_name_parts = [part for part in name.split(",", 1)[0].split() if part]
+        while last_name_parts and _normalize_name_token(last_name_parts[-1]) in _NAME_SUFFIXES:
+            last_name_parts.pop()
+        return _format_salutation_value(" ".join(last_name_parts))
+
+    parts = [part for part in name.split() if part]
+    while parts and _normalize_name_token(parts[-1]) in _NAME_SUFFIXES:
+        parts.pop()
     if not parts:
         return "Property Owner"
-    last = parts[-1].lower().rstrip(".,")
-    if last in _CORP_SUFFIXES:
-        return "Property Owner"
-    return parts[-1]
+    return _format_salutation_value(parts[-1])
 
 
 def is_template_message(message: str | None) -> bool:

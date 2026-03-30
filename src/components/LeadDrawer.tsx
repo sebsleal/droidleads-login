@@ -48,7 +48,7 @@ interface LeadDrawerProps {
   onClose: () => void;
   onUpdateStatus: (id: string, status: Lead["status"]) => void;
   onUpdateTracking?: (id: string, patch: TrackingPatch) => void;
-
+  readOnly?: boolean;
 }
 
 const STATUS_OPTIONS: Lead["status"][] = [
@@ -87,6 +87,7 @@ export default function LeadDrawer({
   onClose,
   onUpdateStatus,
   onUpdateTracking,
+  readOnly = false,
 }: LeadDrawerProps) {
   const [copied, setCopied] = useState(false);
   const [notesValue, setNotesValue] = useState(lead.notes ?? "");
@@ -724,11 +725,15 @@ export default function LeadDrawer({
                   </Tooltip>
                   <select
                     value={lead.contactMethod ?? ""}
+                    disabled={readOnly}
                     onChange={(e) => {
                       const val = e.target.value || undefined;
                       onUpdateTracking?.(lead.id, { contactMethod: val });
                     }}
-                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={cn(
+                      "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                      readOnly ? "cursor-not-allowed bg-slate-50 text-slate-400" : "",
+                    )}
                   >
                     <option value="">— not set —</option>
                     <option value="Phone">Phone</option>
@@ -760,6 +765,7 @@ export default function LeadDrawer({
                     step="100"
                     placeholder="e.g. 45000"
                     value={claimValue}
+                    disabled={readOnly}
                     onChange={(e) => setClaimValue(e.target.value)}
                     onBlur={() => {
                       const num = parseFloat(claimValue);
@@ -767,7 +773,10 @@ export default function LeadDrawer({
                         claimValue: isNaN(num) ? undefined : num,
                       });
                     }}
-                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={cn(
+                      "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                      readOnly ? "cursor-not-allowed bg-slate-50 text-slate-400" : "",
+                    )}
                   />
                 </div>
               </div>
@@ -790,13 +799,17 @@ export default function LeadDrawer({
                     rows={3}
                     placeholder="Add adjuster notes…"
                     value={notesValue}
+                    disabled={readOnly}
                     onChange={(e) => setNotesValue(e.target.value)}
                     onBlur={() => {
                       onUpdateTracking?.(lead.id, {
                         notes: notesValue.trim() || undefined,
                       });
                     }}
-                    className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={cn(
+                      "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                      readOnly ? "cursor-not-allowed bg-slate-50 text-slate-400" : "",
+                    )}
                   />
                 </div>
               </div>
@@ -817,10 +830,12 @@ export default function LeadDrawer({
               {STATUS_OPTIONS.map((s) => (
                 <Tooltip key={s} text={STATUS_TOOLTIPS[s]} position="top">
                   <button
+                    disabled={readOnly}
                     onClick={() => onUpdateStatus(lead.id, s)}
                     className={cn(
                       "flex-1 py-2 rounded-lg text-sm font-medium border transition-all duration-150",
                       lead.status === s ? STATUS_ACTIVE[s] : STATUS_INACTIVE,
+                      readOnly ? "cursor-not-allowed opacity-60" : "",
                     )}
                   >
                     {s}

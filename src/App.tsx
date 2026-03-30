@@ -99,12 +99,17 @@ export default function App() {
     null,
   );
 
-  const { trackingMap, saveTracking } = useTracking();
+  const {
+    trackingMap,
+    saveTracking,
+    readOnly: leadReadOnly,
+  } = useTracking();
   const {
     trackingMap: stormTrackingMap,
     saveTracking: saveStormTracking,
+    readOnly: stormReadOnly,
   } = useStormTracking();
-  const { cases, saveCase } = useCases();
+  const { cases, saveCase, readOnly: caseReadOnly } = useCases();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -697,6 +702,7 @@ export default function App() {
           onClose={() => setSelectedLead(null)}
           onUpdateStatus={handleUpdateStatus}
           onUpdateTracking={handleUpdateTracking}
+          readOnly={leadReadOnly}
         />
       )}
 
@@ -706,6 +712,7 @@ export default function App() {
           onClose={() => setSelectedStormCandidate(null)}
           onUpdateStatus={handleUpdateStormStatus}
           onUpdateTracking={handleUpdateStormTracking}
+          readOnly={stormReadOnly}
         />
       )}
 
@@ -714,6 +721,7 @@ export default function App() {
           kase={syncedSelectedCase}
           onClose={() => setSelectedCase(null)}
           onSave={saveCase}
+          readOnly={caseReadOnly}
         />
       )}
     </div>

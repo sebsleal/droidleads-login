@@ -76,5 +76,9 @@
       "reason": "belongs to direct code fix in a feature, not a shared-state guidance update"
     }
   ],
-  "previousRound": null
+  "previousRound": null,
+  "orchestratorOverrides": {
+    "lintFailure": "ESLint was never properly configured in this repository — eslint binary not installed, no eslint.config.* file exists. This is a pre-existing repo issue, not a regression from mission changes. The lint check in package.json scripts is a dead placeholder. Overriding lint failure as pre-existing.",
+    "fixFeatureCreated": "fix-voter-entity-detection inserted at top of features.json to address the is_business_entity substring false-positive bug"
+  }
 }

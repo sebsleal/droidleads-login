@@ -135,7 +135,7 @@ def canonicalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
             or permit_date
             or datetime.now(timezone.utc).date().isoformat()
         ),
-        "score": int(raw.get("score") or 0),
+        "score": round(float(raw.get("score") or 0), 1),
         "status": raw.get("status") or "New",
         "source": source,
         "source_detail": source_detail,
@@ -452,7 +452,7 @@ def serialize_lead_for_ui(lead: dict[str, Any]) -> dict[str, Any]:
         "zip": lead.get("zip") or "",
         "folioNumber": lead.get("folio_number") or "",
         "damageType": lead.get("damage_type") or "Roof",
-        "score": int(lead.get("score") or 0),
+        "score": round(float(lead.get("score") or 0), 1),
         "date": lead.get("permit_date") or lead.get("lead_date") or "",
         "status": lead.get("status") or "New",
         "permitType": lead.get("permit_type") or "",

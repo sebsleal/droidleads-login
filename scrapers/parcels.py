@@ -31,12 +31,12 @@ MIAMI_DADE_ZIPS = [
 
 def fetch_parcels_by_zip(
     zip_codes: list[int],
-    limit_per_zip: int = 50,
+    limit_per_zip: int = 100,
     delay: float = 0.3,
 ) -> list[dict[str, Any]]:
     """Fetch residential parcels for given ZIP codes from the GeoProp layer."""
     results = []
-    for z in zip_codes[:5]:  # hard cap: 5 ZIPs per run
+    for z in zip_codes:
         params = {
             "where": f"zip_code = {int(z)}",
             "outFields": "FOLIO,address,zip_code",

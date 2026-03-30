@@ -371,7 +371,7 @@ def build_pre_permit_leads(
         if lead.get("address")
     }
 
-    parcels = fetch_parcels_by_zip(MIAMI_DADE_ZIPS[:5], limit_per_zip=20)
+    parcels = fetch_parcels_by_zip(MIAMI_DADE_ZIPS, limit_per_zip=100)
     pre_permit: list[dict[str, Any]] = []
     for parcel in parcels:
         address = (parcel.get("propertyAddress") or "").strip()
@@ -554,7 +554,7 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
     )
 
     try:
-        all_leads = enrich_leads_with_owner_info(all_leads, max_lookups=300)
+        all_leads = enrich_leads_with_owner_info(all_leads, max_lookups=2000)
     except Exception as exc:
         print(f"[lead-pipeline] Owner enrichment failed: {exc}")
 
@@ -572,8 +572,8 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
         from scrapers.sunbiz import enrich_business_owners
         from scrapers.voter_lookup import enrich_with_voter_data
 
-        all_leads = enrich_business_owners(all_leads, top_n=20, delay=2.0)
-        all_leads = enrich_with_voter_data(all_leads, top_n=200)
+        all_leads = enrich_business_owners(all_leads, top_n=100, delay=2.0)
+        all_leads = enrich_with_voter_data(all_leads, top_n=1000)
         for lead in all_leads:
             apply_company_signals(lead)
             lead["score"], lead["score_breakdown"] = _score_with_breakdown(lead)

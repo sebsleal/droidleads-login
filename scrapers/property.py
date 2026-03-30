@@ -221,24 +221,24 @@ def enrich_leads_with_owner_info(
     Lightweight PA enrichment for the scraper pipeline (snake_case fields).
 
     Populates owner_name, zip, mailing address, homestead, assessed_value,
-    roof_age, absentee_owner when available. Preserves existing values.
+    roof_age, absentee_owner when available. Preserves existing non-None values.
 
     Args:
         leads: List of lead dicts (snake_case).
         max_lookups: Max number of PA lookups to perform.
         delay: Seconds between requests.
     """
-    eligible = [l for l in leads if l.get("folio_number", "").strip()]
+    eligible = [l for l in leads if str(l.get("folio_number") or "").strip()]
     to_enrich = eligible[:max_lookups]
 
     print(f"\nPA enrichment: {len(to_enrich)} lookups (top {max_lookups} leads with folios)...")
 
     enriched_ids = set()
     for i, lead in enumerate(to_enrich):
-        folio = lead.get("folio_number", "")
+        folio = str(lead.get("folio_number") or "").strip()
         info = lookup_by_folio(folio)
         if info:
-            if not lead.get("zip") and (info["site_zip"] or info["mailing_zip"]):
+            if lead.get("zip") is None and (info["site_zip"] or info["mailing_zip"]):
                 lead["zip"] = info["site_zip"] or info["mailing_zip"]
 
             if info["owner_name"] and info["owner_name"] != "Property Owner":
@@ -252,15 +252,17 @@ def enrich_leads_with_owner_info(
                     mailing += f", {info['mailing_state']}"
                 if info.get("mailing_zip"):
                     mailing += f" {info['mailing_zip']}"
-                lead.setdefault("owner_mailing_address", mailing)
+                if lead.get("owner_mailing_address") is None:
+                    lead["owner_mailing_address"] = mailing
 
-            lead.setdefault("homestead", info.get("homestead"))
+            if lead.get("homestead") is None:
+                lead["homestead"] = info.get("homestead")
 
-            if info.get("assessed_value"):
-                lead.setdefault("assessed_value", info["assessed_value"])
+            if info.get("assessed_value") and lead.get("assessed_value") is None:
+                lead["assessed_value"] = info["assessed_value"]
 
-            if info.get("roof_age") is not None:
-                lead.setdefault("roof_age", info["roof_age"])
+            if info.get("roof_age") is not None and lead.get("roof_age") is None:
+                lead["roof_age"] = info["roof_age"]
 
             mailing_state = (info.get("mailing_state") or "").upper().strip()
             is_absentee = mailing_state not in ("FL", "FLORIDA", "")

@@ -5,41 +5,49 @@ Data-driven scoring helpers backed by the sanitized company metrics dataset.
 from __future__ import annotations
 
 import json
+import math
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from enrichment.ev_config import compute_ev, EV_MAX
 
 COMPANY_METRICS_PATH = (
     Path(__file__).resolve().parents[1] / "src" / "data" / "companyMetrics.json"
 )
 
 DEFAULT_PERIL_MODIFIERS = {
-    # Ranked by EV: P(settled) × avg_settlement from 120+ closed claims
-    "Fire":                 12,  # $65K avg settlement, 50% settlement rate
-    "Accidental Discharge": 10,  # 58% settlement rate, $48K avg — highest P(settled)
-    "Structural":            8,  # $55K avg, strong settlement when it occurs
-    "Hurricane/Wind":        6,  # most common type, 45% settlement, $42K avg
+    # Aligned with companyMetrics.json scoring_model.peril_weights score_modifier values
+    # Ranked by expected_fee_per_case from 120+ closed claims
+    "Fire":                 12,  # $65K avg settlement, 50% settlement rate (no sample in metrics)
+    "Accidental Discharge": 10,  # 52.5% settled_like_rate, $1,721 expected_fee — companyMetrics value
+    "Structural":            8,  # Strong settlement when it occurs (small sample)
+    "Hurricane/Wind":        3,  # High litigation (44%), $1,630 expected_fee — companyMetrics value
     "Roof":                  3,  # 42% settlement rate but lowest avg ($32K)
     "Flood":                 2,  # most complex, 32% settlement rate
 }
 
 DEFAULT_INSURER_MODIFIERS = {
-    # Ranked by portfolio outcomes: settlement rate × avg payout
-    "tower hill":           {"score_modifier":  8, "risk": "low",    "label": "Strong Payer"},
+    # Aligned with companyMetrics.json scoring_model.insurer_modifiers score_modifier values
+    # Derived from 120+ closed claims: settlement rate, expected fee per case
+    "universal north america": {"score_modifier": 11, "risk": "low",    "label": "Strong Payer"},
+    "tower hill":           {"score_modifier": 10, "risk": "low",    "label": "Strong Payer"},
+    "monarch national":     {"score_modifier": 10, "risk": "low",    "label": "Strong Payer"},
+    "american security":    {"score_modifier":  9, "risk": "low",    "label": "Strong Payer"},
     "progressive":          {"score_modifier":  8, "risk": "low",    "label": "Strong Payer"},
-    "universal property":   {"score_modifier":  6, "risk": "low",    "label": "Strong Payer"},
-    "universal north america": {"score_modifier": 6, "risk": "low",  "label": "Strong Payer"},
-    "florida peninsula":    {"score_modifier":  6, "risk": "low",    "label": "Strong Payer"},
-    "cypress":              {"score_modifier":  6, "risk": "low",    "label": "Strong Payer"},
-    "homeowners choice":    {"score_modifier":  4, "risk": "low",    "label": "Strong Payer"},
-    "monarch national":     {"score_modifier":  4, "risk": "low",    "label": "Strong Payer"},
-    "slide":                {"score_modifier":  2, "risk": "medium", "label": "Moderate Payer"},
-    "state farm":           {"score_modifier":  0, "risk": "medium", "label": "Moderate Payer"},
-    "usaa":                 {"score_modifier":  0, "risk": "medium", "label": "Moderate Payer"},
-    "american security":    {"score_modifier":  0, "risk": "medium", "label": "Moderate Payer"},
-    "castle key":           {"score_modifier": -2, "risk": "high",   "label": "High Friction"},
-    "citizens":             {"score_modifier": -4, "risk": "high",   "label": "High Friction"},
-    "integon national":     {"score_modifier": -8, "risk": "high",   "label": "High Friction"},
+    "usaa":                 {"score_modifier":  8, "risk": "low",    "label": "Strong Payer"},
+    "castle key":           {"score_modifier":  6, "risk": "medium", "label": "Balanced Outcomes"},
+    "heritage":             {"score_modifier":  5, "risk": "medium", "label": "Balanced Outcomes"},
+    "universal property":   {"score_modifier":  5, "risk": "medium", "label": "Balanced Outcomes"},
+    "homeowners choice":    {"score_modifier":  5, "risk": "medium", "label": "Balanced Outcomes"},
+    "florida peninsula":    {"score_modifier":  5, "risk": "medium", "label": "Balanced Outcomes"},
+    "slide":                {"score_modifier":  4, "risk": "medium", "label": "Balanced Outcomes"},
+    "cypress":              {"score_modifier":  4, "risk": "medium", "label": "Balanced Outcomes"},
+    "orange insurance":     {"score_modifier":  0, "risk": "medium", "label": "Balanced Outcomes"},
+    "citizens":             {"score_modifier":  0, "risk": "high",   "label": "High Friction"},
+    "state farm":           {"score_modifier": -4, "risk": "high",   "label": "High Friction"},
+    "statefarm":            {"score_modifier": -4, "risk": "high",   "label": "High Friction"},
+    "integon national":     {"score_modifier": -12, "risk": "high",  "label": "High Friction"},
 }
 
 
@@ -204,23 +212,39 @@ Respond with ONLY:
 
 
 def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
-    """Compute score and return (score, breakdown_dict) with per-factor detail."""
+    """Compute score and return (score, breakdown_dict) with per-factor detail.
+
+    Uses logarithmic compression to map the raw additive score to 0–100,
+    preventing ceiling saturation for high-signal leads.
+
+    Raw scoring components:
+      - Base = 30
+      - Peril modifier (from companyMetrics / DEFAULT_PERIL_MODIFIERS)
+      - Insurer modifier (from companyMetrics / DEFAULT_INSURER_MODIFIERS)
+      - Smooth exponential recency decay (continuous, no step jumps)
+      - Expected Value from ev_config.compute_ev()
+      - Permit scope, contact quality, storm signals, property signals
+
+    Final score = logarithmic compression of raw to 0–100.
+    """
     from datetime import date
 
-    score = 30
+    raw_score = 30.0
     factors: list[dict] = []
 
-    def add(delta: int, label: str, note: str = "") -> None:
-        nonlocal score
-        score += delta
-        factors.append({"label": label, "delta": delta, "note": note})
+    def add(delta: float, label: str, note: str = "") -> None:
+        nonlocal raw_score
+        raw_score += delta
+        factors.append({"label": label, "delta": round(delta, 2), "note": note})
 
+    # --- Peril signal ---
     damage_type = lead.get("damage_type") or lead.get("damageType")
     peril_signal = get_peril_signal(damage_type)
     if peril_signal and int(peril_signal["score_modifier"]) != 0:
         add(int(peril_signal["score_modifier"]), f"{damage_type} damage type",
             "Based on historical settlement rate & avg payout from closed claims")
 
+    # --- Insurer signal ---
     insurer_name = lead.get("insurance_company") or lead.get("insuranceCompany")
     insurer_signal = get_insurer_risk(insurer_name)
     if insurer_signal and int(insurer_signal["score_modifier"]) != 0:
@@ -228,34 +252,50 @@ def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
         add(int(insurer_signal["score_modifier"]), f"Insurer: {label}",
             insurer_signal.get("label", ""))
 
+    # --- Smooth exponential recency decay ---
+    # Replaces the step-function to avoid >5-point jumps between adjacent days.
+    # Formula: recency_points = MAX_RECENCY * exp(-lambda * days_ago)
+    # MAX_RECENCY = 18 (same as old "within 30 days" bonus), half-life = 45 days
+    # At day 0: +18; day 30: ~8.5; day 60: ~4; day 90: ~2; day 120: ~0.9
+    MAX_RECENCY = 18.0
+    DECAY_LAMBDA = math.log(2) / 45.0   # half-life of 45 days
     try:
         permit_date = date.fromisoformat(
             str(lead.get("permit_date") or lead.get("permitDate") or "")
         )
-        days_ago = (date.today() - permit_date).days
-        if days_ago <= 30:
-            add(18, "Permit filed within 30 days", "Fresh damage — highest urgency")
-        elif days_ago <= 60:
-            add(10, "Permit filed within 60 days", "Recent damage — high urgency")
-        elif days_ago <= 90:
-            add(4, "Permit filed within 90 days", "Moderate recency")
-    except ValueError:
+        days_ago = max(0, (date.today() - permit_date).days)
+        recency_points = MAX_RECENCY * math.exp(-DECAY_LAMBDA * days_ago)
+        if recency_points >= 0.5:
+            add(recency_points, "Permit recency",
+                f"Permit filed {days_ago} days ago (smooth exponential decay, half-life 45 days)")
+    except (ValueError, OverflowError):
         pass
 
+    # --- Permit scope ---
     permit_type = (lead.get("permit_type") or lead.get("permitType") or "").lower()
     if any(kw in permit_type for kw in ["replacement", "structural", "foundation", "full roof", "mitigation"]):
         add(12, "Major permit scope", f'"{permit_type}" indicates full replacement or structural work')
     elif "repair" in permit_type or "roof" in permit_type:
         add(6, "Repair/roof permit", f'"{permit_type}" indicates repair-level work')
 
-    has_contact = (
-        lead.get("contact_email") or lead.get("contact_phone")
+    # --- Contact quality — three distinct tiers ---
+    # phone+email > email-only > no contact
+    contact_email = (
+        lead.get("contact_email")
         or (lead.get("contact") or {}).get("email")
+    )
+    contact_phone = (
+        lead.get("contact_phone")
         or (lead.get("contact") or {}).get("phone")
     )
-    if has_contact:
-        add(12, "Contact info available", "Owner can be reached directly")
+    if contact_email and contact_phone:
+        add(14, "Contact: phone + email", "Both phone and email available — highest reachability")
+    elif contact_email:
+        add(8, "Contact: email only", "Email available — can be reached via email outreach")
+    elif contact_phone:
+        add(10, "Contact: phone only", "Phone available — direct outreach possible")
 
+    # --- Storm / source signals ---
     if lead.get("storm_event") or lead.get("stormEvent"):
         add(8, "Linked to storm event", "Permit correlates with a named storm or weather event")
 
@@ -263,12 +303,14 @@ def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
     if source_detail == "storm_first":
         add(6, "Storm-first lead", "Storm preceded the permit — strong insurance claim signal")
 
+    # --- Permit status ---
     permit_status = lead.get("permit_status") or lead.get("permitStatus") or "Active"
     if permit_status in {"Owner-Builder", "No Contractor"}:
         add(18, f"Permit status: {permit_status}", "No licensed contractor — owner likely underpaid or self-managing")
     elif permit_status == "Stalled":
         add(12, "Permit stalled", "Work halted — possible underpayment or dispute")
 
+    # --- Underpayment & repeat damage ---
     if lead.get("underpaid_flag") or lead.get("underpaidFlag"):
         add(10, "Underpayment flag", "Permit value below local median — owner may have accepted a low settlement")
 
@@ -277,6 +319,7 @@ def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
         add(8, f"Repeat damage ({prior_permit_count} prior permit{'s' if prior_permit_count > 1 else ''})",
             "Multiple claims history — likely still under-indemnified")
 
+    # --- Property signals ---
     if lead.get("homestead"):
         add(6, "Homesteaded property", "Primary residence — owner has personal stake in outcome")
 
@@ -311,9 +354,37 @@ def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
     except (TypeError, ValueError):
         pass
 
-    total = min(max(score, 0), 100)
-    breakdown = {"base": 30, "factors": factors, "total": total}
-    return total, breakdown
+    # --- Expected Value (EV) contribution ---
+    # Compute EV from ev_config and translate to a score bonus using
+    # logarithmic compression to keep it in a meaningful additive range.
+    # EV bonus scale: 0–20 points, log-compressed against EV_MAX.
+    EV_SCORE_WEIGHT = 20.0
+    ev = compute_ev(
+        insurer=insurer_name or "",
+        peril=damage_type or "",
+    )
+    ev_bonus = 0.0
+    if ev > 0 and EV_MAX > 0:
+        ev_bonus = EV_SCORE_WEIGHT * math.log(1 + ev) / math.log(1 + EV_MAX)
+    ev_bonus_rounded = round(ev_bonus, 2)
+    add(ev_bonus_rounded, f"Expected Value (EV ${ev:,.0f})",
+        f"Computed EV = P(settled) × avg_settlement × fee_rate = ${ev:,.0f}; "
+        f"log-compressed to {ev_bonus_rounded:.1f} pts")
+
+    # --- Logarithmic compression of raw score to 0–100 ---
+    # Prevents ceiling saturation: as raw_score accumulates beyond ~80,
+    # each additional raw point contributes progressively less to the final score.
+    # Formula: final = 30 + 70 * log(1 + raw_above_base) / log(1 + MAX_THEORETICAL_ABOVE_BASE)
+    # where raw_above_base = raw_score - 30 (clamped to ≥ 0)
+    # MAX_THEORETICAL_ABOVE_BASE ≈ 179 (sum of all possible bonuses, including EV max of 20)
+    BASE = 30.0
+    MAX_THEORETICAL_ABOVE_BASE = 179.0
+    raw_above_base = max(0.0, raw_score - BASE)
+    compressed_above_base = 70.0 * math.log(1 + raw_above_base) / math.log(1 + MAX_THEORETICAL_ABOVE_BASE)
+    final_score = int(round(min(max(BASE + compressed_above_base, 0.0), 100.0)))
+
+    breakdown = {"base": 30, "factors": factors, "total": final_score}
+    return final_score, breakdown
 
 
 def _algorithmic_score(lead: dict[str, Any]) -> int:

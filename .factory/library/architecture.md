@@ -27,6 +27,7 @@ Two outputs from same canonical dataset:
 - `build_canonical_lead_dataset()` — orchestrates all stages, returns `PipelineResult`
 - `write_leads_json()` — writes the canonical leads to `public/leads.json`
 - All leads use snake_case keys internally; camelCase conversion happens at JSON output
+- Runtime scripts that consume `public/leads.json` (e.g., `enrich_outreach.py`) receive camelCase rows unless they explicitly canonicalize input
 
 ### Scrapers (scrapers/)
 - `permits.py` — ArcGIS permit APIs per county (multi-county config in `COUNTY_CONFIGS`)
@@ -40,7 +41,7 @@ Two outputs from same canonical dataset:
 
 ### Enrichment (enrichment/)
 - `company_scoring.py` — algorithmic scoring with 15+ signal categories, base score 30, cap 0-100
-- `ev_config.py` — expected value model (P(settled) × settlement × fee_rate) — currently unused, being integrated
+- `ev_config.py` — expected value model (P(settled) × settlement × fee_rate), imported and used by `company_scoring.py` during scoring
 - `outreach_prompt.py` — fallback TEMPLATE: placeholders + Claude prompt builder
 - `enrich.py` — Supabase batch enrichment runner
 - `score_prompt.py` — thin re-export of scoring function

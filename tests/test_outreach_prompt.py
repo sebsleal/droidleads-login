@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
-from enrichment.outreach_prompt import _salutation_name
+from enrichment.outreach_prompt import (
+    _fallback_template,
+    _salutation_name,
+    build_outreach_prompt,
+)
 
 
 class SalutationNameTests(unittest.TestCase):
@@ -25,6 +30,35 @@ class SalutationNameTests(unittest.TestCase):
         self.assertEqual(_salutation_name("RODRIGUEZ JR"), "Rodriguez")
         self.assertEqual(_salutation_name("RODRIGUEZ SR."), "Rodriguez")
         self.assertEqual(_salutation_name("RODRIGUEZ III"), "Rodriguez")
+
+
+class OutreachPhoneConfigTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.lead = {
+            "owner_name": "Mendoza",
+            "address": "1427 SW 8th St",
+            "city": "Miami",
+            "zip": "33135",
+            "damage_type": "Hurricane/Wind",
+            "permit_type": "Roof Replacement",
+            "permit_date": "2026-03-10",
+            "storm_event": "Hurricane Helene (Sept 2025)",
+        }
+
+    @patch.dict("os.environ", {"OUTREACH_PHONE": "(305) 555-1234"}, clear=False)
+    def test_fallback_template_uses_configured_phone(self) -> None:
+        self.assertIn("(305) 555-1234", _fallback_template(self.lead))
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_fallback_template_uses_default_placeholder_when_env_unset(self) -> None:
+        self.assertIn("(800) 555-0100", _fallback_template(self.lead))
+
+    @patch.dict("os.environ", {"OUTREACH_PHONE": "(305) 555-1234"}, clear=False)
+    def test_build_outreach_prompt_includes_configured_phone_in_cta(self) -> None:
+        prompt = build_outreach_prompt(self.lead)
+
+        self.assertIn("(305) 555-1234", prompt)
+        self.assertIn("call or text us at (305) 555-1234", prompt)
 
 
 if __name__ == "__main__":

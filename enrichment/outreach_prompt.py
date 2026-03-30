@@ -11,8 +11,10 @@ Claude Code automation (enrich_leads.py) later reads these placeholders and
 replaces them with personalised messages — no API key needed on the server.
 """
 
+import os
 from typing import Any
 
+DEFAULT_OUTREACH_PHONE = "(800) 555-0100"
 TEMPLATE_PREFIX = "TEMPLATE:"
 
 # Words that indicate a corporate entity or placeholder — not a real last name
@@ -77,6 +79,10 @@ def needs_outreach_enrichment(message: str | None) -> bool:
     return not (message or "").strip() or is_template_message(message)
 
 
+def _outreach_phone() -> str:
+    return os.environ.get("OUTREACH_PHONE", DEFAULT_OUTREACH_PHONE)
+
+
 def build_outreach_prompt(lead: dict[str, Any]) -> str:
     """
     Build a rich outreach prompt string for a lead.
@@ -89,6 +95,7 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
     )
 
     last_name = _salutation_name(lead.get("owner_name"))
+    outreach_phone = _outreach_phone()
 
     return f"""You are a professional public adjuster outreach specialist for Claim Remedy Adjusters in Miami, FL.
 
@@ -105,7 +112,7 @@ Rules:
 - Mention the specific damage type and the address
 - Explain that Claim Remedy Adjusters can help maximize their insurance settlement
 - Keep it warm and helpful, not salesy
-- End with a clear call to action (call or text us)
+- End with a clear call to action (call or text us at {outreach_phone})
 - Do NOT use generic filler phrases like "I hope this message finds you well"
 - Do NOT include a subject line or signature
 
@@ -123,6 +130,7 @@ def _fallback_template(lead: dict[str, Any]) -> str:
     address = lead.get("address", "your property")
     damage = lead.get("damage_type", "storm")
     storm = lead.get("storm_event", "")
+    outreach_phone = _outreach_phone()
 
     storm_line = f" related to {storm}" if storm else ""
 
@@ -132,7 +140,7 @@ def _fallback_template(lead: dict[str, Any]) -> str:
         f"As a licensed Florida public adjuster, Claim Remedy Adjusters specializes in "
         f"maximizing insurance settlements at no upfront cost to you. "
         f"We'd love to schedule a free property inspection to ensure you receive every "
-        f"dollar you deserve. Please call or text us at (800) 555-0100."
+        f"dollar you deserve. Please call or text us at {outreach_phone}."
     )
     return f"{TEMPLATE_PREFIX} {body}"
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scrapers import voter_lookup
+from scrapers.sunbiz import is_business_entity
 
 
 class VoterLookupTests(unittest.TestCase):
@@ -215,6 +216,53 @@ class VoterLookupTests(unittest.TestCase):
         self.assertIsNone(leads[0]["contact_phone"])
         self.assertIsNone(leads[0]["contact_email"])
         self.assertNotIn("contact", leads[0])
+
+    def test_is_business_entity_avoids_substring_false_positives(self) -> None:
+        self.assertFalse(is_business_entity("VINCENT SMITH"))
+        self.assertFalse(is_business_entity("LINCOLN JONES"))
+
+    def test_is_business_entity_matches_full_entity_tokens(self) -> None:
+        self.assertTrue(is_business_entity("SMITH PROPERTIES LLC"))
+        self.assertTrue(is_business_entity("MENDOZA INC"))
+
+    def test_enrich_with_voter_data_does_not_skip_people_with_inc_substrings(self) -> None:
+        leads = [
+            {
+                "owner_name": "VINCENT SMITH",
+                "address": "1427 SW 8th St",
+                "contact_phone": None,
+                "contact_email": None,
+            },
+            {
+                "owner_name": "LINCOLN JONES",
+                "address": "1890 NW 7th Ave",
+                "contact_phone": None,
+                "contact_email": None,
+            },
+        ]
+        voter_roll = [
+            {
+                "Name": "Vincent Smith",
+                "ResidenceAddress": "1427 SW 8th St",
+                "Phone": "305-555-0101",
+                "Email": "vincent@example.com",
+            },
+            {
+                "Name": "Lincoln Jones",
+                "ResidenceAddress": "1890 NW 7th Ave",
+                "Phone": "305-555-0202",
+                "Email": "lincoln@example.com",
+            },
+        ]
+
+        with patch.object(voter_lookup, "load_voter_roll", return_value=voter_roll):
+            returned = voter_lookup.enrich_with_voter_data(leads, top_n=10)
+
+        self.assertIs(returned, leads)
+        self.assertEqual(leads[0]["contact_phone"], "305-555-0101")
+        self.assertEqual(leads[0]["contact_email"], "vincent@example.com")
+        self.assertEqual(leads[1]["contact_phone"], "305-555-0202")
+        self.assertEqual(leads[1]["contact_email"], "lincoln@example.com")
 
 
 if __name__ == "__main__":

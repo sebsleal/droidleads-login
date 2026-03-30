@@ -27,17 +27,47 @@ HEADERS = {
     "Referer": "https://search.sunbiz.org/",
 }
 
-# Keywords that indicate a business entity (not a natural person)
-ENTITY_KEYWORDS = [
-    "LLC", "L.L.C", "INC", "CORP", "LTD", "TRUST", "HOLDINGS",
-    "PROPERTIES", "REALTY", "INVESTMENTS", "GROUP", "PARTNERS", "VENTURES",
-]
+# Keywords that indicate a business entity (not a natural person).
+# Match against normalized whole tokens only so names like VINCENT/LINCOLN
+# do not get flagged just because they contain the substring "INC".
+ENTITY_KEYWORDS = {
+    "LLC",
+    "INC",
+    "CORP",
+    "CORPORATION",
+    "LTD",
+    "LP",
+    "LLP",
+    "PLLC",
+    "TRUST",
+    "ESTATE",
+    "ASSOC",
+    "ASSOCIATES",
+    "REALTY",
+    "PROPERTIES",
+    "HOLDINGS",
+    "INVESTMENTS",
+    "GROUP",
+    "PARTNERS",
+    "PARTNERSHIP",
+    "VENTURES",
+    "COMPANY",
+}
+
+
+def _entity_name_tokens(owner_name: str) -> set[str]:
+    return {
+        re.sub(r"[^A-Z0-9]", "", raw_token)
+        for raw_token in re.findall(r"[A-Z0-9.]+", owner_name.upper())
+        if re.sub(r"[^A-Z0-9]", "", raw_token)
+    }
 
 
 def is_business_entity(owner_name: str) -> bool:
-    """Check if the owner name looks like a business entity."""
-    name_upper = owner_name.upper()
-    return any(kw in name_upper for kw in ENTITY_KEYWORDS)
+    """Check if the owner name looks like a business entity using whole tokens."""
+    if not owner_name:
+        return False
+    return bool(_entity_name_tokens(owner_name) & ENTITY_KEYWORDS)
 
 
 def _strip_tags(html: str) -> str:

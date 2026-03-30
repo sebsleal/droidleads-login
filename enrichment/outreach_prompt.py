@@ -89,6 +89,12 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
 
     Used by Claude Code automation (enrich_leads.py) to give Claude
     full context when writing a personalised outreach message.
+
+    Includes available enrichment signals:
+    - FEMA declaration number (when lead has fema_declaration_number)
+    - Permit status (Owner-Builder, Stalled, No Contractor)
+    - Underpayment flag context (when underpaid_flag is True)
+    - Insurance company and insurer risk (when insurance_company is present)
     """
     storm_line = (
         f"Related storm: {lead['storm_event']}" if lead.get("storm_event") else ""
@@ -96,6 +102,55 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
 
     last_name = _salutation_name(lead.get("owner_name"))
     outreach_phone = _outreach_phone()
+
+    # Build enrichment signal lines
+    extra_signals: list[str] = []
+
+    fema_number = lead.get("fema_declaration_number")
+    if fema_number:
+        extra_signals.append(f"FEMA declaration: {fema_number}")
+
+    permit_status = lead.get("permit_status")
+    if permit_status:
+        extra_signals.append(f"Permit status: {permit_status}")
+
+    if lead.get("underpaid_flag"):
+        extra_signals.append(
+            "Underpayment flag: this property may have been underpaid on a prior claim"
+        )
+
+    insurance_company = lead.get("insurance_company")
+    if insurance_company:
+        insurer_risk = lead.get("insurer_risk")
+        if insurer_risk:
+            extra_signals.append(
+                f"Insurance company: {insurance_company} (insurer risk: {insurer_risk})"
+            )
+        else:
+            extra_signals.append(f"Insurance company: {insurance_company}")
+
+    signals_block = "\n".join(extra_signals)
+
+    # Build rules for enrichment signals
+    extra_rules: list[str] = []
+    if fema_number:
+        extra_rules.append(
+            f"- Reference the FEMA disaster declaration ({fema_number}) to add urgency"
+        )
+    if permit_status:
+        extra_rules.append(
+            f"- Note the permit status ({permit_status}) as a relevant context for their claim"
+        )
+    if lead.get("underpaid_flag"):
+        extra_rules.append(
+            "- Mention that the property may have been underpaid on a prior claim and we can help recover the difference"
+        )
+    if insurance_company:
+        extra_rules.append(
+            f"- Reference their insurer ({insurance_company}) by name to show you've done your research"
+        )
+
+    rules_block = "\n".join(extra_rules)
 
     return f"""You are a professional public adjuster outreach specialist for Claim Remedy Adjusters in Miami, FL.
 
@@ -106,6 +161,7 @@ Owner last name: {last_name}
 Damage type: {lead.get("damage_type", "Unknown")}
 Permit filed: {lead.get("permit_type", "")} on {lead.get("permit_date", "")}
 {storm_line}
+{signals_block}
 
 Rules:
 - Address them by last name (e.g. "Dear Mr./Ms. {last_name},")
@@ -115,8 +171,41 @@ Rules:
 - End with a clear call to action (call or text us at {outreach_phone})
 - Do NOT use generic filler phrases like "I hope this message finds you well"
 - Do NOT include a subject line or signature
+{rules_block}
 
 Output ONLY the message text, nothing else."""
+
+
+def validate_outreach_message(message: str | None, lead: dict[str, Any]) -> bool:
+    """
+    Validate an outreach message for quality.
+
+    Checks:
+    1. Minimum length of 100 characters.
+    2. Property address from the lead is present in the message.
+    3. No placeholder tokens (TEMPLATE: prefix).
+
+    Returns True if the message passes all checks, False otherwise.
+    """
+    if not message:
+        return False
+
+    msg = message.strip()
+
+    # Check 1: minimum length
+    if len(msg) < 100:
+        return False
+
+    # Check 2: no placeholder tokens
+    if msg.upper().startswith(TEMPLATE_PREFIX.upper()):
+        return False
+
+    # Check 3: property address present
+    address = lead.get("address", "")
+    if address and address.lower() not in msg.lower():
+        return False
+
+    return True
 
 
 def _fallback_template(lead: dict[str, Any]) -> str:

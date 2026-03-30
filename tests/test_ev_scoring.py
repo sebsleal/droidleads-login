@@ -234,6 +234,81 @@ class ScoreDistributionTests(unittest.TestCase):
         )
 
 
+    def test_val_score_003_top_decile_20_leads_distinguishable(self) -> None:
+        """VAL-SCORE-003 contract: top 10% of >=20 high-value leads must have distinguishable scores.
+
+        Generates 20 leads with progressively stacked positive signals.
+        Levels 18 and 19 are both near-maximum (differing only by recency),
+        which causes duplicate 100s with integer compression but produces
+        distinct scores with fractional (1 decimal place) compression.
+        """
+        def make_stacked(level: int) -> dict:
+            """Build a lead with progressively more high-value signals (levels 0–19)."""
+            lead = _lead(
+                damage_type="Accidental Discharge",
+                insurance_company="Tower Hill",
+                # Level 19 uses today-1 for marginally better recency; all others today-5.
+                permit_date=(date.today() - timedelta(days=(1 if level >= 19 else 5))).isoformat(),
+            )
+            if level >= 1:
+                lead["contact_phone"] = "305-555-1234"
+            if level >= 2:
+                lead["contact_email"] = "owner@test.com"
+            if level >= 3:
+                lead["storm_event"] = "Hurricane Test"
+            if level >= 4:
+                lead["source_detail"] = "storm_first"
+            if level >= 5:
+                lead["underpaid_flag"] = True
+            if level >= 6:
+                lead["homestead"] = True
+            if level >= 7:
+                lead["permit_value"] = 20000
+            if level >= 8:
+                lead["permit_value"] = 50000
+            if level >= 9:
+                lead["assessed_value"] = 300000
+            if level >= 10:
+                lead["assessed_value"] = 600000
+            if level >= 11:
+                lead["prior_permit_count"] = 1
+            if level >= 12:
+                lead["absentee_owner"] = True
+            if level >= 13:
+                lead["roof_age"] = 20
+            if level >= 14:
+                lead["fema_declaration_number"] = "DR-4000"
+            if level >= 15:
+                lead["permit_type"] = "roof repair"
+            if level >= 16:
+                lead["permit_type"] = "full roof replacement"
+            if level >= 17:
+                lead["permit_status"] = "Stalled"
+            if level >= 18:
+                lead["permit_status"] = "Owner-Builder"
+            # Level 19: permit_date is set to today-1 above (recency improvement)
+            return lead
+
+        # Generate 20 high-value leads (levels 0–19), each with more signals than the last
+        leads = [make_stacked(level) for level in range(20)]
+        scored = score_leads_batch(leads)
+        scores = sorted([lead["score"] for lead in scored], reverse=True)
+
+        # Take top 10% of 20 leads = top 2
+        top_k = max(2, math.ceil(len(leads) * 0.1))
+        top_scores = scores[:top_k]
+        unique_top_scores = set(top_scores)
+
+        self.assertGreater(
+            len(unique_top_scores),
+            1,
+            f"Top {top_k} scores of {len(leads)} high-value leads are all identical: "
+            f"{top_scores}. Score ceiling saturation detected — fix: use fractional "
+            f"(1 decimal place) compression instead of int(round(...)). "
+            f"Full sorted scores: {scores}",
+        )
+
+
 class RecencyDecaySmoothnessTests(unittest.TestCase):
     """VAL-SCORE-004: Recency decay smooth — no >5-point jump between adjacent days."""
 

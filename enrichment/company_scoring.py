@@ -211,7 +211,7 @@ Respond with ONLY:
 """
 
 
-def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
+def _score_with_breakdown(lead: dict[str, Any]) -> tuple[float, dict]:
     """Compute score and return (score, breakdown_dict) with per-factor detail.
 
     Uses logarithmic compression to map the raw additive score to 0–100,
@@ -381,13 +381,13 @@ def _score_with_breakdown(lead: dict[str, Any]) -> tuple[int, dict]:
     MAX_THEORETICAL_ABOVE_BASE = 179.0
     raw_above_base = max(0.0, raw_score - BASE)
     compressed_above_base = 70.0 * math.log(1 + raw_above_base) / math.log(1 + MAX_THEORETICAL_ABOVE_BASE)
-    final_score = int(round(min(max(BASE + compressed_above_base, 0.0), 100.0)))
+    final_score = round(min(max(BASE + compressed_above_base, 0.0), 100.0), 1)
 
     breakdown = {"base": 30, "factors": factors, "total": final_score}
     return final_score, breakdown
 
 
-def _algorithmic_score(lead: dict[str, Any]) -> int:
+def _algorithmic_score(lead: dict[str, Any]) -> float:
     score, _ = _score_with_breakdown(lead)
     return score
 

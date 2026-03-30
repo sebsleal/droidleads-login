@@ -1,0 +1,80 @@
+{
+  "milestone": "bugfixes",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "python3 -m unittest discover -s \"/Users/seb/Documents/claim-remedy-leads-testing/tests\" -p \"test_*.py\" -v",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run build",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": false,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run lint",
+      "exitCode": 127
+    }
+  },
+  "reviewsSummary": {
+    "total": 5,
+    "passed": 4,
+    "failed": 1,
+    "failedFeatures": [
+      "voter-pipeline-infrastructure"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "voter-pipeline-infrastructure",
+      "severity": "blocking",
+      "description": "Business-entity skipping in scrapers/voter_lookup.py reuses substring-based is_business_entity, which false-positives legitimate person names containing INC/CORP substrings (for example, VINCENT and LINCOLN), causing valid leads to be skipped from voter enrichment."
+    },
+    {
+      "featureId": "scrutiny-validator-bugfixes",
+      "severity": "blocking",
+      "description": "Lint validator failed: npm run lint exits with code 127 because eslint is not available/configured in this repository state."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add an explicit handoff rule that Known Pre-Existing Issues must never be listed under discoveredIssues in worker handoffs.",
+      "evidence": "Both fix-pa-enrichment-setdefault and configurable-outreach-phone handoffs reported pre-existing warnings (Vite chunk-size and pip conflicts) as discovered issues despite AGENTS.md guidance.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/python-backend/SKILL.md",
+      "suggestion": "Allow a targeted RED-test-first workflow before full-suite execution, and allow deterministic pure-function changes to skip ad-hoc manual checks when covered by focused unit tests.",
+      "evidence": "fix-pa-enrichment-setdefault and configurable-outreach-phone both reported procedural deviations despite strong deterministic unit-test coverage and successful full validation runs.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/react-frontend/SKILL.md",
+      "suggestion": "Document an acceptable fallback verification path (component-level mount/controlled state) when normal UI navigation cannot open a drawer because data is empty locally.",
+      "evidence": "fix-readonly-prop-threading had empty Cases data and validated CaseDrawer by direct mount, but this fallback is not explicitly described in the current react-frontend skill.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a convention for owner-name classification: business-entity detection in voter/person pipelines should use token or word-boundary matching, not broad substring matching.",
+      "evidence": "voter-pipeline-infrastructure reused substring-based entity detection and introduced a blocking false-positive bug for legitimate personal names.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Duplicate report that pre-existing warning lines were logged as discovered issues",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "voter_lookup module messaging still says CSV in some strings despite TSV support",
+      "reason": "belongs to direct code fix in a feature, not a shared-state guidance update"
+    }
+  ],
+  "previousRound": null
+}

@@ -8,6 +8,9 @@ outreach message, and calls the Claude API to write a warm, personalized
 Prioritizes by score (highest first) so the best leads always get done first.
 Processes up to MAX_PER_RUN leads per execution to keep API cost predictable.
 
+API calls are made in parallel using ThreadPoolExecutor (default 10 workers)
+to maximise throughput while staying comfortably within Anthropic rate limits.
+
 Designed to run as a GitHub Action after the scraper finishes.
 Requires: ANTHROPIC_API_KEY environment variable.
 """
@@ -17,7 +20,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import anthropic
@@ -27,15 +30,16 @@ from enrichment.outreach_prompt import build_outreach_prompt, needs_outreach_enr
 LEADS_PATH = Path(__file__).resolve().parent / "public" / "leads.json"
 
 # How many leads to enrich per run. Keeps cost predictable.
-# At ~700 tokens per lead with Haiku: 100 leads ≈ $0.05 per run.
-MAX_PER_RUN = 100
+# At ~700 tokens per lead with Haiku: 500 leads ≈ $0.25 per run.
+MAX_PER_RUN = 500
 
 # Claude model to use for outreach generation.
 # Haiku is fast, cheap, and perfectly capable for message writing.
 MODEL = "claude-haiku-4-5-20251001"
 
-# Delay between API calls to stay well within rate limits.
-DELAY_BETWEEN_CALLS = 0.3  # seconds
+# Number of concurrent Anthropic API calls.
+# 10 workers stays well within Haiku rate limits (requests/minute).
+MAX_WORKERS = 10
 
 
 def load_leads() -> dict:
@@ -62,6 +66,37 @@ def generate_message(client: anthropic.Anthropic, lead: dict) -> str | None:
     except anthropic.APIError as e:
         print(f"[enrich] API error for lead {lead.get('id', '?')}: {e}")
         return None
+
+
+def enrich_leads_parallel(
+    client: anthropic.Anthropic,
+    batch: list[dict],
+    max_workers: int = MAX_WORKERS,
+) -> list[tuple[str, str | None]]:
+    """
+    Enrich a batch of leads in parallel using ThreadPoolExecutor.
+
+    Returns a list of (lead_id, message_or_None) tuples in completion order.
+    Exceptions from individual API calls are caught and logged; the batch continues.
+    """
+    results: list[tuple[str, str | None]] = []
+
+    def _enrich_one(lead: dict) -> tuple[str, str | None]:
+        lead_id = lead.get("id", "")
+        try:
+            message = generate_message(client, lead)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[enrich] Unexpected error for lead {lead_id}: {exc}")
+            message = None
+        return lead_id, message
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_enrich_one, lead): lead for lead in batch}
+        for future in as_completed(futures):
+            lead_id, message = future.result()
+            results.append((lead_id, message))
+
+    return results
 
 
 def main() -> None:
@@ -94,28 +129,25 @@ def main() -> None:
     # Build a lookup for fast updates
     lead_index = {lead["id"]: lead for lead in leads}
 
+    # Process all leads in parallel
+    print(f"[enrich] Running {len(batch)} API calls with up to {MAX_WORKERS} concurrent workers…")
+    results = enrich_leads_parallel(client, batch, max_workers=MAX_WORKERS)
+
     succeeded = 0
     failed = 0
 
-    for i, lead in enumerate(batch, 1):
-        lead_id = lead.get("id", "")
+    for lead_id, message in results:
+        lead = lead_index.get(lead_id, {})
         address = lead.get("propertyAddress") or lead.get("address", "Unknown")
         score = lead.get("score", 0)
-
-        print(f"[enrich] ({i}/{len(batch)}) score={score} — {address}")
-
-        message = generate_message(client, lead)
 
         if message:
             lead_index[lead_id]["outreachMessage"] = message
             succeeded += 1
-            print(f"           ✓ {message[:80]}...")
+            print(f"[enrich] ✓ score={score} — {address}: {message[:80]}…")
         else:
             failed += 1
-            print(f"           ✗ Failed — keeping TEMPLATE placeholder")
-
-        if i < len(batch):
-            time.sleep(DELAY_BETWEEN_CALLS)
+            print(f"[enrich] ✗ score={score} — {address}: Failed — keeping TEMPLATE placeholder")
 
     # Write back
     data["leads"] = list(lead_index.values())

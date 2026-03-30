@@ -1,6 +1,6 @@
 {
   "milestone": "scoring",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "validatorsRun": {
     "test": {
@@ -21,63 +21,41 @@
   },
   "reviewsSummary": {
     "total": 2,
-    "passed": 0,
-    "failed": 2,
+    "passed": 1,
+    "failed": 1,
     "failedFeatures": [
-      "integrate-ev-model-scoring",
-      "enrich-outreach-prompts"
+      "fix-scoring-top-decile-saturation"
     ]
   },
   "blockingIssues": [
     {
-      "featureId": "integrate-ev-model-scoring",
+      "featureId": "fix-scoring-top-decile-saturation",
       "severity": "blocking",
-      "description": "VAL-SCORE-003 contract coverage was weakened in tests/test_ev_scoring.py and no longer validates top 10% spread for 20+ high-value synthetic leads."
-    },
-    {
-      "featureId": "integrate-ev-model-scoring",
-      "severity": "blocking",
-      "description": "Current scoring compression still allows top-decile saturation for high-value synthetic leads (top 10% includes duplicate 100 scores), violating required distinguishability."
-    },
-    {
-      "featureId": "enrich-outreach-prompts",
-      "severity": "blocking",
-      "description": "build_outreach_prompt() reads only snake_case enrichment keys, but enrich_outreach.py passes camelCase rows from public/leads.json, so FEMA/permit/underpayment/insurer signals are omitted at runtime."
-    },
-    {
-      "featureId": "enrich-outreach-prompts",
-      "severity": "blocking",
-      "description": "validate_outreach_message() checks only lead['address']; runtime leads use propertyAddress, so address-presence validation can be bypassed in the production enrichment path."
+      "description": "Score precision is truncated at the pipeline output boundary: serialize_lead_for_ui() casts score to int, collapsing distinguishable top-decile fractional scores (e.g., 99.7 vs 99.6) into ties (99/99) in runtime leads.json/dashboard data."
     }
   ],
-  "appliedUpdates": [
-    {
-      "target": "library",
-      "description": "Updated .factory/library/architecture.md to document that ev_config.py is now imported/used in company scoring.",
-      "sourceFeature": "integrate-ev-model-scoring"
-    },
-    {
-      "target": "library",
-      "description": "Updated .factory/library/architecture.md to document camelCase JSON boundary behavior for runtime scripts consuming public/leads.json (e.g., enrich_outreach.py).",
-      "sourceFeature": "enrich-outreach-prompts"
-    }
-  ],
-  "suggestedGuidanceUpdates": [
-    {
-      "target": "skill: python-backend",
-      "suggestion": "Add an explicit validation step for data-shape boundary compatibility (snake_case internal vs camelCase public/leads.json) when implementing enrichment helpers used by runtime scripts.",
-      "evidence": "enrich-outreach-prompts passed snake_case unit tests but failed runtime behavior because enrich_outreach.py consumes camelCase rows from public/leads.json.",
-      "isSystemic": false
-    }
-  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
   "rejectedObservations": [
     {
       "observation": "Lint validator exits 127 because eslint is missing/unconfigured in this repository.",
       "reason": "already-documented"
     }
   ],
-  "previousRound": null,
+  "previousRound": ".factory/validation/scoring/scrutiny/synthesis.round1.json",
+  "rerunContext": {
+    "failedFeaturesFromPreviousRound": [
+      "integrate-ev-model-scoring",
+      "enrich-outreach-prompts"
+    ],
+    "fixFeaturesReviewed": [
+      "fix-scoring-top-decile-saturation",
+      "fix-outreach-camelcase-compat"
+    ],
+    "priorFailedFeatureNowAddressed": false
+  },
   "orchestratorOverrides": {
-    "lintFailure": "Known pre-existing repository issue documented in mission AGENTS.md (eslint binary/config absent)."
+    "lintFailure": "Known pre-existing repository issue documented in mission AGENTS.md (eslint binary/config absent). Kept non-blocking for this rerun.",
+    "reviewOutcome": "fix-outreach-camelcase-compat passed and resolved prior runtime key-shape defects; fix-scoring-top-decile-saturation improved scorer precision but remains blocked by downstream int coercion in pipeline output."
   }
 }

@@ -1,0 +1,83 @@
+{
+  "milestone": "scoring",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "python3 -m unittest discover -s \"/Users/seb/Documents/claim-remedy-leads-testing/tests\" -p \"test_*.py\" -v",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run build",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": false,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run lint",
+      "exitCode": 127
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 0,
+    "failed": 2,
+    "failedFeatures": [
+      "integrate-ev-model-scoring",
+      "enrich-outreach-prompts"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "integrate-ev-model-scoring",
+      "severity": "blocking",
+      "description": "VAL-SCORE-003 contract coverage was weakened in tests/test_ev_scoring.py and no longer validates top 10% spread for 20+ high-value synthetic leads."
+    },
+    {
+      "featureId": "integrate-ev-model-scoring",
+      "severity": "blocking",
+      "description": "Current scoring compression still allows top-decile saturation for high-value synthetic leads (top 10% includes duplicate 100 scores), violating required distinguishability."
+    },
+    {
+      "featureId": "enrich-outreach-prompts",
+      "severity": "blocking",
+      "description": "build_outreach_prompt() reads only snake_case enrichment keys, but enrich_outreach.py passes camelCase rows from public/leads.json, so FEMA/permit/underpayment/insurer signals are omitted at runtime."
+    },
+    {
+      "featureId": "enrich-outreach-prompts",
+      "severity": "blocking",
+      "description": "validate_outreach_message() checks only lead['address']; runtime leads use propertyAddress, so address-presence validation can be bypassed in the production enrichment path."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Updated .factory/library/architecture.md to document that ev_config.py is now imported/used in company scoring.",
+      "sourceFeature": "integrate-ev-model-scoring"
+    },
+    {
+      "target": "library",
+      "description": "Updated .factory/library/architecture.md to document camelCase JSON boundary behavior for runtime scripts consuming public/leads.json (e.g., enrich_outreach.py).",
+      "sourceFeature": "enrich-outreach-prompts"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skill: python-backend",
+      "suggestion": "Add an explicit validation step for data-shape boundary compatibility (snake_case internal vs camelCase public/leads.json) when implementing enrichment helpers used by runtime scripts.",
+      "evidence": "enrich-outreach-prompts passed snake_case unit tests but failed runtime behavior because enrich_outreach.py consumes camelCase rows from public/leads.json.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Lint validator exits 127 because eslint is missing/unconfigured in this repository.",
+      "reason": "already-documented"
+    }
+  ],
+  "previousRound": null,
+  "orchestratorOverrides": {
+    "lintFailure": "Known pre-existing repository issue documented in mission AGENTS.md (eslint binary/config absent)."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-outreach-camelcase-compat",
+  "reviewedAt": "2026-03-30T23:17:22Z",
+  "commitId": "676832b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix commit directly addresses the prior blocking runtime-shape defects. build_outreach_prompt() now resolves both snake_case and camelCase keys for enrichment signals and core prompt fields, and validate_outreach_message() now checks address from either address or propertyAddress. Added CamelCaseCompatibilityTests cover FEMA/permit/underpayment/insurer signal extraction plus address validation against leads.json-shaped fixtures used by enrich_outreach.py.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": ".factory/validation/scoring/scrutiny/reviews/enrich-outreach-prompts.json",
+  "summary": "PASS. The original blocking camelCase runtime compatibility failures are resolved in commit 676832b, and integration-style tests now cover the previously missed public/leads.json data shape for both prompt enrichment and message validation."
+}

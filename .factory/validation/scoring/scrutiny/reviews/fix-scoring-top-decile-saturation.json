@@ -1,0 +1,28 @@
+{
+  "featureId": "fix-scoring-top-decile-saturation",
+  "reviewedAt": "2026-03-30T23:48:09Z",
+  "commitId": "5f17e5a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix commit adds a contract-faithful VAL-SCORE-003 test with 20 progressively stacked high-value leads and updates scoring compression to 1-decimal output, which makes top-decile scores distinguishable at the scorer level (e.g., 99.7 vs 99.6). However, the implementation still does not fully resolve the prior blocking failure in end-to-end behavior because the pipeline/UI canonicalization layer coerces scores back to integers, collapsing those distinct top-decile scores to ties (99 and 99).",
+    "issues": [
+      {
+        "file": "pipeline/leads.py",
+        "line": 455,
+        "severity": "blocking",
+        "description": "The saturation fix is negated at the output boundary: serialize_lead_for_ui() casts score with int(...), so distinguishable fractional top-decile scores from _score_with_breakdown (e.g., 99.7 vs 99.6) are collapsed to identical integers (99 vs 99). This breaks the intended VAL-SCORE-003 distinguishability in generated leads.json/dashboard data and means the fix does not fully address the prior blocking issue in runtime outputs."
+      },
+      {
+        "file": "pipeline/leads.py",
+        "line": 138,
+        "severity": "non_blocking",
+        "description": "canonicalize_lead() also coerces incoming score to int(...), which can further discard fractional precision when reloading existing state from JSON/DB. This is not the primary blocker for the new test path but reinforces precision loss across pipeline round-trips."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": ".factory/validation/scoring/scrutiny/reviews/integrate-ev-model-scoring.json",
+  "summary": "FAIL. The fix resolves the scorer-level top-decile tie condition and adds a contract-faithful 20-lead test, but precision is still truncated to integers in pipeline serialization, so runtime lead outputs can still collapse top-decile distinguishability."
+}

@@ -256,5 +256,194 @@ class ValidateOutreachMessageTests(unittest.TestCase):
         self.assertFalse(validate_outreach_message(None, lead))  # type: ignore[arg-type]
 
 
+class CamelCaseCompatibilityTests(unittest.TestCase):
+    """Integration tests verifying that camelCase runtime keys from leads.json work correctly.
+
+    enrich_outreach.py passes camelCase rows directly from public/leads.json to
+    build_outreach_prompt() and validate_outreach_message(). These tests verify
+    that both functions handle the runtime data shape.
+    """
+
+    def _camelcase_lead(self) -> dict:
+        """A realistic camelCase lead fixture matching public/leads.json runtime shape."""
+        return {
+            "id": "lead-abc123",
+            "ownerName": "HERNANDEZ, MARIA",
+            "propertyAddress": "3210 NW 7th Ave",
+            "city": "Miami",
+            "zip": "33127",
+            "damageType": "Hurricane/Wind",
+            "permitType": "Roof Replacement",
+            "permitDate": "2026-03-01",
+            "stormEvent": "Hurricane Helene (Sept 2025)",
+            "score": 82,
+            "status": "New",
+        }
+
+    # --- build_outreach_prompt: camelCase basic keys ---
+
+    def test_prompt_uses_camelcase_property_address(self) -> None:
+        """build_outreach_prompt reads propertyAddress from camelCase lead."""
+        lead = self._camelcase_lead()
+        prompt = build_outreach_prompt(lead)
+        self.assertIn("3210 NW 7th Ave", prompt, "Prompt should include propertyAddress")
+
+    def test_prompt_uses_camelcase_owner_name(self) -> None:
+        """build_outreach_prompt reads ownerName from camelCase lead."""
+        lead = self._camelcase_lead()
+        prompt = build_outreach_prompt(lead)
+        # _salutation_name("HERNANDEZ, MARIA") → "Hernandez"
+        self.assertIn("Hernandez", prompt, "Prompt should include salutation from ownerName")
+
+    def test_prompt_uses_camelcase_damage_type(self) -> None:
+        """build_outreach_prompt reads damageType from camelCase lead."""
+        lead = self._camelcase_lead()
+        prompt = build_outreach_prompt(lead)
+        self.assertIn("Hurricane/Wind", prompt, "Prompt should include damageType")
+
+    def test_prompt_uses_camelcase_storm_event(self) -> None:
+        """build_outreach_prompt reads stormEvent from camelCase lead."""
+        lead = self._camelcase_lead()
+        prompt = build_outreach_prompt(lead)
+        self.assertIn("Hurricane Helene", prompt, "Prompt should include stormEvent")
+
+    # --- build_outreach_prompt: camelCase enrichment signal keys ---
+
+    def test_prompt_includes_fema_via_camelcase_key(self) -> None:
+        """build_outreach_prompt picks up femaDeclarationNumber from camelCase lead."""
+        lead = {**self._camelcase_lead(), "femaDeclarationNumber": "DR-4709-FL"}
+        prompt = build_outreach_prompt(lead)
+        self.assertTrue(
+            "DR-4709-FL" in prompt or "FEMA" in prompt,
+            "Prompt should reference FEMA declaration from camelCase key",
+        )
+
+    def test_prompt_includes_permit_status_via_camelcase_key(self) -> None:
+        """build_outreach_prompt picks up permitStatus from camelCase lead."""
+        lead = {**self._camelcase_lead(), "permitStatus": "Owner-Builder"}
+        prompt = build_outreach_prompt(lead)
+        self.assertIn("Owner-Builder", prompt, "Prompt should include permitStatus from camelCase key")
+
+    def test_prompt_includes_underpaid_flag_via_camelcase_key(self) -> None:
+        """build_outreach_prompt picks up underpaidFlag from camelCase lead."""
+        lead = {**self._camelcase_lead(), "underpaidFlag": True}
+        prompt = build_outreach_prompt(lead)
+        underpayment_terms = ("underpaid", "underpayment", "under-paid")
+        self.assertTrue(
+            any(term in prompt.lower() for term in underpayment_terms),
+            "Prompt should include underpayment context when underpaidFlag=True",
+        )
+
+    def test_prompt_includes_insurance_company_via_camelcase_key(self) -> None:
+        """build_outreach_prompt picks up insuranceCompany from camelCase lead."""
+        lead = {
+            **self._camelcase_lead(),
+            "insuranceCompany": "Citizens Property Insurance",
+            "insurerRisk": "high",
+        }
+        prompt = build_outreach_prompt(lead)
+        self.assertIn(
+            "Citizens Property Insurance", prompt,
+            "Prompt should include insuranceCompany from camelCase key",
+        )
+
+    def test_prompt_excludes_fema_when_camelcase_value_is_none(self) -> None:
+        """build_outreach_prompt skips FEMA section when femaDeclarationNumber is None."""
+        lead = {**self._camelcase_lead(), "femaDeclarationNumber": None}
+        prompt = build_outreach_prompt(lead)
+        self.assertNotIn("DR-", prompt, "No FEMA section expected when femaDeclarationNumber is None")
+
+    def test_prompt_excludes_underpaid_when_camelcase_flag_is_false(self) -> None:
+        """build_outreach_prompt skips underpayment when underpaidFlag is False."""
+        lead = {**self._camelcase_lead(), "underpaidFlag": False}
+        prompt = build_outreach_prompt(lead)
+        self.assertFalse(
+            any(term in prompt.lower() for term in ("underpaid", "underpayment")),
+            "No underpayment context expected when underpaidFlag=False",
+        )
+
+    # --- validate_outreach_message: camelCase propertyAddress key ---
+
+    def _valid_message(self, address: str = "3210 NW 7th Ave") -> str:
+        return (
+            f"Dear Hernandez, our records show your property at {address} may have "
+            "sustained hurricane damage. As a licensed Florida public adjuster, "
+            "Claim Remedy Adjusters specializes in maximizing insurance settlements. "
+            "Please call us at (800) 555-0100 for a free inspection."
+        )
+
+    def test_validate_uses_camelcase_property_address(self) -> None:
+        """validate_outreach_message reads propertyAddress from camelCase lead."""
+        lead = {
+            "propertyAddress": "3210 NW 7th Ave",
+            "city": "Miami",
+            "zip": "33127",
+        }
+        self.assertTrue(
+            validate_outreach_message(self._valid_message(), lead),
+            "Validation should pass when message contains propertyAddress from camelCase lead",
+        )
+
+    def test_validate_rejects_message_missing_camelcase_property_address(self) -> None:
+        """validate_outreach_message rejects messages missing the propertyAddress."""
+        lead = {
+            "propertyAddress": "3210 NW 7th Ave",
+            "city": "Miami",
+            "zip": "33127",
+        }
+        msg_no_address = (
+            "Dear Hernandez, we noticed you may have filed an insurance claim. "
+            "As a licensed Florida public adjuster, Claim Remedy Adjusters helps "
+            "property owners maximize their insurance settlements at no upfront cost. "
+            "Please call us at (800) 555-0100 to schedule a free property inspection."
+        )
+        self.assertFalse(
+            validate_outreach_message(msg_no_address, lead),
+            "Validation should fail when message is missing the propertyAddress value",
+        )
+
+    def test_validate_with_both_address_forms_prefers_snake_case(self) -> None:
+        """When lead has both 'address' and 'propertyAddress', address check uses 'address' first."""
+        lead = {
+            "address": "123 Main St",
+            "propertyAddress": "456 Other Ave",
+        }
+        # Message contains snake_case value 'address' — should pass
+        msg_with_snake = self._valid_message(address="123 Main St")
+        self.assertTrue(
+            validate_outreach_message(msg_with_snake, lead),
+            "Validation should pass when message contains 'address' value (snake_case takes priority)",
+        )
+
+    def test_full_camelcase_fixture_produces_valid_prompt_and_passes_validation(self) -> None:
+        """Full integration: camelCase lead → prompt → simulate message → validation passes."""
+        lead = {
+            **self._camelcase_lead(),
+            "femaDeclarationNumber": "DR-4709-FL",
+            "permitStatus": "Stalled",
+            "underpaidFlag": True,
+            "insuranceCompany": "Universal Property",
+            "insurerRisk": "medium",
+        }
+        # Build prompt should not raise and should contain key signals
+        prompt = build_outreach_prompt(lead)
+        self.assertIn("3210 NW 7th Ave", prompt)
+        self.assertIn("DR-4709-FL", prompt)
+        self.assertIn("Stalled", prompt)
+        self.assertIn("Universal Property", prompt)
+
+        # Simulate a valid enriched message referencing propertyAddress
+        simulated_message = (
+            "Dear Hernandez, our records show your property at 3210 NW 7th Ave has a "
+            "stalled permit and may be covered under FEMA declaration DR-4709-FL. "
+            "Claim Remedy Adjusters can help you maximize your settlement with Universal "
+            "Property. Call us at (800) 555-0100 for a free, no-obligation inspection."
+        )
+        self.assertTrue(
+            validate_outreach_message(simulated_message, lead),
+            "Simulated message should pass validation for a full camelCase fixture lead",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

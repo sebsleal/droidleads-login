@@ -96,32 +96,35 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
     - Underpayment flag context (when underpaid_flag is True)
     - Insurance company and insurer risk (when insurance_company is present)
     """
+    # Support both snake_case (pipeline/internal) and camelCase (leads.json runtime) key forms
+    storm_event = lead.get("storm_event") or lead.get("stormEvent")
     storm_line = (
-        f"Related storm: {lead['storm_event']}" if lead.get("storm_event") else ""
+        f"Related storm: {storm_event}" if storm_event else ""
     )
 
-    last_name = _salutation_name(lead.get("owner_name"))
+    last_name = _salutation_name(lead.get("owner_name") or lead.get("ownerName"))
     outreach_phone = _outreach_phone()
 
     # Build enrichment signal lines
+    # Support both snake_case (pipeline/internal) and camelCase (leads.json runtime) key forms
     extra_signals: list[str] = []
 
-    fema_number = lead.get("fema_declaration_number")
+    fema_number = lead.get("fema_declaration_number") or lead.get("femaDeclarationNumber")
     if fema_number:
         extra_signals.append(f"FEMA declaration: {fema_number}")
 
-    permit_status = lead.get("permit_status")
+    permit_status = lead.get("permit_status") or lead.get("permitStatus")
     if permit_status:
         extra_signals.append(f"Permit status: {permit_status}")
 
-    if lead.get("underpaid_flag"):
+    if lead.get("underpaid_flag") or lead.get("underpaidFlag"):
         extra_signals.append(
             "Underpayment flag: this property may have been underpaid on a prior claim"
         )
 
-    insurance_company = lead.get("insurance_company")
+    insurance_company = lead.get("insurance_company") or lead.get("insuranceCompany")
     if insurance_company:
-        insurer_risk = lead.get("insurer_risk")
+        insurer_risk = lead.get("insurer_risk") or lead.get("insurerRisk")
         if insurer_risk:
             extra_signals.append(
                 f"Insurance company: {insurance_company} (insurer risk: {insurer_risk})"
@@ -141,7 +144,7 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
         extra_rules.append(
             f"- Note the permit status ({permit_status}) as a relevant context for their claim"
         )
-    if lead.get("underpaid_flag"):
+    if lead.get("underpaid_flag") or lead.get("underpaidFlag"):
         extra_rules.append(
             "- Mention that the property may have been underpaid on a prior claim and we can help recover the difference"
         )
@@ -152,14 +155,22 @@ def build_outreach_prompt(lead: dict[str, Any]) -> str:
 
     rules_block = "\n".join(extra_rules)
 
+    # Support both snake_case and camelCase address/city/zip keys
+    address = lead.get("address") or lead.get("propertyAddress") or ""
+    city = lead.get("city") or "Miami"
+    zip_code = lead.get("zip") or ""
+    damage_type = lead.get("damage_type") or lead.get("damageType") or "Unknown"
+    permit_type = lead.get("permit_type") or lead.get("permitType") or ""
+    permit_date = lead.get("permit_date") or lead.get("permitDate") or ""
+
     return f"""You are a professional public adjuster outreach specialist for Claim Remedy Adjusters in Miami, FL.
 
 Write a warm, professional 3-4 sentence outreach message to a property owner about their insurance claim.
 
-Property: {lead.get("address", "")}, {lead.get("city", "Miami")}, FL {lead.get("zip", "")}
+Property: {address}, {city}, FL {zip_code}
 Owner last name: {last_name}
-Damage type: {lead.get("damage_type", "Unknown")}
-Permit filed: {lead.get("permit_type", "")} on {lead.get("permit_date", "")}
+Damage type: {damage_type}
+Permit filed: {permit_type} on {permit_date}
 {storm_line}
 {signals_block}
 
@@ -201,7 +212,8 @@ def validate_outreach_message(message: str | None, lead: dict[str, Any]) -> bool
         return False
 
     # Check 3: property address present
-    address = lead.get("address", "")
+    # Support both snake_case (pipeline) and camelCase (leads.json runtime)
+    address = lead.get("address") or lead.get("propertyAddress") or ""
     if address and address.lower() not in msg.lower():
         return False
 

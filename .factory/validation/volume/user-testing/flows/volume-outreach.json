@@ -1,0 +1,42 @@
+{
+  "milestone": "volume",
+  "groupId": "volume-outreach",
+  "status": "pass",
+  "assertions": [
+    {
+      "id": "VAL-VOLUME-006",
+      "status": "pass",
+      "evidence": "python3 -m unittest -v tests.test_async_outreach passed (exit 0); validated by tests.test_async_outreach.MaxPerRunTests.test_max_per_run_equals_500 asserting enrich_outreach.MAX_PER_RUN == 500. Output captured at /Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/volume/volume-outreach/python-test-output.txt"
+    },
+    {
+      "id": "VAL-VOLUME-007",
+      "status": "pass",
+      "evidence": "python3 -m unittest -v tests.test_async_outreach passed (exit 0); validated by tests.test_async_outreach.ParallelExecutionTests.test_parallel_execution_faster_than_sequential_sleep and test_no_per_lead_sleep_between_calls, which confirm parallel enrichment runtime is below sequential sleep-based thresholds. Output captured at /Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/volume/volume-outreach/python-test-output.txt"
+    }
+  ],
+  "commands": [
+    {
+      "command": "python3 -m unittest -v tests.test_async_outreach",
+      "exitCode": 0,
+      "observation": "Ran 7 tests in 0.358s; OK"
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_async_outreach > /Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/volume/volume-outreach/python-test-output.txt 2>&1; code=$?; echo \"$code\" > /Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/volume/volume-outreach/python-test-exit-code.txt; exit $code",
+      "exitCode": 0,
+      "observation": "Captured reproducible test log and explicit exit code evidence files"
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "python-test"
+  ],
+  "testedAt": "2026-03-30T22:08:44.248487+00:00",
+  "isolation": {
+    "repo": "/Users/seb/Documents/claim-remedy-leads-testing",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "externalHttpCalls": "none",
+    "envFilesAccessed": false,
+    "publicDataRegenerated": false
+  }
+}

@@ -29,6 +29,13 @@
 - Lightweight, no services needed
 - **Max concurrent validators: 5**
 
+## Flow Validator Guidance: python-test
+- Scope: run only the assertion-linked Python unit tests needed for assigned assertions; avoid broad refactors or unrelated commands.
+- Isolation boundary: stay inside `/Users/seb/Documents/claim-remedy-leads-testing`; do not access `.env` / `.env.local` or external services.
+- Network boundary: do not introduce real outbound HTTP calls; rely on tests that mock scraper/network behavior.
+- Data boundary: do not regenerate `public/leads.json` or `public/storm_candidates.json`.
+- Evidence: include exact commands, exit codes, and assertion-to-test mapping in flow report JSON.
+
 ## Testing Notes
 - Dashboard data comes from static JSON files in `public/` — no Supabase connection needed for validation
 - For testing browser write features (readOnly), set `VITE_ENABLE_BROWSER_WRITES=false` (default)

@@ -1,0 +1,59 @@
+{
+  "milestone": "volume",
+  "groupId": "volume-caps",
+  "status": "pass",
+  "testedAt": "2026-03-30T22:08:21Z",
+  "isolation": {
+    "repo": "/Users/seb/Documents/claim-remedy-leads-testing",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "network": "No real external HTTP calls; unit tests and mocks only"
+  },
+  "assertions": [
+    {
+      "id": "VAL-VOLUME-001",
+      "status": "pass",
+      "evidence": "tests.test_enrichment_caps.PAEnrichmentCapTests.test_pa_enrichment_called_with_max_lookups_2000 passed (pipeline calls enrich_leads_with_owner_info with max_lookups=2000)."
+    },
+    {
+      "id": "VAL-VOLUME-002",
+      "status": "pass",
+      "evidence": "tests.test_enrichment_caps.PrePermitParcelCapTests.test_build_pre_permit_leads_queries_all_miami_dade_zips and test_fetch_parcels_by_zip_no_hardcoded_zip_slice passed (all Miami-Dade ZIPs queried; no [:5] truncation)."
+    },
+    {
+      "id": "VAL-VOLUME-003",
+      "status": "pass",
+      "evidence": "tests.test_enrichment_caps.PrePermitParcelCapTests.test_build_pre_permit_leads_uses_limit_per_zip_100 and test_fetch_parcels_by_zip_default_limit_per_zip_is_100 passed (limit_per_zip/resultRecordCount cap set to 100)."
+    },
+    {
+      "id": "VAL-VOLUME-004",
+      "status": "pass",
+      "evidence": "tests.test_enrichment_caps.SunbizCapTests.test_sunbiz_called_with_top_n_100 passed (pipeline calls enrich_business_owners with top_n=100)."
+    },
+    {
+      "id": "VAL-VOLUME-005",
+      "status": "pass",
+      "evidence": "tests.test_enrichment_caps.VoterEnrichmentCapTests.test_voter_enrichment_called_with_top_n_1000 passed (pipeline calls enrich_with_voter_data with top_n=1000)."
+    },
+    {
+      "id": "VAL-VOLUME-008",
+      "status": "pass",
+      "evidence": "tests.test_enrichment_caps.CapsAreConfigurableTests.test_fetch_parcels_by_zip_has_limit_per_zip_parameter, test_enrich_leads_with_owner_info_has_max_lookups_parameter, test_enrich_business_owners_has_top_n_parameter, and test_enrich_with_voter_data_has_top_n_parameter passed (caps exposed as function parameters)."
+    }
+  ],
+  "commands": [
+    {
+      "command": "python3 -m unittest -v tests.test_enrichment_caps",
+      "exitCode": 0,
+      "observation": "Ran 13 tests in 0.184s; OK. All tests relevant to VAL-VOLUME-001/002/003/004/005/008 passed. Raw output saved to mission evidence file."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "python-test"
+  ],
+  "evidenceFiles": [
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/volume/volume-caps/unittest-test_enrichment_caps.txt"
+  ],
+  "summary": "Validated 6 assigned volume-cap assertions via targeted python tests; all passed."
+}

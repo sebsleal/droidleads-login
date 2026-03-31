@@ -35,6 +35,7 @@ import CaseFilterBar from "@/components/CaseFilterBar";
 import CaseDrawer from "@/components/CaseDrawer";
 import ConvertToCaseModal from "@/components/ConvertToCaseModal";
 import FixtureConversionPage from "@/components/FixtureConversionPage";
+import FixtureLegacyCompatPage from "@/components/FixtureLegacyCompatPage";
 
 const DEFAULT_FILTERS: FilterState = {
   zip: "",
@@ -1137,6 +1138,10 @@ export default function App() {
               <Route
                 path="/fixtures/convert-case"
                 element={<FixtureConversionPage />}
+              />
+              <Route
+                path="/fixtures/legacy-compat"
+                element={<FixtureLegacyCompatPage />}
               />
             </Routes>
           </div>

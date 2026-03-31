@@ -773,14 +773,17 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
         county for county, config in COUNTY_CONFIGS.items()
         if config.get("enabled")
     ]
-    with ThreadPoolExecutor(max_workers=len(enabled_counties)) as executor:
-        futures = {
-            executor.submit(_scrape_county, county): county
-            for county in enabled_counties
-        }
-        for future in as_completed(futures):
-            county, leads = future.result()
-            permit_leads.extend(leads)
+    if not enabled_counties:
+        print("[lead-pipeline] No counties enabled — skipping permit scrape")
+    else:
+        with ThreadPoolExecutor(max_workers=len(enabled_counties)) as executor:
+            futures = {
+                executor.submit(_scrape_county, county): county
+                for county in enabled_counties
+            }
+            for future in as_completed(futures):
+                county, leads = future.result()
+                permit_leads.extend(leads)
 
     storm_leads: list[dict[str, Any]] = []
     try:

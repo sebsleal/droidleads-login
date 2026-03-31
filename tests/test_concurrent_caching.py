@@ -148,13 +148,6 @@ class SunbizCachingTests(unittest.TestCase):
         """Second lookup for same entity name must NOT hit the network."""
         from scrapers.sunbiz import search_sunbiz
 
-        fake_sunbiz_result = {
-            "registered_agent_name": "Agent Smith",
-            "registered_agent_address": "123 Agent Way",
-            "registered_agent_phone": "305-555-0100",
-            "officers": [],
-        }
-
         with patch(
             "scrapers.sunbiz.requests.get",
         ) as mock_get:
@@ -186,22 +179,115 @@ class SunbizCachingTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Zero-enabled-counties guard
+# ---------------------------------------------------------------------------
+
+class ZeroEnabledCountiesGuardTests(unittest.TestCase):
+    """Verify that zero enabled counties does not raise ValueError."""
+
+    def test_zero_enabled_counties_does_not_raise(self) -> None:
+        """Pipeline must not crash when all counties are disabled."""
+        with patch("pipeline.leads.COUNTY_CONFIGS", {
+            "miami-dade": {"enabled": False},
+            "broward": {"enabled": False},
+            "palm-beach": {"enabled": False},
+        }):
+            with patch("pipeline.leads.scrape_storm_events", return_value=[]), \
+                 patch("pipeline.leads.build_fema_windows", return_value=[]), \
+                 patch("pipeline.leads.build_pre_permit_leads", return_value=[]), \
+                 patch("pipeline.leads.build_storm_leads_from_candidates", return_value=[]), \
+                 patch("pipeline.leads.enrich_leads_with_owner_info", side_effect=lambda x, **kw: x), \
+                 patch("pipeline.leads.deduplicate_canonical_leads", side_effect=lambda x: x), \
+                 patch("pipeline.leads.compute_underpayment_flags"), \
+                 patch("pipeline.leads.compute_repeat_damage"), \
+                 patch("pipeline.leads.apply_company_signals"), \
+                 patch("pipeline.leads._score_with_breakdown", return_value=(0, {})), \
+                 patch("pipeline.leads.generate_outreach_batch", side_effect=lambda x: x), \
+                 patch("pipeline.leads.load_existing_state_from_json", return_value={}):
+                # Must not raise ValueError or any other exception
+                result = build_canonical_lead_dataset(supabase=None)
+                # Should return empty result gracefully
+                self.assertEqual(result.permit_count, 0)
+                self.assertEqual(result.leads, [])
+
+
+# ---------------------------------------------------------------------------
+# County normalization tests
+# ---------------------------------------------------------------------------
+
+class CountyNormalizationTests(unittest.TestCase):
+    """Verify county normalization in lookup_by_folio."""
+
+    def setUp(self) -> None:
+        import scrapers.property as prop_module
+        prop_module._pa_cache.clear()
+
+    def test_whitespace_broward_routes_to_bcpa(self) -> None:
+        """County with surrounding whitespace like ' BROWARD ' must route to BCPA, not Miami-Dade."""
+        from scrapers.property import lookup_by_folio
+
+        with patch(
+            "scrapers.property._lookup_by_folio_miami_dade",
+            return_value={
+                "owner_name": "MD Owner", "mailing_address": "", "mailing_city": "Miami",
+                "mailing_state": "FL", "mailing_zip": "33101", "site_zip": "33101",
+                "homestead": True, "assessed_value": 400000, "roof_age": 15,
+            },
+        ) as mock_md, patch(
+            "scrapers.property._lookup_by_folio_bcpa",
+            return_value={
+                "owner_name": "Broward Owner", "mailing_address": "", "mailing_city": "Fort Lauderdale",
+                "mailing_state": "FL", "mailing_zip": "33301", "site_zip": "33301",
+                "homestead": False, "assessed_value": 350000, "roof_age": 20,
+            },
+        ) as mock_bcpa:
+            lookup_by_folio("01-1234-567-8900", county=" BROWARD ")
+            # Must call BCPA (broward), NOT Miami-Dade
+            self.assertEqual(mock_bcpa.call_count, 1)
+            self.assertEqual(mock_md.call_count, 0)
+
+    def test_whitespace_county_uses_consistent_cache_key(self) -> None:
+        """Whitespace variants of the same county must share the same cache entry."""
+        from scrapers.property import lookup_by_folio
+
+        with patch(
+            "scrapers.property._lookup_by_folio_miami_dade",
+            return_value={
+                "owner_name": "Test", "mailing_address": "", "mailing_city": "Miami",
+                "mailing_state": "FL", "mailing_zip": "33101", "site_zip": "33101",
+                "homestead": True, "assessed_value": 400000, "roof_age": 15,
+            },
+        ) as mock_md:
+            lookup_by_folio("01-0000-000-0001", county="  miami-dade  ")
+            lookup_by_folio("01-0000-000-0001", county="miami-dade")
+            lookup_by_folio("01-0000-000-0001", county="  MIAMI-DADE  ")
+            # Single call — all three use the same normalized cache key
+            self.assertEqual(mock_md.call_count, 1)
+
+
+# ---------------------------------------------------------------------------
 # Concurrent county scrape tests
 # ---------------------------------------------------------------------------
 
 class ConcurrentCountyScrapingTests(unittest.TestCase):
     """Verify that county permit scrapes run concurrently via ThreadPoolExecutor."""
 
-    def test_permit_scrape_uses_thread_pool(self) -> None:
-        """ThreadPoolExecutor must be used, and counties must run concurrently."""
-        import threading
+    def test_permit_scrape_runs_in_parallel_proven_by_time(self) -> None:
+        """
+        Prove real parallel execution by measuring wall-clock time.
+
+        With 3 counties each sleeping 0.15s:
+        - Sequential execution would take ≥ 0.45s
+        - True parallel execution takes ≈ 0.15s (all threads run simultaneously)
+
+        A test that only checks interleaving could pass under sequential
+        execution with a clever scheduler (thread_yield between start/end),
+        so we use wall-clock timing as the contract-faithful proof.
+        """
         import time as time_module
 
-        # Track the order that counties are STARTED and COMPLETED.
-        # In a sequential loop, start and complete order would be identical.
-        # In concurrent execution, order may differ.
-        call_log: list[str] = []
-        log_lock = threading.Lock()
+        SLEEP = 0.15   # seconds per county scrape
+        COUNTY_COUNT = 3   # miami-dade, broward, palm-beach (all enabled in this test)
 
         def tracking_scrape(
             county: str,
@@ -209,23 +295,15 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
             lookback_days: int = 90,
             city: object = None,
         ) -> list[object]:
-            with log_lock:
-                call_log.append(f"start-{county}")
-            # Simulate work with a small sleep
-            time_module.sleep(0.05)
-            with log_lock:
-                call_log.append(f"end-{county}")
+            time_module.sleep(SLEEP)
             return []
 
-        # Patch scrape_damage_permits where it is USED (pipeline.leads), not where it is defined.
         with patch("pipeline.leads.scrape_damage_permits", side_effect=tracking_scrape):
-            # Patch COUNTY_CONFIGS in pipeline.leads so only miami-dade and broward are "enabled"
             with patch("pipeline.leads.COUNTY_CONFIGS", {
                 "miami-dade": {"enabled": True},
                 "broward": {"enabled": True},
-                "palm-beach": {"enabled": False},
+                "palm-beach": {"enabled": True},
             }):
-                # Patch out other pipeline steps to isolate the county loop
                 with patch("pipeline.leads.scrape_storm_events", return_value=[]), \
                      patch("pipeline.leads.build_fema_windows", return_value=[]), \
                      patch("pipeline.leads.build_pre_permit_leads", return_value=[]), \
@@ -238,29 +316,19 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
                      patch("pipeline.leads._score_with_breakdown", return_value=(0, {})), \
                      patch("pipeline.leads.generate_outreach_batch", side_effect=lambda x: x), \
                      patch("pipeline.leads.load_existing_state_from_json", return_value={}):
+                    start = time_module.perf_counter()
                     build_canonical_lead_dataset(supabase=None)
+                    elapsed = time_module.perf_counter() - start
 
-        # We expect at least miami-dade and broward to be started
-        started = [c for c in call_log if c.startswith("start-")]
-        self.assertIn("start-miami-dade", started)
-        self.assertIn("start-broward", started)
-
-        # In concurrent execution, the second county starts BEFORE the first ends.
-        # In sequential, "start-broward" would come after "end-miami-dade".
-        # Check that we have interleaving: both counties' start events appear
-        # before at least one of their end events.
-        start_md = call_log.index("start-miami-dade")
-        start_bw = call_log.index("start-broward")
-        end_md = call_log.index("end-miami-dade")
-        end_bw = call_log.index("end-broward")
-
-        # At least one start must come before at least one end of the OTHER county
-        concurrent_interleaving = (
-            start_bw < end_md or start_md < end_bw
-        )
-        self.assertTrue(
-            concurrent_interleaving,
-            f"Expected concurrent interleaving but got sequential order: {call_log}",
+        # Sequential would be 3 * 0.15 = 0.45s minimum.
+        # Parallel should be close to 0.15s (all threads run simultaneously).
+        # Use 0.35s as the threshold — anything at or above sequential time
+        # means the pipeline ran sequentially.
+        self.assertLess(
+            elapsed,
+            SLEEP * COUNTY_COUNT * 0.78,
+            f"Expected parallel execution (< {SLEEP * COUNTY_COUNT * 0.78:.2f}s) "
+            f"but took {elapsed:.2f}s — pipeline appears to be running sequentially",
         )
 
 

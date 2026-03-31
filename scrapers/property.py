@@ -63,11 +63,15 @@ def lookup_by_folio(folio_number: str, county: str = "miami-dade") -> dict[str, 
         site_zip, homestead, assessed_value
     or None if not found / request failed.
     """
-    cache_key = (folio_number.strip(), county.strip().lower())
+    # Normalize once at entry — used for both routing and cache-key construction.
+    # This prevents inputs like " BROWARD " from routing to Miami-Dade or
+    # poisoning a Broward cache entry.
+    county_normalized = county.strip().lower()
+    cache_key = (folio_number.strip(), county_normalized)
     if cache_key in _pa_cache:
         return _pa_cache[cache_key]
 
-    if county == "broward":
+    if county_normalized == "broward":
         result = _lookup_by_folio_bcpa(folio_number)
     else:
         result = _lookup_by_folio_miami_dade(folio_number)

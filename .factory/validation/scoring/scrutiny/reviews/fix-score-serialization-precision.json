@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-score-serialization-precision",
+  "reviewedAt": "2026-03-31T00:12:00Z",
+  "commitId": "fecc724",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix directly resolves the prior blocking runtime precision loss. In commit fecc724, score coercion at both canonicalization and UI serialization boundaries was changed from integer truncation to round(float(...), 1), so scorer-level fractional distinctions now survive into JSON output. Added integration tests cover canonicalize_lead(), serialize_lead_for_ui(), write_leads_json(), and end-to-end scoring→serialization behavior, including <1-point differences that previously collapsed.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": ".factory/validation/scoring/scrutiny/reviews/fix-scoring-top-decile-saturation.json",
+  "summary": "PASS. The prior blocker (int truncation collapsing top-decile scores in runtime output) is fixed: scorer outputs like 99.7 vs 99.6 remain distinct through canonicalization and serialized leads.json output."
+}

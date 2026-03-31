@@ -117,17 +117,25 @@ def retry_request(
             # Exhausted retries
             break
 
-        except (requests.Timeout, requests.RequestException) as exc:
-            # Timeout and other requests exceptions are retryable
+        except requests.Timeout as exc:
+            # Timeout is transient — retry with backoff
             last_exception = exc
             if attempt < max_retries - 1:
                 delay = backoff_delays[attempt]
                 print(
-                    f"[retry] {type(exc).__name__} for {url} — "
+                    f"[retry] Timeout for {url} — "
                     f"retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
                 )
                 time.sleep(delay)
                 continue
+            break
+
+        # All other requests.RequestException subclasses (e.g. TooManyRedirects,
+        # URLRequired, InvalidURL, JSONDecodeError, MissingSchema, SSLError) are
+        # permanent failures — do NOT retry; raise immediately.
+        # The bare except here catches any RequestException not already handled above.
+        except requests.RequestException as exc:
+            last_exception = exc
             break
 
     # All retries exhausted — raise the last stored exception

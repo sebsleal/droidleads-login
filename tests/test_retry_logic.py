@@ -254,6 +254,107 @@ class ConcurrentScrapeErrorIsolationTests(unittest.TestCase):
             self.assertGreater(len(results[county]), 0)
 
 
+class NonTransientRequestExceptionTests(unittest.TestCase):
+    """
+    Verify VAL-INFRA-009 (part 2): non-transient RequestException subclasses
+    do NOT trigger retries — they fail fast after a single attempt.
+    The contract-approved transient set is: HTTP 408/429/500/502/503/504,
+    ConnectionError, and Timeout.
+    All other requests.RequestException subclasses are permanent failures
+    (e.g. InvalidURL, TooManyRedirects, URLRequired) and must NOT retry.
+    """
+
+    def test_no_retry_on_too_many_redirects(self) -> None:
+        """requests.TooManyRedirects is a permanent RequestException — no retry."""
+        with patch(
+            "scrapers.retry_utils.requests.get",
+            side_effect=requests.TooManyRedirects("Too many redirects"),
+        ) as mock_get:
+            with self.assertRaises(requests.TooManyRedirects):
+                retry_request("https://example.com/api")
+            self.assertEqual(mock_get.call_count, 1)
+
+    def test_no_retry_on_url_required(self) -> None:
+        """requests.URLRequired is a permanent RequestException — no retry."""
+        with patch(
+            "scrapers.retry_utils.requests.get",
+            side_effect=requests.URLRequired("URL required"),
+        ) as mock_get:
+            with self.assertRaises(requests.URLRequired):
+                retry_request("https://example.com/api")
+            self.assertEqual(mock_get.call_count, 1)
+
+    def test_no_retry_on_decode_error(self) -> None:
+        """
+        requests.JSONDecodeError (subclass of RequestException) is non-transient —
+        no retry for malformed response bodies.
+        """
+        with patch(
+            "scrapers.retry_utils.requests.get",
+            side_effect=requests.JSONDecodeError("Expecting value", "", 0),
+        ) as mock_get:
+            with self.assertRaises(requests.JSONDecodeError):
+                retry_request("https://example.com/api")
+            self.assertEqual(mock_get.call_count, 1)
+
+
+class TransientFailureThenSuccessTests(unittest.TestCase):
+    """
+    Verify VAL-INFRA-010: transient failure followed by success returns valid data.
+    """
+
+    def test_transient_503_then_success_returns_valid_response(self) -> None:
+        """First attempt returns 503 (transient), second attempt returns 200 — data is returned."""
+        fail_resp = MagicMock(spec=requests.Response)
+        fail_resp.status_code = 503
+        fail_resp.ok = False
+        fail_exc = requests.HTTPError(response=MagicMock(status_code=503))
+        fail_resp.raise_for_status.side_effect = fail_exc
+
+        success_resp = MagicMock(spec=requests.Response)
+        success_resp.status_code = 200
+        success_resp.ok = True
+        success_resp.raise_for_status.return_value = None
+        success_resp.json.return_value = {"data": "valid"}
+
+        with patch("scrapers.retry_utils.requests.get", side_effect=[fail_resp, success_resp]):
+            resp = retry_request("https://example.com/api")
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.json(), {"data": "valid"})
+
+    def test_transient_connection_error_then_success_returns_valid_response(self) -> None:
+        """First attempt raises ConnectionError (transient), second succeeds — valid data returned."""
+        success_resp = MagicMock(spec=requests.Response)
+        success_resp.status_code = 200
+        success_resp.ok = True
+        success_resp.raise_for_status.return_value = None
+        success_resp.json.return_value = {"leads": []}
+
+        with patch(
+            "scrapers.retry_utils.requests.get",
+            side_effect=[requests.ConnectionError("Connection reset"), success_resp],
+        ):
+            resp = retry_request("https://example.com/api")
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.json(), {"leads": []})
+
+    def test_transient_timeout_then_success_returns_valid_response(self) -> None:
+        """First attempt raises Timeout (transient), second succeeds — valid data returned."""
+        success_resp = MagicMock(spec=requests.Response)
+        success_resp.status_code = 200
+        success_resp.ok = True
+        success_resp.raise_for_status.return_value = None
+        success_resp.json.return_value = {"count": 42}
+
+        with patch(
+            "scrapers.retry_utils.requests.get",
+            side_effect=[requests.Timeout("timed out"), success_resp],
+        ):
+            resp = retry_request("https://example.com/api")
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.json(), {"count": 42})
+
+
 class RetryableStatusCodesContract(unittest.TestCase):
     """Ensure RETRYABLE_STATUS_CODES only contains transient codes."""
 

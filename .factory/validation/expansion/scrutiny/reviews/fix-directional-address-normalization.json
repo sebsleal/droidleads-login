@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-directional-address-normalization",
+  "reviewedAt": "2026-03-31T17:01:45Z",
+  "commitId": "6f2bccc",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix addresses both failures from the prior review. `normalize_address()` now normalizes attached directional+number forms (e.g., NW7th) to match spaced variants (NW 7th) before hashing, and tests now enforce true idempotency by asserting `normalize_address(normalize_address(addr))`. Added tests also verify directional no-space equivalence at normalization and hash levels, which is sufficient for dedup correctness because `deduplicate_leads()` is hash-based.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": "/Users/seb/Documents/claim-remedy-leads-testing/.factory/validation/expansion/scrutiny/reviews/address-normalization-dedup.json",
+  "summary": "Reviewed fix-directional-address-normalization using prior failure context, handoff, commit diff, and transcript skeleton. Commit 6f2bccc resolves the NW7th vs NW 7th canonicalization gap and corrects idempotency test coverage, so the re-run fix passes review."
+}

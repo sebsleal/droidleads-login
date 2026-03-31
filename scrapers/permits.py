@@ -14,6 +14,8 @@ import requests
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from scrapers.retry_utils import retry_request
+
 # ---------------------------------------------------------------------------
 # County configurations
 # ---------------------------------------------------------------------------
@@ -303,7 +305,7 @@ def _scrape_endpoint(
     try:
         while True:
             params = {**base_params, "resultOffset": offset}
-            resp = requests.get(url, params=params, timeout=30)
+            resp = retry_request(url, params=params, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             if "error" in data:

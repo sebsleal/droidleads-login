@@ -16,6 +16,8 @@ import time
 import requests
 from typing import Any
 
+from scrapers.retry_utils import retry_request
+
 # Module-level cache for PA lookups: keyed by (folio_number, county_slug).
 _pa_cache: dict[tuple[str, str], dict[str, Any] | None] = {}
 
@@ -86,7 +88,7 @@ def _lookup_by_folio_miami_dade(folio_number: str) -> dict[str, Any] | None:
         "clientAppName": "PropertySearch",
     }
     try:
-        r = requests.get(MIAMI_DADE_PA_URL, params=params, headers=MD_PA_HEADERS, timeout=15)
+        r = retry_request(MIAMI_DADE_PA_URL, params=params, headers=MD_PA_HEADERS, timeout=15)
         if r.status_code == 404:
             return None
         r.raise_for_status()
@@ -114,7 +116,7 @@ def _lookup_by_folio_bcpa(folio_number: str) -> dict[str, Any] | None:
     # BCPA accepts folio in query string — try with and without hyphens
     params = {"folio": folio_clean}
     try:
-        r = requests.get(BCPA_PA_URL, params=params, headers=BCPA_HEADERS, timeout=15)
+        r = retry_request(BCPA_PA_URL, params=params, headers=BCPA_HEADERS, timeout=15)
         if r.status_code in (404, 400):
             return None
         r.raise_for_status()

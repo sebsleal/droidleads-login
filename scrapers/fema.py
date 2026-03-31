@@ -23,6 +23,8 @@ import requests
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from scrapers.retry_utils import retry_request
+
 FEMA_API_URL = "https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries"
 
 # Maps FEMA designatedArea strings (uppercase) → our county slugs
@@ -76,7 +78,7 @@ def fetch_fl_declarations(lookback_years: int = 3) -> list[dict[str, Any]]:
     }
 
     try:
-        resp = requests.get(FEMA_API_URL, params=params, timeout=30)
+        resp = retry_request(FEMA_API_URL, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
     except requests.RequestException as e:

@@ -19,6 +19,8 @@ import requests
 from datetime import datetime, timezone
 from typing import Any
 
+from scrapers.retry_utils import retry_request
+
 NOAA_BASE_URL = "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/"
 
 # Storm event types relevant to insurance claims
@@ -85,7 +87,7 @@ def get_available_years(years: list[int]) -> list[str]:
     Fetch the directory listing from NOAA and return URLs for the requested years.
     """
     try:
-        resp = requests.get(NOAA_BASE_URL, timeout=15)
+        resp = retry_request(NOAA_BASE_URL, timeout=15)
         resp.raise_for_status()
         text = resp.text
     except requests.RequestException as e:
@@ -108,7 +110,7 @@ def download_and_parse_storm_csv(url: str) -> list[dict[str, str]]:
     Download a gzipped NOAA storm events CSV and return rows as dicts.
     """
     try:
-        resp = requests.get(url, timeout=60, stream=True)
+        resp = retry_request(url, timeout=60)
         resp.raise_for_status()
         compressed = resp.content
         decompressed = gzip.decompress(compressed)

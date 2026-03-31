@@ -18,6 +18,8 @@ import time
 import requests
 from typing import Any
 
+from scrapers.retry_utils import retry_request
+
 # Module-level cache for Sunbiz lookups: keyed by normalized entity name.
 _sunbiz_cache: dict[str, dict[str, Any] | None] = {}
 
@@ -220,7 +222,7 @@ def search_sunbiz(entity_name: str) -> dict[str, Any] | None:
 
     result: dict[str, Any] | None = None
     try:
-        resp = requests.get(
+        resp = retry_request(
             SUNBIZ_SEARCH_URL, params=params, headers=HEADERS, timeout=15
         )
         resp.raise_for_status()
@@ -230,7 +232,7 @@ def search_sunbiz(entity_name: str) -> dict[str, Any] | None:
         detail_url = _extract_detail_url(search_html)
         if detail_url:
             time.sleep(1)  # brief pause before detail fetch
-            detail_resp = requests.get(detail_url, headers=HEADERS, timeout=15)
+            detail_resp = retry_request(detail_url, headers=HEADERS, timeout=15)
             detail_resp.raise_for_status()
             parsed = _parse_detail_page(detail_resp.text)
         else:

@@ -7,6 +7,7 @@ interface FilterBarProps {
   filters: FilterState
   onChange: (f: FilterState) => void
   onClear: () => void
+  availableInsurers?: string[]
 }
 
 const DAMAGE_TYPES: Array<DamageType | 'All'> = [
@@ -45,7 +46,10 @@ const isDefaultFilters = (f: FilterState) =>
   !f.underpaid &&
   !f.noContractor &&
   !f.stormFirst &&
-  f.county === 'All'
+  f.county === 'All' &&
+  f.statusFilter === 'All' &&
+  f.insurerFilter === '' &&
+  f.femaFilter === 'All'
 
 interface ToggleProps {
   label: string
@@ -96,7 +100,7 @@ function FilterLabel({ text, tooltip }: { text: string; tooltip: string }) {
   )
 }
 
-export default function FilterBar({ filters, onChange, onClear }: FilterBarProps) {
+export default function FilterBar({ filters, onChange, onClear, availableInsurers = [] }: FilterBarProps) {
   const hasActiveFilters = !isDefaultFilters(filters)
 
   function update<K extends keyof FilterState>(key: K, value: FilterState[K]) {
@@ -166,6 +170,48 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
             {COUNTY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <FilterLabel text="Status" tooltip="Filter leads by tracking status — New, Contacted, Converted, or Closed." />
+          <select
+            value={filters.statusFilter}
+            onChange={(e) => update('statusFilter', e.target.value as FilterState['statusFilter'])}
+            className="select-input w-32"
+          >
+            <option value="All">All statuses</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Converted">Converted</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <FilterLabel text="Insurer" tooltip="Filter leads by insurance company." />
+          <select
+            value={filters.insurerFilter}
+            onChange={(e) => update('insurerFilter', e.target.value)}
+            className="select-input w-44"
+          >
+            <option value="">All insurers</option>
+            {availableInsurers.map((ins) => (
+              <option key={ins} value={ins}>{ins}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <FilterLabel text="FEMA" tooltip="Filter by FEMA disaster declaration status — Tagged (has declaration) or Untagged." />
+          <select
+            value={filters.femaFilter}
+            onChange={(e) => update('femaFilter', e.target.value as FilterState['femaFilter'])}
+            className="select-input w-32"
+          >
+            <option value="All">All</option>
+            <option value="Tagged">Tagged</option>
+            <option value="Untagged">Untagged</option>
           </select>
         </div>
 

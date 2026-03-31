@@ -114,6 +114,9 @@ export interface FilterState {
   noContractor: boolean;
   stormFirst: boolean;
   county: "All" | CountySlug;
+  statusFilter: "All" | LeadStatus;
+  insurerFilter: string;
+  femaFilter: "All" | "Tagged" | "Untagged";
 }
 
 export interface StatsData {

@@ -46,6 +46,9 @@ const DEFAULT_FILTERS: FilterState = {
   noContractor: false,
   stormFirst: false,
   county: "All",
+  statusFilter: "All",
+  insurerFilter: "",
+  femaFilter: "All",
 };
 
 const DEFAULT_STORM_FILTERS: StormFilterState = {
@@ -249,6 +252,20 @@ export default function App() {
       )
         return false;
 
+      // Status filter
+      if (filters.statusFilter !== "All" && lead.status !== filters.statusFilter)
+        return false;
+
+      // Insurer filter
+      if (filters.insurerFilter && lead.insuranceCompany !== filters.insurerFilter)
+        return false;
+
+      // FEMA filter
+      if (filters.femaFilter === "Tagged" && !lead.femaDeclarationNumber)
+        return false;
+      if (filters.femaFilter === "Untagged" && lead.femaDeclarationNumber)
+        return false;
+
       return true;
     }).sort((a, b) => {
       switch (filters.sortOrder) {
@@ -280,6 +297,16 @@ export default function App() {
       }
     });
   }, [leads, filters]);
+
+  const availableLeadInsurers = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          leads.map((l) => l.insuranceCompany).filter(Boolean) as string[],
+        ),
+      ).sort(),
+    [leads],
+  );
 
   const stormEventTypes = useMemo(
     () =>
@@ -671,13 +698,21 @@ export default function App() {
                       filters={filters}
                       onChange={setFilters}
                       onClear={() => setFilters(DEFAULT_FILTERS)}
+                      availableInsurers={availableLeadInsurers}
                     />
                     <div className="mt-4">
-                      <LeadsTable
-                        leads={filteredLeads}
-                        onSelectLead={setSelectedLead}
-                        selectedLeadId={selectedLead?.id}
-                      />
+                      {filteredLeads.length === 0 && leads.length > 0 ? (
+                        <div className="text-center py-12 text-zinc-500">
+                          <p className="text-sm font-medium">No leads match your current filters</p>
+                          <p className="text-xs mt-1 text-zinc-400">Try adjusting or clearing your filters to see more results.</p>
+                        </div>
+                      ) : (
+                        <LeadsTable
+                          leads={filteredLeads}
+                          onSelectLead={setSelectedLead}
+                          selectedLeadId={selectedLead?.id}
+                        />
+                      )}
                     </div>
                   </>
                 }

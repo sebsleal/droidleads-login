@@ -31,6 +31,8 @@ None — Python backend features use CLI-based testing and verification.
    - Use `unittest.mock.patch` for mocking HTTP calls and external dependencies
    - Run: `python3 -m unittest discover -s tests -p 'test_*.py' -v`
    - Confirm new tests FAIL (they should, since implementation doesn't exist yet)
+   - Capture explicit RED→GREEN evidence in your transcript/handoff: the first relevant test run must fail before implementation edits, then pass after the fix.
+   - When contracts or feature descriptions specify measurable thresholds or timing/concurrency guarantees, write contract-faithful assertions that would fail if the implementation were weaker than specified.
 
 4. **Implement the feature (GREEN)**:
    - Follow existing code patterns and style

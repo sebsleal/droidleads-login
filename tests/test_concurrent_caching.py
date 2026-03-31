@@ -272,22 +272,84 @@ class CountyNormalizationTests(unittest.TestCase):
 class ConcurrentCountyScrapingTests(unittest.TestCase):
     """Verify that county permit scrapes run concurrently via ThreadPoolExecutor."""
 
-    def test_permit_scrape_runs_in_parallel_proven_by_time(self) -> None:
+    def test_permit_scrape_runs_in_parallel_proven_by_barrier(self) -> None:
         """
-        Prove real parallel execution by measuring wall-clock time.
+        Prove real parallel execution using a threading.Barrier as a
+        deterministic rendezvous point.
 
-        With 3 counties each sleeping 0.15s:
-        - Sequential execution would take ≥ 0.45s
-        - True parallel execution takes ≈ 0.15s (all threads run simultaneously)
+        A Barrier(parties=2, timeout=1.0) is placed inside the mock scrape
+        function. Each call waits on the barrier before returning.
 
-        A test that only checks interleaving could pass under sequential
-        execution with a clever scheduler (thread_yield between start/end),
-        so we use wall-clock timing as the contract-faithful proof.
+        - Parallel execution: two threads reach the barrier at roughly the
+          same wall-clock time → both pass through → no exception.
+        - Sequential execution: only one thread ever runs → it waits at the
+          barrier for a second thread that never comes → BarrierTimeout →
+          BrokenBarrierError → test fails via the except block.
+
+        This approach is deterministic and does not depend on wall-clock
+        timing thresholds, so it cannot flake due to scheduling variance.
         """
+        import threading
         import time as time_module
 
-        SLEEP = 0.15   # seconds per county scrape
-        COUNTY_COUNT = 3   # miami-dade, broward, palm-beach (all enabled in this test)
+        BARRIER_TIMEOUT = 1.0   # seconds — generous; sequential would deadlock well before this
+        barrier = threading.Barrier(2, timeout=BARRIER_TIMEOUT)
+
+        def barrier_scrape(
+            county: str,
+            max_records: int = 500,
+            lookback_days: int = 90,
+            city: object = None,
+        ) -> list[object]:
+            # Brief sleep so all threads have time to have started before
+            # reaching the barrier — avoids race where thread A finishes and
+            # exits before thread B even calls wait().
+            time_module.sleep(0.02)
+            barrier.wait()
+            return []
+
+        with patch("pipeline.leads.scrape_damage_permits", side_effect=barrier_scrape):
+            with patch("pipeline.leads.COUNTY_CONFIGS", {
+                "miami-dade": {"enabled": True},
+                "broward": {"enabled": True},
+                "palm-beach": {"enabled": True},
+            }):
+                with patch("pipeline.leads.scrape_storm_events", return_value=[]), \
+                     patch("pipeline.leads.build_fema_windows", return_value=[]), \
+                     patch("pipeline.leads.build_pre_permit_leads", return_value=[]), \
+                     patch("pipeline.leads.build_storm_leads_from_candidates", return_value=[]), \
+                     patch("pipeline.leads.enrich_leads_with_owner_info", side_effect=lambda x, **kw: x), \
+                     patch("pipeline.leads.deduplicate_canonical_leads", side_effect=lambda x: x), \
+                     patch("pipeline.leads.compute_underpayment_flags"), \
+                     patch("pipeline.leads.compute_repeat_damage"), \
+                     patch("pipeline.leads.apply_company_signals"), \
+                     patch("pipeline.leads._score_with_breakdown", return_value=(0, {})), \
+                     patch("pipeline.leads.generate_outreach_batch", side_effect=lambda x: x), \
+                     patch("pipeline.leads.load_existing_state_from_json", return_value={}):
+                    try:
+                        build_canonical_lead_dataset(supabase=None)
+                    except threading.BrokenBarrierError:
+                        self.fail(
+                            "Barrier was broken — sequential execution detected. "
+                            "County permit scrapes must run concurrently via ThreadPoolExecutor."
+                        )
+
+    def test_permit_scrape_runs_in_parallel_proven_by_thread_ids(self) -> None:
+        """
+        Complementary proof of parallel execution by tracking the thread
+        identities that entered the scrape function.
+
+        Each call to the mock records the caller's thread identity in a
+        shared, lock-protected list. After the pipeline returns, we assert
+        that more than one unique thread was involved — which is only
+        possible with true parallel execution.
+
+        Sequential execution would produce a list with one repeated thread ID.
+        """
+        import threading
+
+        thread_ids: list[int] = []
+        lock = threading.Lock()
 
         def tracking_scrape(
             county: str,
@@ -295,7 +357,8 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
             lookback_days: int = 90,
             city: object = None,
         ) -> list[object]:
-            time_module.sleep(SLEEP)
+            with lock:
+                thread_ids.append(threading.current_thread().ident)
             return []
 
         with patch("pipeline.leads.scrape_damage_permits", side_effect=tracking_scrape):
@@ -316,19 +379,15 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
                      patch("pipeline.leads._score_with_breakdown", return_value=(0, {})), \
                      patch("pipeline.leads.generate_outreach_batch", side_effect=lambda x: x), \
                      patch("pipeline.leads.load_existing_state_from_json", return_value={}):
-                    start = time_module.perf_counter()
                     build_canonical_lead_dataset(supabase=None)
-                    elapsed = time_module.perf_counter() - start
 
-        # Sequential would be 3 * 0.15 = 0.45s minimum.
-        # Parallel should be close to 0.15s (all threads run simultaneously).
-        # Use 0.35s as the threshold — anything at or above sequential time
-        # means the pipeline ran sequentially.
-        self.assertLess(
-            elapsed,
-            SLEEP * COUNTY_COUNT * 0.78,
-            f"Expected parallel execution (< {SLEEP * COUNTY_COUNT * 0.78:.2f}s) "
-            f"but took {elapsed:.2f}s — pipeline appears to be running sequentially",
+        unique_threads = set(thread_ids)
+        self.assertGreater(
+            len(unique_threads),
+            1,
+            f"Expected multiple worker threads but got only {len(unique_threads)} — "
+            "county permit scrapes appear to be running sequentially. "
+            f"Thread IDs observed: {unique_threads}",
         )
 
 

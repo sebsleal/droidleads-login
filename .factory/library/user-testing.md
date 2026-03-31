@@ -36,6 +36,13 @@
 - Data boundary: do not regenerate `public/leads.json` or `public/storm_candidates.json`.
 - Evidence: include exact commands, exit codes, and assertion-to-test mapping in flow report JSON.
 
+## Flow Validator Guidance: agent-browser
+- Scope: validate only assigned browser assertions and capture evidence under the assigned milestone/group evidence directory.
+- Isolation boundary: use only the assigned URL and browser session; do not change global app config or env files.
+- Primary route for conversion assertions (`VAL-EXPAND-004`, `VAL-EXPAND-005`, `VAL-CROSS-005`): use `http://localhost:5173/fixtures/convert-case` which provides an isolated Converted-lead fixture and case-creation flow without mutating real leads.
+- Shared-state boundary: fixture-created cases are acceptable test data for validation; do not attempt to mutate production Supabase records.
+- Evidence: capture screenshots/DOM checks for button visibility, prefilled modal fields, and case presence in `/cases` after submit.
+
 ## Testing Notes
 - Dashboard data comes from static JSON files in `public/` — no Supabase connection needed for validation
 - For testing browser write features (readOnly), set `VITE_ENABLE_BROWSER_WRITES=false` (default)

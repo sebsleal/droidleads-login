@@ -1,0 +1,92 @@
+{
+  "surface": "agent-browser",
+  "groupId": "browser-conversion-rerun",
+  "status": "pass",
+  "testedAt": "2026-03-31T20:45:47Z",
+  "isolation": {
+    "appUrl": "http://localhost:5173",
+    "fixtureUrl": "http://localhost:5173/fixtures/convert-case",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "session": "conversion-rerun"
+  },
+  "assertions": [
+    {
+      "id": "VAL-EXPAND-004",
+      "status": "pass",
+      "evidence": "Fixture LeadDrawer for pre-seeded Converted lead shows 'Convert to Case'. DOM check confirms fixture status is Converted and Convert-to-Case control is present in that state.",
+      "artifacts": [
+        "expansion/browser-conversion-rerun/VAL-EXPAND-004-converted-lead-drawer-annotated.png",
+        "expansion/browser-conversion-rerun/VAL-EXPAND-004-converted-lead-drawer-full.png",
+        "expansion/browser-conversion-rerun/VAL-EXPAND-004-state-visibility-body.txt",
+        "expansion/browser-conversion-rerun/VAL-EXPAND-004-dom-check.json"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-005",
+      "status": "pass",
+      "evidence": "Convert-to-Case modal opened from fixture and was prefilled from lead data. DOM checks all true for client name, loss address, peril type, insurer, phone/email, estimated loss, and fixture notes text.",
+      "artifacts": [
+        "expansion/browser-conversion-rerun/VAL-EXPAND-005-prefilled-modal-annotated.png",
+        "expansion/browser-conversion-rerun/VAL-EXPAND-005-modal-body.txt",
+        "expansion/browser-conversion-rerun/VAL-EXPAND-005-prefill-dom-check.json"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "status": "pass",
+      "evidence": "Submitted Create Case from fixture modal, auto-navigated to /cases, and verified created case appears with lead-derived values (Rodriguez, Maria; 7421 SW 82nd Ave, Miami, FL 33143; Hurricane/Wind; Citizens Property Insurance). DOM evidence captured file number CRA-MNF35ZYB.",
+      "artifacts": [
+        "expansion/browser-conversion-rerun/VAL-CROSS-005-cases-after-submit-annotated.png",
+        "expansion/browser-conversion-rerun/VAL-CROSS-005-cases-after-submit-full.png",
+        "expansion/browser-conversion-rerun/VAL-CROSS-005-cases-body.txt",
+        "expansion/browser-conversion-rerun/VAL-CROSS-005-cases-dom-check.json"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "command": "agent-browser --session conversion-rerun open http://localhost:5173/fixtures/convert-case && wait --load networkidle && snapshot -i -C",
+      "exitCode": 0,
+      "observation": "Fixture route loaded with Converted lead drawer and open Convert-to-Case modal."
+    },
+    {
+      "command": "agent-browser --session conversion-rerun screenshot ...VAL-EXPAND-004... --annotate/--full + eval DOM checks",
+      "exitCode": 0,
+      "observation": "Captured Convert-to-Case visibility evidence and Converted-state DOM evidence."
+    },
+    {
+      "command": "agent-browser --session conversion-rerun screenshot ...VAL-EXPAND-005... --annotate + eval prefill checks",
+      "exitCode": 0,
+      "observation": "Captured modal prefill evidence; all required prefill assertions evaluated true."
+    },
+    {
+      "command": "agent-browser --session conversion-rerun find role button click --name 'Create Case' && wait --url **/cases",
+      "exitCode": 0,
+      "observation": "Conversion submit completed and navigated to Cases view."
+    },
+    {
+      "command": "agent-browser --session conversion-rerun screenshot ...VAL-CROSS-005... + get text body + eval case DOM checks",
+      "exitCode": 0,
+      "observation": "Created case present in /cases with expected lead-derived values."
+    },
+    {
+      "command": "agent-browser --session conversion-rerun errors|console|network requests",
+      "exitCode": 0,
+      "observation": "errors output was empty; console log contained known local-dev warnings/404 resource errors and Supabase schema-cache warnings."
+    }
+  ],
+  "consoleState": {
+    "clean": false,
+    "details": "agent-browser errors output empty, but console-log contains known pre-existing local warnings/errors (404 resource fetches and Supabase schema-cache warnings).",
+    "artifacts": [
+      "expansion/browser-conversion-rerun/console-errors.txt",
+      "expansion/browser-conversion-rerun/console-log.txt",
+      "expansion/browser-conversion-rerun/network-requests.txt"
+    ]
+  },
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "agent-browser"
+  ]
+}

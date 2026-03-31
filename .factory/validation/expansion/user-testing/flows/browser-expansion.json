@@ -1,0 +1,141 @@
+{
+  "surface": "agent-browser",
+  "groupId": "browser-expansion",
+  "status": "blocked",
+  "testedAt": "2026-03-31T17:28:35Z",
+  "isolation": {
+    "appUrl": "http://localhost:5173",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "session": "3d5704652f90__u1"
+  },
+  "assertions": [
+    {
+      "id": "VAL-EXPAND-004",
+      "status": "blocked",
+      "evidence": "Lead drawer for New lead does not show any 'Convert to Case' button (DOM eval count=0), but Converted-state visibility could not be validated because no Converted leads exist and drawer status controls are disabled in read-only mode.",
+      "artifacts": [
+        "expansion/browser-expansion/lead-drawer-open-new-status-annotated.png",
+        "expansion/browser-expansion/leads-converted-filter-full.png",
+        "expansion/browser-expansion/leads-converted-filter-body.txt"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-005",
+      "status": "blocked",
+      "evidence": "Could not trigger 'Convert to Case' flow because no lead could be put into Converted state in this run (read-only controls disabled, and Converted filter returned zero leads).",
+      "artifacts": [
+        "expansion/browser-expansion/lead-drawer-open-new-status-annotated.png",
+        "expansion/browser-expansion/leads-converted-filter-full.png"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-006",
+      "status": "pass",
+      "evidence": "Analytics page shows 'Conversion Funnel' with stage counts and rates: New, Contacted, Converted and rate rows (New → Contacted, Contacted → Converted, Overall New→Converted).",
+      "artifacts": [
+        "expansion/browser-expansion/analytics-view-annotated.png",
+        "expansion/browser-expansion/analytics-view-full.png",
+        "expansion/browser-expansion/analytics-body-text.txt"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-007",
+      "status": "pass",
+      "evidence": "Analytics page shows 'Time-to-Contact' metric section with expected copy ('Average days from lead date to first contact'). Current dataset has no contacted leads, so fallback no-data message is rendered.",
+      "artifacts": [
+        "expansion/browser-expansion/analytics-view-full.png",
+        "expansion/browser-expansion/analytics-body-text.txt"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-008",
+      "status": "pass",
+      "evidence": "Analytics page shows 'Lead Age Distribution' chart with bucket labels 0-7d, 8-30d, 31-60d, and 60+d.",
+      "artifacts": [
+        "expansion/browser-expansion/analytics-view-full.png",
+        "expansion/browser-expansion/analytics-body-text.txt"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "status": "blocked",
+      "evidence": "End-to-end converted-lead-to-case flow could not run: no Converted leads available, status filter for Converted/Contacted returns zero leads, and lead drawer mutation controls are disabled (read-only), preventing conversion action.",
+      "artifacts": [
+        "expansion/browser-expansion/lead-drawer-open-new-status-annotated.png",
+        "expansion/browser-expansion/leads-converted-filter-full.png",
+        "expansion/browser-expansion/leads-contacted-filter-full.png"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 open http://localhost:5173",
+      "exitCode": 0,
+      "observation": "App loaded successfully on local Vite server."
+    },
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 click row (open lead drawer)",
+      "exitCode": 0,
+      "observation": "Lead drawer opened for a New lead; status buttons visible but disabled in read-only mode."
+    },
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 eval DOM check for 'Convert to Case' button",
+      "exitCode": 0,
+      "observation": "Returned {count:0}, no Convert to Case button present in current drawer state."
+    },
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 select Status=Converted",
+      "exitCode": 0,
+      "observation": "No leads matched current filters in Converted state."
+    },
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 open Analytics view",
+      "exitCode": 0,
+      "observation": "Conversion Funnel, Time-to-Contact, and Lead Age Distribution sections rendered."
+    },
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 errors",
+      "exitCode": 0,
+      "observation": "No console errors captured during tested flows."
+    },
+    {
+      "command": "agent-browser --session 3d5704652f90__u1 network requests",
+      "exitCode": 0,
+      "observation": "Network evidence captured after reload, including leads.json/storm_candidates.json fetch and Supabase REST reads."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Default interactive snapshot refs did not include clickable table rows for opening LeadDrawer; required snapshot with -C cursor-interactive mode to discover row click targets.",
+      "resolved": true,
+      "resolution": "Used `agent-browser snapshot -i -C` and clicked cursor-interactive row refs.",
+      "affectedAssertions": [
+        "VAL-EXPAND-004",
+        "VAL-EXPAND-005",
+        "VAL-CROSS-005"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No Contacted or Converted leads available in current data/state; Status filter yielded empty results for both.",
+      "affectedAssertions": [
+        "VAL-EXPAND-004",
+        "VAL-EXPAND-005",
+        "VAL-CROSS-005"
+      ],
+      "quickFixAttempted": "Cleared filters, retried status filters, reopened leads, and verified no matching rows rendered."
+    },
+    {
+      "description": "Lead drawer mutation controls are disabled in read-only mode, so a New lead could not be advanced to Converted for conversion flow validation.",
+      "affectedAssertions": [
+        "VAL-EXPAND-005",
+        "VAL-CROSS-005"
+      ],
+      "quickFixAttempted": "Checked drawer controls/buttons and status selector state; all mutation controls were disabled."
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ]
+}

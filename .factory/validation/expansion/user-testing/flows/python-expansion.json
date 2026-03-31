@@ -1,0 +1,80 @@
+{
+  "surface": "python-test",
+  "groupId": "python-expansion",
+  "status": "pass",
+  "assertions": [
+    {
+      "id": "VAL-EXPAND-001",
+      "status": "pass",
+      "evidence": "Targeted unittest passed and log shows Broward scrape contacted >=3 distinct hosts/endpoints (Fort Lauderdale, county-wide ArcGIS, HCED Posse).",
+      "artifacts": [
+        "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/expansion/python-expansion/VAL-EXPAND-001.log"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-002",
+      "status": "pass",
+      "evidence": "Targeted unittests passed: county='broward' routes lookup_by_folio to bcpa.net and BCPA mock response populates owner_name, homestead=True, assessed_value=350000.",
+      "artifacts": [
+        "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/expansion/python-expansion/VAL-EXPAND-002.log"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-003",
+      "status": "pass",
+      "evidence": "Targeted unittests passed: score threshold includes >=75 and high-scoring candidate generates storm-origin leads (source='storm', source_detail='storm_event').",
+      "artifacts": [
+        "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/expansion/python-expansion/VAL-EXPAND-003.log"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-009",
+      "status": "pass",
+      "evidence": "Targeted normalization unittests passed: St/Street, Ave/Avenue, and Blvd/Boulevard variants normalize identically.",
+      "artifacts": [
+        "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/expansion/python-expansion/VAL-EXPAND-009.log"
+      ]
+    },
+    {
+      "id": "VAL-EXPAND-010",
+      "status": "pass",
+      "evidence": "Direct unittest passed with leads ['123 Main St', '123 Main Street'] on same date; deduplicate_leads returned exactly 1 unique lead.",
+      "artifacts": [
+        "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/expansion/python-expansion/VAL-EXPAND-010.log"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "command": "python3 -m unittest -v tests.test_broward_expansion.BrowardPermitsTests.test_broward_scrapes_multiple_endpoints",
+      "exitCode": 0,
+      "observation": "Ran 1 test, OK; output confirms >=3 Broward endpoint hosts contacted."
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_broward_expansion.BrowardPARoutingTests.test_lookup_by_folio_routes_to_bcpa_for_broward tests.test_broward_expansion.BrowardPARoutingTests.test_bcpa_lookup_returns_parsed_result",
+      "exitCode": 0,
+      "observation": "Ran 2 tests, OK; routing goes to bcpa.net and BCPA enrichment fields parsed/populated."
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_storm_to_lead_pipeline.BuildStormLeadsFromCandidatesTests.test_score_75_included tests.test_storm_to_lead_pipeline.BuildStormLeadsFromCandidatesTests.test_generates_leads_from_parcels",
+      "exitCode": 0,
+      "observation": "Ran 2 tests, OK; >=75 threshold processed and storm-origin leads generated from high-scoring candidate."
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_dedup.TestNormalizeAddress.test_st_abbreviated_to_street tests.test_dedup.TestNormalizeAddress.test_ave_abbreviated_to_avenue tests.test_dedup.TestNormalizeAddress.test_blvd_abbreviated_to_boulevard",
+      "exitCode": 0,
+      "observation": "Ran 3 tests, OK; abbreviation normalization equivalence validated."
+    },
+    {
+      "command": "python3 - <<'PY' ... (inline unittest asserting deduplicate_leads([123 Main St, 123 Main Street]) returns 1 unique) ... PY",
+      "exitCode": 0,
+      "observation": "Ran 1 inline test, OK; dedup reduced two normalized-equivalent addresses to one lead."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "python3",
+    "unittest"
+  ]
+}

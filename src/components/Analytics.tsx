@@ -8,6 +8,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  FunnelChart,
+  Funnel,
+  LabelList,
 } from "recharts";
 import type { Lead, DamageType, Case } from "@/types";
 import companyMetricsData from "@/data/companyMetrics.json";
@@ -164,6 +167,67 @@ export default function Analytics({
     Converted: "#10b981",
     Closed: "#94a3b8",
   };
+
+  // -----------------------------------------------------------------------
+  // Conversion Funnel Data
+  // -----------------------------------------------------------------------
+  const funnelOrder = ["New", "Contacted", "Converted"] as const;
+  const funnelCounts = funnelOrder.map((status) => ({
+    status,
+    count: leads.filter((l) => l.status === status).length,
+  }));
+  const funnelData = funnelCounts.map((item, idx) => {
+    const prevCount = idx === 0 ? leads.length : funnelCounts[idx - 1].count;
+    const rate = prevCount > 0 ? Math.round((item.count / prevCount) * 100) : 0;
+    return { ...item, rate };
+  });
+
+  // -----------------------------------------------------------------------
+  // Time-to-Contact Metric
+  // -----------------------------------------------------------------------
+  const timeToContactStats = useMemo(() => {
+    const contacted = leads.filter(
+      (l) => l.contactedAt && l.date,
+    );
+    if (contacted.length === 0) return null;
+    const durations = contacted.map((l) => {
+      const created = new Date(l.date).getTime();
+      const contactedAt = new Date(l.contactedAt!).getTime();
+      return (contactedAt - created) / (1000 * 60 * 60); // hours
+    });
+    const avgHours = durations.reduce((s, h) => s + h, 0) / durations.length;
+    const avgDays = avgHours / 24;
+    const minHours = Math.min(...durations);
+    const maxHours = Math.max(...durations);
+    return {
+      avgHours: Math.round(avgHours * 10) / 10,
+      avgDays: Math.round(avgDays * 10) / 10,
+      minHours: Math.round(minHours),
+      maxHours: Math.round(maxHours),
+      count: contacted.length,
+    };
+  }, [leads]);
+
+  // -----------------------------------------------------------------------
+  // Lead Age Distribution
+  // -----------------------------------------------------------------------
+  const ageBuckets = [
+    { label: "0-7d", min: 0, max: 7 },
+    { label: "8-30d", min: 8, max: 30 },
+    { label: "31-60d", min: 31, max: 60 },
+    { label: "60+d", min: 61, max: Infinity },
+  ];
+  const ageData = ageBuckets.map((bucket) => {
+    const now = Date.now();
+    const cutoff = now - bucket.max * 24 * 60 * 60 * 1000;
+    const cutoffMin = now - (bucket.min - 1) * 24 * 60 * 60 * 1000;
+    const count = leads.filter((l) => {
+      const d = new Date(l.date).getTime();
+      if (bucket.max === Infinity) return d <= cutoff;
+      return d >= cutoff && d <= cutoffMin;
+    }).length;
+    return { bucket: bucket.label, count };
+  });
 
   const companyKpis = useMemo(() => {
     if (!hasCompanyMetrics) return null;
@@ -581,6 +645,238 @@ export default function Analytics({
                   : 0}
               </p>
               <p className="text-xs text-slate-400 mt-0.5">Avg Score</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Row 4: Conversion Funnel + Time-to-Contact + Lead Age Distribution   */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Conversion Funnel */}
+        <div className="card px-6 py-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-1">
+            Conversion Funnel
+          </h2>
+          <p className="text-xs text-slate-400 mb-4">
+            Stage counts and stage-to-stage rates
+          </p>
+          <ResponsiveContainer width="100%" height={220}>
+            <FunnelChart>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const d = payload[0].payload;
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-lg">
+                        <p className="text-xs font-semibold text-slate-700 mb-1">
+                          {d.status}
+                        </p>
+                        <p className="text-sm font-bold text-zinc-900">
+                          {d.count} leads
+                        </p>
+                        {d.rate !== undefined && d._idx > 0 && (
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {d.rate}% from previous stage
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Funnel
+                dataKey="count"
+                data={funnelData.map((d, i) => ({ ...d, _idx: i }))}
+                isAnimationActive
+              >
+                <LabelList
+                  position="right"
+                  fill="#475569"
+                  stroke="none"
+                  dataKey="status"
+                  fontSize={12}
+                />
+                <LabelList
+                  position="center"
+                  fill="#ffffff"
+                  stroke="none"
+                  dataKey="count"
+                  fontSize={13}
+                  fontWeight="bold"
+                />
+                {funnelData.map((entry) => (
+                  <Cell
+                    key={entry.status}
+                    fill={
+                      entry.status === "New"
+                        ? "#3b82f6"
+                        : entry.status === "Contacted"
+                          ? "#f59e0b"
+                          : "#10b981"
+                    }
+                  />
+                ))}
+              </Funnel>
+            </FunnelChart>
+          </ResponsiveContainer>
+          {/* Stage-to-stage conversion rates */}
+          <div className="mt-3 space-y-2">
+            {funnelData.slice(1).map((d) => (
+              <div
+                key={d.status}
+                className="flex items-center justify-between text-xs"
+              >
+                <span className="text-slate-500">
+                  {funnelData[funnelData.findIndex((f) => f.status === d.status) - 1]?.status ?? "New"} → {d.status}
+                </span>
+                <span className="font-semibold text-slate-700">{d.rate}%</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between text-xs border-t border-slate-100 pt-2">
+              <span className="text-slate-500">Overall New→Converted</span>
+              <span className="font-semibold text-emerald-600">
+                {funnelData.length > 0
+                  ? Math.round((funnelData[funnelData.length - 1].count / funnelData[0].count) * 100)
+                  : 0}
+                %
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Time-to-Contact */}
+        <div className="card px-6 py-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-1">
+            Time-to-Contact
+          </h2>
+          <p className="text-xs text-slate-400 mb-5">
+            Average days from lead date to first contact
+          </p>
+          {timeToContactStats ? (
+            <div className="space-y-5">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-slate-900 score-number">
+                  {timeToContactStats.avgDays}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">days avg</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  ({timeToContactStats.avgHours}h)
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-base font-bold text-slate-700 score-number">
+                    {timeToContactStats.count}
+                  </p>
+                  <p className="text-xs text-slate-400">contacted</p>
+                </div>
+                <div>
+                  <p className="text-base font-bold text-emerald-600 score-number">
+                    {timeToContactStats.minHours}h
+                  </p>
+                  <p className="text-xs text-slate-400">fastest</p>
+                </div>
+                <div>
+                  <p className="text-base font-bold text-red-500 score-number">
+                    {timeToContactStats.maxHours}h
+                  </p>
+                  <p className="text-xs text-slate-400">slowest</p>
+                </div>
+              </div>
+              <div className="border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-between text-xs mb-2">
+                  <span className="text-slate-500">Contact rate</span>
+                  <span className="font-semibold text-slate-700">
+                    {leads.length > 0
+                      ? Math.round((timeToContactStats.count / leads.length) * 100)
+                      : 0}
+                    %
+                  </span>
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                    style={{
+                      width: `${
+                        leads.length > 0
+                          ? Math.round((timeToContactStats.count / leads.length) * 100)
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm text-slate-400">No contacted leads yet</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Contact data will appear once leads are marked as contacted
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Lead Age Distribution */}
+        <div className="card px-6 py-5">
+          <h2 className="text-sm font-semibold text-slate-700 mb-1">
+            Lead Age Distribution
+          </h2>
+          <p className="text-xs text-slate-400 mb-5">
+            How long leads have been in the pipeline
+          </p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart
+              data={ageData}
+              margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f1f5f9"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="bucket"
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
+              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                {ageData.map((entry) => {
+                  const isFresh = entry.bucket === "0-7d";
+                  const isStale = entry.bucket === "60+d";
+                  return (
+                    <Cell
+                      key={entry.bucket}
+                      fill={isFresh ? "#10b981" : isStale ? "#ef4444" : "#3a5ea8"}
+                    />
+                  );
+                })}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+              <span className="text-xs text-slate-500">Fresh 0–7d</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-sky-600" />
+              <span className="text-xs text-slate-500">8–60d</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-red-500" />
+              <span className="text-xs text-slate-500">Stale 60+d</span>
             </div>
           </div>
         </div>

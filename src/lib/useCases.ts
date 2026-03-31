@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { browserCanWrite, browserReadOnly, supabase } from "@/lib/supabase";
 import type { CaseRecord } from "@/lib/supabase";
 import type { Case, CaseStatusPhase } from "@/types";
+import { getFixtureCases, addFixtureCase, registerCaseStateSetter } from "@/data/fixtureState";
 
 type CasePatch = Partial<
   Pick<
@@ -63,6 +64,12 @@ export function useCases() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Register this hook's setter so fixture cases can update it
+  useEffect(() => {
+    const unregister = registerCaseStateSetter(setCases);
+    return unregister;
+  }, []);
+
   // Fetch all cases on mount
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +106,9 @@ export function useCases() {
         }
 
         if (!cancelled) {
-          setCases((data ?? []).map((r) => recordToCase(r as CaseRecord)));
+          const realCases = (data ?? []).map((r) => recordToCase(r as CaseRecord));
+          const fixtureCases = getFixtureCases();
+          setCases([...fixtureCases, ...realCases]);
         }
       })
       .then(finishLoading, finishLoading);
@@ -222,6 +231,9 @@ export function useCases() {
     }
 
     setCases((prev) => [newCase, ...prev]);
+    // Also register in fixture state so fixture-created cases are visible
+    // across the app without requiring Supabase writes
+    addFixtureCase(newCase);
     return newCase;
   }, []);
 

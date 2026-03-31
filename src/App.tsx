@@ -34,6 +34,7 @@ import CasesTable from "@/components/CasesTable";
 import CaseFilterBar from "@/components/CaseFilterBar";
 import CaseDrawer from "@/components/CaseDrawer";
 import ConvertToCaseModal from "@/components/ConvertToCaseModal";
+import FixtureConversionPage from "@/components/FixtureConversionPage";
 
 const DEFAULT_FILTERS: FilterState = {
   zip: "",
@@ -896,6 +897,10 @@ export default function App() {
               <Route
                 path="/analytics"
                 element={<Analytics leads={leads} cases={cases} />}
+              />
+              <Route
+                path="/fixtures/convert-case"
+                element={<FixtureConversionPage />}
               />
             </Routes>
           </div>

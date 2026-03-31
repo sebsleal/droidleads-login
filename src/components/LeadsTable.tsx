@@ -4,9 +4,15 @@ import type { Lead } from '@/types'
 import { formatDate, damageTypeColor, cn, displayOwnerName } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
 import ScoreBreakdownPopover from '@/components/ScoreBreakdownPopover'
+import Pagination, { type PageSize } from '@/components/Pagination'
 
 interface LeadsTableProps {
   leads: Lead[]
+  totalLeads: number
+  currentPage: number
+  pageSize: PageSize
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: PageSize) => void
   onSelectLead: (lead: Lead) => void
   selectedLeadId?: string
 }
@@ -25,7 +31,7 @@ interface ScorePopoverState {
   anchorRect: DOMRect
 }
 
-export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: LeadsTableProps) {
+export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, onPageChange, onPageSizeChange, onSelectLead, selectedLeadId }: LeadsTableProps) {
   const [scorePopover, setScorePopover] = useState<ScorePopoverState | null>(null)
 
   const handleScoreClick = useCallback((e: React.MouseEvent, lead: Lead) => {
@@ -51,8 +57,8 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
       {/* Count bar */}
       <div className="px-4 py-2.5 border-b border-zinc-50 flex items-center justify-between bg-zinc-50/50">
         <p className="text-[13px] text-zinc-500">
-          <span className="text-zinc-900 font-semibold score-number">{leads.length.toLocaleString()}</span>
-          {' '}{leads.length === 1 ? 'lead' : 'leads'} found
+          <span className="text-zinc-900 font-semibold score-number">{totalLeads.toLocaleString()}</span>
+          {' '}{totalLeads === 1 ? 'lead' : 'leads'} found
         </p>
         <p className="text-[11px] text-zinc-300">Click a row to view details</p>
       </div>
@@ -84,7 +90,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
               >
                 {/* Index */}
                 <td className="px-5 py-3 text-zinc-300 text-[11px] score-number">
-                  {idx + 1}
+                  {(currentPage - 1) * pageSize + idx + 1}
                 </td>
 
                 {/* Address */}
@@ -190,6 +196,14 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalLeads}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
 
       {scorePopover && (
         <ScoreBreakdownPopover

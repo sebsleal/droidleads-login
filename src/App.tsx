@@ -18,6 +18,7 @@ import {
 import { useTracking } from "@/lib/useTracking";
 import { useStormTracking } from "@/lib/useStormTracking";
 import { useCases } from "@/lib/useCases";
+import type { PageSize } from "@/components/Pagination";
 import Header from "@/components/Header";
 import StatsRow from "@/components/StatsRow";
 import FilterBar from "@/components/FilterBar";
@@ -103,6 +104,14 @@ export default function App() {
     null,
   );
 
+  // Pagination state for all three tables
+  const [leadsPage, setLeadsPage] = useState(1);
+  const [leadsPageSize, setLeadsPageSize] = useState<PageSize>(25);
+  const [stormPage, setStormPage] = useState(1);
+  const [stormPageSize, setStormPageSize] = useState<PageSize>(25);
+  const [casesPage, setCasesPage] = useState(1);
+  const [casesPageSize, setCasesPageSize] = useState<PageSize>(25);
+
   const {
     trackingMap,
     saveTracking,
@@ -167,6 +176,33 @@ export default function App() {
     setSelectedStormCandidate(null);
     setSelectedCase(null);
   }, [location.pathname]);
+
+  // Reset leads pagination to page 1 when any filter, search, sort, or page size changes
+  useEffect(() => {
+    setLeadsPage(1);
+  }, [
+    filters.zip, filters.damageType, filters.scoreTier, filters.dateRange,
+    filters.sortOrder, filters.search, filters.hasContact, filters.absenteeOwner,
+    filters.underpaid, filters.noContractor, filters.stormFirst, filters.county,
+    filters.statusFilter, filters.insurerFilter, filters.femaFilter, leadsPageSize,
+  ]);
+
+  // Reset storm pagination to page 1 when any storm filter or page size changes
+  useEffect(() => {
+    setStormPage(1);
+  }, [
+    stormFilters.county, stormFilters.eventType, stormFilters.femaTagged,
+    stormFilters.scoreTier, stormFilters.dateRange, stormFilters.candidateType,
+    stormPageSize,
+  ]);
+
+  // Reset cases pagination to page 1 when any case filter or page size changes
+  useEffect(() => {
+    setCasesPage(1);
+  }, [
+    caseFilters.search, caseFilters.statusGroup, caseFilters.insuranceCompany,
+    caseFilters.perilType, caseFilters.dateRange, casesPageSize,
+  ]);
 
   const leads = useMemo(() => {
     if (trackingMap.size === 0) return rawLeads;
@@ -298,6 +334,12 @@ export default function App() {
     });
   }, [leads, filters]);
 
+  // Paginated lead slices
+  const paginatedLeads = useMemo(() => {
+    const start = (leadsPage - 1) * leadsPageSize;
+    return filteredLeads.slice(start, start + leadsPageSize);
+  }, [filteredLeads, leadsPage, leadsPageSize]);
+
   const availableLeadInsurers = useMemo(
     () =>
       Array.from(
@@ -365,6 +407,12 @@ export default function App() {
       return true;
     });
   }, [stormCandidates, stormFilters]);
+
+  // Paginated storm candidate slices
+  const paginatedStormCandidates = useMemo(() => {
+    const start = (stormPage - 1) * stormPageSize;
+    return filteredStormCandidates.slice(start, start + stormPageSize);
+  }, [filteredStormCandidates, stormPage, stormPageSize]);
 
   const availableInsurers = useMemo(
     () =>
@@ -434,6 +482,12 @@ export default function App() {
       return true;
     });
   }, [cases, caseFilters]);
+
+  // Paginated case slices
+  const paginatedCases = useMemo(() => {
+    const start = (casesPage - 1) * casesPageSize;
+    return filteredCases.slice(start, start + casesPageSize);
+  }, [filteredCases, casesPage, casesPageSize]);
 
   const syncedSelectedCase = useMemo(() => {
     if (!selectedCase) return null;
@@ -708,7 +762,12 @@ export default function App() {
                         </div>
                       ) : (
                         <LeadsTable
-                          leads={filteredLeads}
+                          leads={paginatedLeads}
+                          totalLeads={filteredLeads.length}
+                          currentPage={leadsPage}
+                          pageSize={leadsPageSize}
+                          onPageChange={setLeadsPage}
+                          onPageSizeChange={setLeadsPageSize}
                           onSelectLead={setSelectedLead}
                           selectedLeadId={selectedLead?.id}
                         />
@@ -729,7 +788,12 @@ export default function App() {
                     />
                     <div className="mt-4">
                       <StormWatchTable
-                        candidates={filteredStormCandidates}
+                        candidates={paginatedStormCandidates}
+                        totalCandidates={filteredStormCandidates.length}
+                        currentPage={stormPage}
+                        pageSize={stormPageSize}
+                        onPageChange={setStormPage}
+                        onPageSizeChange={setStormPageSize}
                         onSelectCandidate={setSelectedStormCandidate}
                         selectedCandidateId={selectedStormCandidate?.id}
                       />
@@ -750,7 +814,12 @@ export default function App() {
                     />
                     <div className="mt-4">
                       <CasesTable
-                        cases={filteredCases}
+                        cases={paginatedCases}
+                        totalCases={filteredCases.length}
+                        currentPage={casesPage}
+                        pageSize={casesPageSize}
+                        onPageChange={setCasesPage}
+                        onPageSizeChange={setCasesPageSize}
                         onSelectCase={setSelectedCase}
                         selectedCaseId={syncedSelectedCase?.id}
                       />

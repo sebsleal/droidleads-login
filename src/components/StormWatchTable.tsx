@@ -3,9 +3,15 @@ import type { StormCandidate, StormWatchStatus } from '@/types'
 import { COUNTY_LABELS } from '@/types'
 import { cn, formatDate } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
+import Pagination, { type PageSize } from '@/components/Pagination'
 
 interface StormWatchTableProps {
   candidates: StormCandidate[]
+  totalCandidates: number
+  currentPage: number
+  pageSize: PageSize
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: PageSize) => void
   onSelectCandidate: (candidate: StormCandidate) => void
   selectedCandidateId?: string
 }
@@ -21,6 +27,11 @@ const STATUS_STYLES: Record<StormWatchStatus, string> = {
 
 export default function StormWatchTable({
   candidates,
+  totalCandidates,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   onSelectCandidate,
   selectedCandidateId,
 }: StormWatchTableProps) {
@@ -40,8 +51,8 @@ export default function StormWatchTable({
     <div className="card overflow-hidden">
       <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
         <p className="text-sm font-medium text-slate-700">
-          <span className="text-zinc-900 font-semibold score-number">{candidates.length}</span>{' '}
-          {candidates.length === 1 ? 'candidate' : 'candidates'} found
+          <span className="text-zinc-900 font-semibold score-number">{totalCandidates}</span>{' '}
+          {totalCandidates === 1 ? 'candidate' : 'candidates'} found
         </p>
         <p className="text-xs text-slate-400">Area-based opportunities stay separate from permit leads</p>
       </div>
@@ -87,7 +98,7 @@ export default function StormWatchTable({
                   selectedCandidateId === candidate.id && 'bg-blue-50/60',
                 )}
               >
-                <td className="px-5 py-3.5 text-slate-300 text-xs score-number">{index + 1}</td>
+                <td className="px-5 py-3.5 text-slate-300 text-xs score-number">{(currentPage - 1) * pageSize + index + 1}</td>
 
                 <td className="px-3 py-3.5">
                   <div className="font-medium text-slate-900 truncate max-w-[220px]">
@@ -152,6 +163,14 @@ export default function StormWatchTable({
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalCandidates}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   )
 }

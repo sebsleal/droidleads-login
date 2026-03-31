@@ -1,9 +1,15 @@
 import { ChevronRight, Briefcase } from 'lucide-react'
 import type { Case } from '@/types'
 import { cn } from '@/lib/utils'
+import Pagination, { type PageSize } from '@/components/Pagination'
 
 interface CasesTableProps {
   cases: Case[]
+  totalCases: number
+  currentPage: number
+  pageSize: PageSize
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: PageSize) => void
   onSelectCase: (c: Case) => void
   selectedCaseId?: string
 }
@@ -35,7 +41,7 @@ function perilBadgeColor(peril: string): string {
   return 'bg-slate-100 text-slate-600 border-slate-200'
 }
 
-export default function CasesTable({ cases, onSelectCase, selectedCaseId }: CasesTableProps) {
+export default function CasesTable({ cases, totalCases, currentPage, pageSize, onPageChange, onPageSizeChange, onSelectCase, selectedCaseId }: CasesTableProps) {
   if (cases.length === 0) {
     return (
       <div className="card px-6 py-16 text-center">
@@ -167,12 +173,13 @@ export default function CasesTable({ cases, onSelectCase, selectedCaseId }: Case
         })}
       </div>
 
-      {/* Footer count */}
-      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-        <p className="text-xs text-slate-400">
-          {cases.length} {cases.length === 1 ? 'case' : 'cases'}
-        </p>
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalCases}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   )
 }

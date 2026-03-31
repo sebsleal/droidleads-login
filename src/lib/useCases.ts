@@ -162,5 +162,68 @@ export function useCases() {
     return true;
   }, []);
 
-  return { cases, saveCase, loading, readOnly: browserReadOnly };
+  const createCase = useCallback(async (caseData: {
+    clientName: string;
+    lossAddress: string;
+    mailingAddress?: string;
+    lossDate?: string;
+    perilType?: string;
+    insuranceCompany?: string;
+    phone?: string;
+    email?: string;
+    claimNumber?: string;
+    policyNumber?: string;
+    estimatedLoss?: number;
+    notes?: string;
+  }): Promise<Case | null> => {
+    const now = new Date().toISOString();
+    const fileNumber = `CRA-${Date.now().toString(36).toUpperCase()}`;
+
+    const newCaseRecord: CaseRecord = {
+      id: crypto.randomUUID(),
+      file_number: fileNumber,
+      client_name: caseData.clientName,
+      loss_address: caseData.lossAddress,
+      mailing_address: caseData.mailingAddress ?? null,
+      loss_date: caseData.lossDate ?? null,
+      peril_type: caseData.perilType ?? null,
+      insurance_company: caseData.insuranceCompany ?? null,
+      policy_number: caseData.policyNumber ?? null,
+      claim_number: caseData.claimNumber ?? null,
+      phone: caseData.phone ?? null,
+      email: caseData.email ?? null,
+      status_phase: "OpenPhase: Claim Originated",
+      fee_rate: null,
+      fee_disbursed: null,
+      estimated_loss: caseData.estimatedLoss ?? null,
+      date_logged: now,
+      lor: false,
+      plumbing_invoice: false,
+      water_mitigation: false,
+      estimate_date: null,
+      inspection_date: null,
+      srl_date: null,
+      cdl1_date: null,
+      cdl2_date: null,
+      cdl3_date: null,
+      notes: caseData.notes ?? null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    const newCase = recordToCase(newCaseRecord);
+
+    if (browserCanWrite && supabase) {
+      const { error } = await supabase.from("cases").insert(newCaseRecord);
+      if (error) {
+        console.warn("[cases] Failed to create case:", error.message);
+        return null;
+      }
+    }
+
+    setCases((prev) => [newCase, ...prev]);
+    return newCase;
+  }, []);
+
+  return { cases, saveCase, createCase, loading, readOnly: browserReadOnly };
 }

@@ -48,6 +48,7 @@ interface LeadDrawerProps {
   onClose: () => void;
   onUpdateStatus: (id: string, status: Lead["status"]) => void;
   onUpdateTracking?: (id: string, patch: TrackingPatch) => void;
+  onConvertToCase?: (lead: Lead) => void;
   readOnly?: boolean;
 }
 
@@ -87,6 +88,7 @@ export default function LeadDrawer({
   onClose,
   onUpdateStatus,
   onUpdateTracking,
+  onConvertToCase,
   readOnly = false,
 }: LeadDrawerProps) {
   const [copied, setCopied] = useState(false);
@@ -848,6 +850,15 @@ export default function LeadDrawer({
 
         {/* Footer */}
         <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          {lead.status === "Converted" && onConvertToCase && (
+            <button
+              onClick={() => onConvertToCase(lead)}
+              className="w-full mb-2 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium
+                         hover:bg-emerald-700 transition-colors shadow-sm"
+            >
+              Convert to Case
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-lg border border-slate-200 text-sm font-medium

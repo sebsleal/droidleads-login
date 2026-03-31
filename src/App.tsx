@@ -33,6 +33,7 @@ import StormWatchDrawer from "@/components/StormWatchDrawer";
 import CasesTable from "@/components/CasesTable";
 import CaseFilterBar from "@/components/CaseFilterBar";
 import CaseDrawer from "@/components/CaseDrawer";
+import ConvertToCaseModal from "@/components/ConvertToCaseModal";
 
 const DEFAULT_FILTERS: FilterState = {
   zip: "",
@@ -97,6 +98,8 @@ export default function App() {
   const [selectedStormCandidate, setSelectedStormCandidate] =
     useState<StormCandidate | null>(null);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
+  const [caseToOpen, setCaseToOpen] = useState<Case | null>(null);
   const [rawLeads, setRawLeads] = useState<Lead[]>([]);
   const [rawStormCandidates, setRawStormCandidates] = useState<
     StormCandidate[]
@@ -126,7 +129,7 @@ export default function App() {
     saveTracking: saveStormTracking,
     readOnly: stormReadOnly,
   } = useStormTracking();
-  const { cases, saveCase, loading: isLoadingCases, readOnly: caseReadOnly } = useCases();
+  const { cases, saveCase, createCase, loading: isLoadingCases, readOnly: caseReadOnly } = useCases();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -536,9 +539,10 @@ export default function App() {
   }, [filteredCases, casesPage, casesPageSize]);
 
   const syncedSelectedCase = useMemo(() => {
+    if (caseToOpen) return caseToOpen;
     if (!selectedCase) return null;
     return cases.find((c) => c.id === selectedCase.id) ?? selectedCase;
-  }, [selectedCase, cases]);
+  }, [caseToOpen, selectedCase, cases]);
 
   const leadStats = useMemo(
     () => ({
@@ -597,6 +601,19 @@ export default function App() {
       setSelectedLead((previous) =>
         previous ? { ...previous, ...patch } : null,
       );
+    }
+  }
+
+  function handleConvertToCase(lead: Lead) {
+    setConvertingLead(lead);
+  }
+
+  async function handleCaseCreate(caseData: Parameters<typeof createCase>[0]) {
+    const newCase = await createCase(caseData);
+    setConvertingLead(null);
+    if (newCase) {
+      setCaseToOpen(newCase);
+      navigate("/cases");
     }
   }
 
@@ -891,7 +908,16 @@ export default function App() {
           onClose={() => setSelectedLead(null)}
           onUpdateStatus={handleUpdateStatus}
           onUpdateTracking={handleUpdateTracking}
+          onConvertToCase={handleConvertToCase}
           readOnly={leadReadOnly}
+        />
+      )}
+
+      {convertingLead && (
+        <ConvertToCaseModal
+          lead={convertingLead}
+          onClose={() => setConvertingLead(null)}
+          onConvert={handleCaseCreate}
         />
       )}
 

@@ -3,8 +3,7 @@ Multi-county building permits scraper — ArcGIS Feature Services.
 
 Supported counties (via COUNTY_CONFIGS):
   - miami-dade: Active — ArcGIS Feature Service confirmed working
-  - broward:    Disabled — flip enabled=True once ArcGIS URL confirmed
-                via https://geohub-bcgis.opendata.arcgis.com → "building permits"
+  - broward:    Active — Fort Lauderdale MapServer + Broward REST View FeatureServer
   - palm-beach: Disabled — flip enabled=True once ArcGIS URL confirmed
                 via https://opendata2-pbcgov.opendata.arcgis.com → "permits"
 
@@ -79,28 +78,74 @@ COUNTY_CONFIGS: dict[str, dict] = {
         "enabled": True,
     },
     "broward": {
-        # Fort Lauderdale BuildingPermitTracker — fresh data through 2026.
-        # Previous endpoint (GeneralPurpose/gisdata/MapServer/27) was stale (last update 2021).
-        # County-wide Broward endpoint (gis.broward.org) is offline (403/503).
-        # Covers Fort Lauderdale only (~200K people, largest Broward city).
-        # SUBMITDT is the only reliable date field; APPROVEDT is null on most records.
-        "url": "https://gis.fortlauderdale.gov/arcgis/rest/services/BuildingPermitTracker/BuildingPermitTracker/MapServer/0/query",
-        "where_field":       "PERMITDESC",
-        "out_fields": (
-            "PERMITID,PERMITTYPE,PERMITDESC,PERMITSTAT,SUBMITDT,"
-            "PARCELID,FULLADDR,OWNERNAME,OWNERADDR,OWNERCITY,OWNERZIP,"
-            "CONTRACTOR,CONTRACTPH,ESTCOST,LASTUPDATEDATE"
-        ),
-        "date_field":        "SUBMITDT",
-        "address_field":     "FULLADDR",
-        "owner_field":       "OWNERNAME",
-        "folio_field":       "PARCELID",
-        "phone_field":       "CONTRACTPH",
-        "contractor_field":  "CONTRACTOR",
-        "value_field":       "ESTCOST",
-        "inspection_field":  "LASTUPDATEDATE",
-        "city_field":        None,
-        "default_city":      "Fort Lauderdale",
+        # Multi-city Broward permit scraping.
+        # Individual city endpoints are defined in "endpoints" sub-config.
+        # Each endpoint is tried in turn; leads are deduplicated after collection.
+        # SUBMITDT is the reliable date field across all Broward MapServers;
+        # APPROVEDT is null on most records.
+        #
+        # Confirmed working (2026-03):
+        #   - Fort Lauderdale: https://gis.fortlauderdale.gov (MapServer)
+        #   - Broward REST View: https://services5.arcgis.com/DllnbBENKfts6TQD (FeatureServer)
+        #     Covers unincorporated Broward + municipalities that report to the county.
+        #
+        # Researched but not available / not working (2026-03):
+        #   - Hollywood GIS portal: requires authentication (HTTP 499)
+        #   - Pembroke Pines / Coral Springs / Pompano Beach: no public ArcGIS
+        #     endpoints found; cities use Click2Gov web forms instead.
+        #   - Broward County GIS: gis.broward.org returns 403/503.
+        #
+        # BCPA (web.bcpa.net): No public JSON API confirmed. For Broward PA
+        # enrichment use the BCPA web map at https://gisweb-adapters.bcpa.net/
+        # or scrape the angular SPA — see scrapers/property.py BCPA integration.
+        #
+        "endpoints": [
+            {
+                "name":       "fort-lauderdale",
+                "url": (
+                    "https://gis.fortlauderdale.gov/arcgis/rest/services/"
+                    "BuildingPermitTracker/BuildingPermitTracker/MapServer/0/query"
+                ),
+                "where_field":  "PERMITDESC",
+                "out_fields": (
+                    "PERMITID,PERMITTYPE,PERMITDESC,PERMITSTAT,SUBMITDT,"
+                    "PARCELID,FULLADDR,OWNERNAME,OWNERADDR,OWNERCITY,OWNERZIP,"
+                    "CONTRACTOR,CONTRACTPH,ESTCOST,LASTUPDATEDATE"
+                ),
+                "date_field":   "SUBMITDT",
+                "address_field": "FULLADDR",
+                "owner_field":  "OWNERNAME",
+                "folio_field":  "PARCELID",
+                "phone_field":  "CONTRACTPH",
+                "contractor_field": "CONTRACTOR",
+                "value_field":   "ESTCOST",
+                "inspection_field": "LASTUPDATEDATE",
+                "city_field":    None,
+                "default_city":  "Fort Lauderdale",
+            },
+            {
+                "name":        "broward-county-wide",
+                "url": (
+                    "https://services5.arcgis.com/DllnbBENKfts6TQD/arcgis/rest/services/"
+                    "Building_Permit_REST_View/FeatureServer/0/query"
+                ),
+                "where_field":  "description",
+                "out_fields": (
+                    "PermitID,Address,work_type,submissionDate,"
+                    "applicantName,applicantPhone,total_cost"
+                ),
+                "date_field":   "submissionDate",
+                "address_field": "Address",
+                "owner_field":  "applicantName",
+                "folio_field":   None,
+                "phone_field":   "applicantPhone",
+                "contractor_field": None,
+                "value_field":   "total_cost",
+                "inspection_field": None,
+                "city_field":    None,
+                "default_city":  "Broward County",
+            },
+        ],
         # MapServer rejects WHERE clauses with >~15 LIKE conditions.
         # Use a short core list for the API; full DAMAGE_KEYWORDS applied locally.
         "where_keywords": [
@@ -186,47 +231,33 @@ def classify_damage_type(permit_type: str, work_desc: str) -> str:
     return "Roof"
 
 
-def scrape_damage_permits(
-    county: str = "miami-dade",
-    max_records: int = 500,
-    lookback_days: int = 90,
+def _scrape_endpoint(
+    endpoint: dict,
+    county: str,
+    max_records: int,
+    lookback_days: int,
 ) -> list[dict[str, Any]]:
     """
-    Fetch damage-related building permits for the given county from its
-    ArcGIS Feature Service.
+    Fetch and normalize damage permits from a single ArcGIS endpoint.
 
-    Returns a list of normalised lead dicts ready for dedup and insert.
-    Each lead dict includes a 'county' field with the county slug.
+    Returns lead dicts with 'county' set to the county slug.
     """
-    config = COUNTY_CONFIGS.get(county)
-    if not config:
-        print(f"[permits] Unknown county '{county}' — skipping")
-        return []
-    if not config["enabled"]:
-        print(f"[permits] County '{county}' is disabled — skipping")
-        return []
-    if not config["url"]:
-        print(f"[permits] County '{county}' has no URL configured — skipping")
+    url = endpoint.get("url")
+    if not url:
         return []
 
     since_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
-    where_field = config["where_field"]
-    date_field = config["date_field"]
-    date_format = config.get("date_format", "iso")
+    where_field = endpoint["where_field"]
+    date_field = endpoint["date_field"]
 
-    query_keywords = config.get("where_keywords", DAMAGE_KEYWORDS)
+    query_keywords = endpoint.get("where_keywords", DAMAGE_KEYWORDS)
     kw_clauses = [f"{where_field} LIKE '%{kw}%'" for kw in query_keywords]
-
-    if date_format == "epoch_ms":
-        since_epoch_ms = int(since_dt.timestamp() * 1000)
-        where = f"{date_field} >= {since_epoch_ms} AND ({' OR '.join(kw_clauses)})"
-    else:
-        since = since_dt.strftime("%Y-%m-%d")
-        where = f"{date_field} >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
+    since = since_dt.strftime("%Y-%m-%d")
+    where = f"{date_field} >= DATE '{since}' AND ({' OR '.join(kw_clauses)})"
 
     base_params = {
         "where": where,
-        "outFields": config["out_fields"],
+        "outFields": endpoint["out_fields"],
         "resultRecordCount": min(max_records, 1000),
         "orderByFields": f"{date_field} DESC",
         "f": "json",
@@ -234,47 +265,48 @@ def scrape_damage_permits(
 
     all_features = []
     offset = 0
+    endpoint_name = endpoint.get("name", "unknown")
     try:
         while True:
             params = {**base_params, "resultOffset": offset}
-            resp = requests.get(config["url"], params=params, timeout=30)
+            resp = requests.get(url, params=params, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             if "error" in data:
-                print(f"[permits] ArcGIS error ({county}): {data['error']}")
+                print(f"[permits] ArcGIS error ({endpoint_name}): {data['error']}")
                 break
             features = data.get("features", [])
             all_features.extend(features)
             if not data.get("exceededTransferLimit", False) or len(all_features) >= max_records:
                 break
             offset += len(features)
-            print(f"[permits] {county}: paginating... fetched {len(all_features)} so far")
+            print(f"[permits] {endpoint_name}: paginating... fetched {len(all_features)} so far")
     except requests.RequestException as e:
-        print(f"[permits] Fetch error ({county}): {e}")
+        print(f"[permits] Fetch error ({endpoint_name}): {e}")
         return []
 
     results: list[dict[str, Any]] = []
-
-    addr_field       = config["address_field"]
-    owner_field      = config["owner_field"]
-    folio_field      = config["folio_field"]
-    phone_field      = config["phone_field"]
-    contractor_field = config["contractor_field"]
-    value_field      = config.get("value_field")
-    city_field       = config["city_field"]
-    default_city     = config["default_city"]
-    date_format      = config.get("date_format", "iso")
+    addr_field = endpoint["address_field"]
+    owner_field = endpoint["owner_field"]
+    folio_field = endpoint["folio_field"]
+    phone_field = endpoint["phone_field"]
+    contractor_field = endpoint["contractor_field"]
+    value_field = endpoint.get("value_field")
+    city_field = endpoint["city_field"]
+    endpoint_default_city = endpoint["default_city"]
 
     for feat in all_features:
         attrs = feat.get("attributes", {})
-        permit_type = (attrs.get("PermitType") or attrs.get("PERMITTYPE") or attrs.get("WorkType") or attrs.get("TYPE") or "").strip()
+        permit_type = (
+            attrs.get("PermitType") or attrs.get("PERMITTYPE")
+            or attrs.get("WorkType") or attrs.get("TYPE") or ""
+        ).strip()
         work_desc = (attrs.get(where_field) or "").strip()
 
         if not is_damage_related(permit_type, work_desc):
             continue
 
-        raw_owner = (attrs.get(owner_field) or "").strip()
-        # Strip joint-ownership suffixes
+        raw_owner = (attrs.get(owner_field) or "").strip() if owner_field else ""
         for suffix in [" &W ", " &H ", " & ", " ETAL", " TR ", " EST "]:
             idx = raw_owner.upper().find(suffix)
             if idx > 0:
@@ -283,8 +315,6 @@ def scrape_damage_permits(
 
         address = (attrs.get(addr_field) or "Unknown Address").strip().title()
 
-        # Date: ArcGIS esriFieldTypeDate returns epoch_ms integers in responses
-        # regardless of how the WHERE clause is expressed.
         raw_date = attrs.get(date_field)
         if isinstance(raw_date, (int, float)) and raw_date > 1_000_000_000:
             try:
@@ -296,14 +326,16 @@ def scrape_damage_permits(
         else:
             permit_date = str(raw_date or "")[:10]
 
-        city = (attrs.get(city_field) or default_city if city_field else default_city)
-        city = (city or default_city).strip().title() or default_city
-        folio = (attrs.get(folio_field) or "").strip()
+        # Use endpoint's explicit city field, else the endpoint's default city name
+        raw_city = attrs.get(city_field) if city_field else None
+        city = (raw_city or endpoint_default_city or "").strip().title()
+        if not city:
+            city = endpoint_default_city or "Broward"
+
+        folio = (attrs.get(folio_field) or "").strip() if folio_field else ""
         phone = (attrs.get(phone_field) or "").strip() if phone_field else None
-        phone = phone or None
         contractor = (attrs.get(contractor_field) or "").strip() if contractor_field else None
 
-        # Permit value — important for underpayment detection and scoring
         permit_value = 0
         if value_field:
             raw_val = attrs.get(value_field)
@@ -331,11 +363,74 @@ def scrape_damage_permits(
             "status": "New",
             "contact_email": None,
             "contact_phone": phone,
-            "county": config.get("county_slug", county),
+            "county": county,
         })
 
-    print(f"[permits] {county}: fetched {len(all_features)} records, kept {len(results)} damage-related permits")
+    print(f"[permits] {endpoint_name}: fetched {len(all_features)} records, kept {len(results)} damage-related permits")
     return results
+
+
+def scrape_damage_permits(
+    county: str = "miami-dade",
+    max_records: int = 500,
+    lookback_days: int = 90,
+) -> list[dict[str, Any]]:
+    """
+    Fetch damage-related building permits for the given county.
+
+    Supports two config structures:
+      - Single-endpoint (miami-dade, palm-beach): uses `url` key directly
+      - Multi-endpoint (broward): iterates over `endpoints` list, aggregates results
+
+    Returns a list of normalised lead dicts ready for dedup and insert.
+    Each lead dict includes a 'county' field set to the county slug.
+    """
+    config = COUNTY_CONFIGS.get(county)
+    if not config:
+        print(f"[permits] Unknown county '{county}' — skipping")
+        return []
+    if not config.get("enabled", False):
+        print(f"[permits] County '{county}' is disabled — skipping")
+        return []
+
+    # Multi-endpoint county: Broward has an "endpoints" list
+    endpoints = config.get("endpoints")
+    if endpoints:
+        all_results: list[dict[str, Any]] = []
+        # Collect up to max_records per endpoint
+        per_endpoint = min(max_records, 500)
+        for endpoint in endpoints:
+            results = _scrape_endpoint(endpoint, county, per_endpoint, lookback_days)
+            all_results.extend(results)
+            print(f"[permits] {county}: total so far {len(all_results)} damage-related permits")
+            if len(all_results) >= max_records:
+                break
+        return all_results[:max_records]
+
+    # Single-endpoint county (existing logic for miami-dade, palm-beach)
+    if not config.get("url"):
+        print(f"[permits] County '{county}' has no URL configured — skipping")
+        return []
+
+    # Build a synthetic single-endpoint dict for _scrape_endpoint
+    single_endpoint = {
+        "name":        county,
+        "url":         config["url"],
+        "where_field": config["where_field"],
+        "out_fields":  config["out_fields"],
+        "date_field":  config["date_field"],
+        "address_field":    config["address_field"],
+        "owner_field":     config["owner_field"],
+        "folio_field":     config["folio_field"],
+        "phone_field":      config["phone_field"],
+        "contractor_field": config["contractor_field"],
+        "value_field":      config.get("value_field"),
+        "inspection_field":  config.get("inspection_field"),
+        "city_field":       config["city_field"],
+        "default_city":     config["default_city"],
+        "where_keywords":   config.get("where_keywords", DAMAGE_KEYWORDS),
+    }
+    return _scrape_endpoint(single_endpoint, county, max_records, lookback_days)
 
 
 if __name__ == "__main__":

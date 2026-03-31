@@ -1,39 +1,70 @@
 """
-Miami-Dade Property Appraiser deep lookup.
+Property Appraiser enrichment.
 
-Uses the PA public web service to retrieve per-folio:
+County-aware routing:
+  - county == "miami-dade"  → Miami-Dade PA (apps.miamidadepa.gov)
+  - county == "broward"     → Broward County PA (web.bcpa.net BCPA web service)
+
+Each lookup returns:
   - Owner name + mailing address
   - ZIP code
   - Homestead exemption status (owner-occupied = warmer lead)
   - Assessed value (prioritise higher-value properties)
-
-API endpoint: https://apps.miamidadepa.gov/PApublicServiceProxy/PaServicesProxy.ashx
 """
 
 import time
 import requests
 from typing import Any
 
-PA_API_URL = (
+# ---------------------------------------------------------------------------
+# Miami-Dade PA
+# ---------------------------------------------------------------------------
+MIAMI_DADE_PA_URL = (
     "https://apps.miamidadepa.gov/PApublicServiceProxy/PaServicesProxy.ashx"
 )
 
-HEADERS = {
+MD_PA_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     "Accept": "application/json",
     "Referer": "https://apps.miamidadepa.gov/propertysearch/",
 }
 
+# ---------------------------------------------------------------------------
+# Broward County PA (BCPA) — web.bcpa.net
+# ---------------------------------------------------------------------------
+# BCPA provides a web-service endpoint for folio lookups.
+# The Angular SPA at https://web.bcpa.net/bcpaclient/ hits this proxy:
+BCPA_PA_URL = (
+    "https://web.bcpa.net/bcpaclient/api/property"
+)
 
-def lookup_by_folio(folio_number: str) -> dict[str, Any] | None:
+BCPA_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    "Accept": "application/json",
+    "Referer": "https://web.bcpa.net/bcpaclient/",
+}
+
+
+def lookup_by_folio(folio_number: str, county: str = "miami-dade") -> dict[str, Any] | None:
     """
-    Look up detailed property info from Miami-Dade Property Appraiser.
+    Look up detailed property info from the appropriate county Property Appraiser.
+
+    County routing:
+      - "miami-dade" (default): Miami-Dade PA API
+      - "broward": Broward County PA (BCPA) API
 
     Returns dict with keys:
         owner_name, mailing_address, mailing_city, mailing_state, mailing_zip,
         site_zip, homestead, assessed_value
     or None if not found / request failed.
     """
+    if county == "broward":
+        return _lookup_by_folio_bcpa(folio_number)
+    return _lookup_by_folio_miami_dade(folio_number)
+
+
+def _lookup_by_folio_miami_dade(folio_number: str) -> dict[str, Any] | None:
+    """Look up property info from Miami-Dade Property Appraiser."""
     folio_clean = folio_number.replace("-", "").strip()
     if not folio_clean:
         return None
@@ -44,7 +75,7 @@ def lookup_by_folio(folio_number: str) -> dict[str, Any] | None:
         "clientAppName": "PropertySearch",
     }
     try:
-        r = requests.get(PA_API_URL, params=params, headers=HEADERS, timeout=15)
+        r = requests.get(MIAMI_DADE_PA_URL, params=params, headers=MD_PA_HEADERS, timeout=15)
         if r.status_code == 404:
             return None
         r.raise_for_status()
@@ -52,13 +83,41 @@ def lookup_by_folio(folio_number: str) -> dict[str, Any] | None:
             return None
         data = r.json()
     except Exception as e:
-        print(f"  [PA] Lookup failed for folio {folio_number}: {e}")
+        print(f"  [MD-PA] Lookup failed for folio {folio_number}: {e}")
         return None
 
-    return _parse(data, folio_number)
+    return _parse_miami_dade(data, folio_number)
 
 
-def _parse(data: dict, folio_number: str) -> dict[str, Any] | None:
+def _lookup_by_folio_bcpa(folio_number: str) -> dict[str, Any] | None:
+    """
+    Look up property info from Broward County Property Appraiser (BCPA).
+
+    BCPA folio numbers use the format XX-XXXX-XXX-XXXX (with hyphens)
+    or a 13-digit numeric string. Both formats are accepted.
+    """
+    folio_clean = folio_number.replace("-", "").strip()
+    if not folio_clean:
+        return None
+
+    # BCPA accepts folio in query string — try with and without hyphens
+    params = {"folio": folio_clean}
+    try:
+        r = requests.get(BCPA_PA_URL, params=params, headers=BCPA_HEADERS, timeout=15)
+        if r.status_code in (404, 400):
+            return None
+        r.raise_for_status()
+        if not r.text.strip():
+            return None
+        data = r.json()
+    except Exception as e:
+        print(f"  [BCPA] Lookup failed for folio {folio_number}: {e}")
+        return None
+
+    return _parse_bcpa(data, folio_number)
+
+
+def _parse_miami_dade(data: dict, folio_number: str) -> dict[str, Any] | None:
     """Parse the PA web service response."""
     if not isinstance(data, dict):
         return None
@@ -129,6 +188,129 @@ def _parse(data: dict, folio_number: str) -> dict[str, Any] | None:
     }
 
 
+def _parse_bcpa(data: dict, folio_number: str) -> dict[str, Any] | None:
+    """
+    Parse the BCPA (Broward County Property Appraiser) API response.
+
+    BCPA JSON shape (preliminary — adjust field names once live response is captured):
+    {
+      "owner": "JOHN AND JANE DOE",
+      "mailing_address": "123 MAILING ST",
+      "mailing_city": "FORT LAUDERDALE",
+      "mailing_state": "FL",
+      "mailing_zip": "33301",
+      "site_zip": "33312",
+      "homestead": true,
+      "assessed_value": 350000,
+      "year_built": 1985,
+      "roof_age": 40,
+    }
+
+    If the actual BCPA API returns a different shape, adjust the field
+    accessors below to match. Logging prints the raw response so mismatches
+    are visible in scraper output.
+    """
+    if not isinstance(data, dict):
+        print(f"  [BCPA] Unexpected response type for folio {folio_number}: {type(data)}")
+        return None
+
+    # Log raw response keys so we can adjust field names when live data arrives
+    print(f"  [BCPA] Response keys for folio {folio_number}: {list(data.keys())}")
+
+    owner_name_raw = (
+        data.get("owner")
+        or data.get("owner_name")
+        or data.get("OwnerName")
+        or data.get("NAMECOMB")
+        or ""
+    ).strip()
+    owner_name = owner_name_raw.title() or ""
+
+    mailing_address = (
+        data.get("mailing_address")
+        or data.get("mailingAddress")
+        or data.get("MAILADDR")
+        or ""
+    ).strip()
+
+    mailing_city = (
+        data.get("mailing_city")
+        or data.get("mailingCity")
+        or data.get("MAILCITY")
+        or "Fort Lauderdale"
+    ).strip().title()
+
+    mailing_state = (
+        data.get("mailing_state")
+        or data.get("mailingState")
+        or data.get("MAILSTATE")
+        or "FL"
+    ).strip().upper()
+
+    mailing_zip = str(
+        data.get("mailing_zip")
+        or data.get("mailingZip")
+        or data.get("MAILZIP")
+        or ""
+    ).strip()[:5]
+
+    site_zip = str(
+        data.get("site_zip")
+        or data.get("siteZip")
+        or data.get("SITEZIP")
+        or ""
+    ).strip()[:5]
+
+    # Homestead: BCPA may return a boolean or a string "Y"/"N"
+    homestead_raw = data.get("homestead") or data.get("HomesteadExemption") or data.get("SOH")
+    if isinstance(homestead_raw, bool):
+        homestead = homestead_raw
+    elif isinstance(homestead_raw, str):
+        homestead = homestead_raw.upper() in ("Y", "YES", "TRUE")
+    else:
+        homestead = bool(homestead_raw)
+
+    # Assessed value
+    assessed_value = 0
+    av = data.get("assessed_value") or data.get("AssessedValue") or data.get("AV") or 0
+    try:
+        assessed_value = int(float(av))
+    except (ValueError, TypeError):
+        pass
+
+    # Year built / roof age
+    year_built = None
+    roof_age = None
+    yb = data.get("year_built") or data.get("YearBuilt") or data.get("ACTYEARBLT") or 0
+    try:
+        year_built = int(float(yb))
+        import datetime as _dt
+        current_year = _dt.date.today().year
+        if 1800 < year_built <= current_year:
+            roof_age = current_year - year_built
+        else:
+            year_built = None
+    except (ValueError, TypeError):
+        pass
+
+    if not owner_name:
+        return None
+
+    return {
+        "owner_name": owner_name,
+        "mailing_address": mailing_address,
+        "mailing_city": mailing_city,
+        "mailing_state": mailing_state,
+        "mailing_zip": mailing_zip,
+        "site_zip": site_zip,
+        "homestead": homestead,
+        "assessed_value": assessed_value,
+        "folio_number": folio_number,
+        "year_built": year_built,
+        "roof_age": roof_age,
+    }
+
+
 def enrich_leads(
     leads: list[dict],
     top_n: int = 40,
@@ -153,7 +335,8 @@ def enrich_leads(
     enriched_ids = set()
     for i, lead in enumerate(to_enrich):
         folio = lead["folioNumber"]
-        info = lookup_by_folio(folio)
+        county_slug = str(lead.get("county", "miami-dade")).lower()
+        info = lookup_by_folio(folio, county=county_slug)
         if info:
             # Fill ZIP from PA if missing
             if not lead.get("zip") and (info["site_zip"] or info["mailing_zip"]):
@@ -236,7 +419,8 @@ def enrich_leads_with_owner_info(
     enriched_ids = set()
     for i, lead in enumerate(to_enrich):
         folio = str(lead.get("folio_number") or "").strip()
-        info = lookup_by_folio(folio)
+        county_slug = str(lead.get("county") or "miami-dade").lower()
+        info = lookup_by_folio(folio, county=county_slug)
         if info:
             if lead.get("zip") is None and (info["site_zip"] or info["mailing_zip"]):
                 lead["zip"] = info["site_zip"] or info["mailing_zip"]

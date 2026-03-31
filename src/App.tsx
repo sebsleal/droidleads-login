@@ -302,10 +302,11 @@ export default function App() {
 
   // ── URL State Sync ──────────────────────────────────────────────────────────
   // Track the last search params string we set ourselves (to skip self-triggered syncs).
-  const lastParamsRef = useRef<string>("");
+  // ── Effect A: URL Writer ─────────────────────────────────────────────
+  // Writes filter/page state to the URL when filters or pagination change.
+  // Does NOT depend on searchParams to avoid triggering on URL reads.
+  const lastWrittenRef = useRef<string>("");
 
-  // Single effect: handles both reading URL params (back/forward/direct nav) and
-  // writing filter/page state to the URL when it changes.
   useEffect(() => {
     if (activeTab !== "leads") return;
 
@@ -328,38 +329,36 @@ export default function App() {
     if (leadsPage !== 1) params.page = String(leadsPage);
     if (leadsPageSize !== 25) params.size = String(leadsPageSize);
 
-    const nextParams = new URLSearchParams(params);
-    const nextStr = nextParams.toString();
-
-    if (nextStr === lastParamsRef.current) {
-      // Params match what we set last time — URL is already correct, but
-      // if the URL has params we haven't applied yet, apply them now.
-      const currentStr = searchParams.toString();
-      if (currentStr && currentStr !== lastParamsRef.current) {
-        const parsed = parseUrlParams(searchParams);
-        setFilters(parsed.filters);
-        if (parsed.page) setLeadsPage(parsed.page);
-        else setLeadsPage(1);
-        if (parsed.pageSize) setLeadsPageSize(parsed.pageSize);
-        lastParamsRef.current = currentStr;
-      }
-      return;
-    }
-
-    // Params differ from what we last set. Two possibilities:
-    // 1. User changed a filter → nextStr != currentStr → write to URL.
-    // 2. URL changed externally (back/forward) → nextStr == currentStr
-    //    and currentStr != lastParamsRef → read from URL.
-    if (nextStr === searchParams.toString()) {
-      // URL already matches desired state — just record it and skip writing.
-      lastParamsRef.current = nextStr;
-      return;
-    }
-
-    // User changed a filter — write to URL.
-    lastParamsRef.current = nextStr;
+    const nextStr = new URLSearchParams(params).toString();
+    if (nextStr === lastWrittenRef.current) return; // Already in sync
+    lastWrittenRef.current = nextStr;
     setSearchParams(params, { replace: true });
-  }, [activeTab, filters, leadsPage, leadsPageSize, searchParams, setSearchParams]);
+  }, [activeTab, filters, leadsPage, leadsPageSize, setSearchParams]);
+
+  // ── Effect B: URL Reader ─────────────────────────────────────────────
+  // Reads URL params when they change (back/forward, direct navigation, or
+  // initial load) and syncs filter/page state. Skips changes written by Effect A.
+  useEffect(() => {
+    if (activeTab !== "leads") return;
+
+    const currentStr = searchParams.toString();
+    // Skip: this change was caused by Effect A writing to the URL.
+    if (currentStr === lastWrittenRef.current) return;
+
+    if (!currentStr) {
+      // Empty query string — browser back/forward to bare path → restore defaults.
+      setFilters(DEFAULT_FILTERS);
+      setLeadsPage(1);
+      setLeadsPageSize(25);
+    } else {
+      // URL has params — apply them to UI state.
+      const parsed = parseUrlParams(searchParams);
+      setFilters(parsed.filters);
+      if (parsed.page) setLeadsPage(parsed.page);
+      else setLeadsPage(1);
+      if (parsed.pageSize) setLeadsPageSize(parsed.pageSize);
+    }
+  }, [activeTab, searchParams]);
 
   // Reset leads pagination to page 1 when any filter, search, sort, or page size changes
   useEffect(() => {

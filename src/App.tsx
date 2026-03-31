@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { BarChart2, Users, CloudLightning, Briefcase, Shield } from "lucide-react";
+import { BarChart2, Users, CloudLightning, Briefcase, Shield, Menu, X } from "lucide-react";
 import type {
   FilterState,
   Lead,
@@ -161,6 +161,7 @@ function timeAgo(isoString: string): string {
 
 export default function App() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [stormFilters, setStormFilters] = useState<StormFilterState>(
     DEFAULT_STORM_FILTERS,
   );
@@ -854,10 +855,113 @@ export default function App() {
     },
   ];
 
+  function handleNavClick(path: string) {
+    navigate(path);
+    setMobileSidebarOpen(false);
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* ── Sidebar ── */}
-      <aside className="w-[212px] flex-shrink-0 flex flex-col bg-[#0f0f11] border-r border-white/[0.06]">
+      {/* ── Mobile: Hamburger button ── */}
+      <div className="lg:hidden fixed top-[56px] left-0 z-50 p-3">
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          className="flex items-center justify-center w-10 h-10 rounded-md bg-[#0f0f11] text-white hover:bg-[#1a1a1d] transition-colors"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* ── Mobile: Sidebar overlay backdrop ── */}
+      {mobileSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Mobile: Sidebar overlay ── */}
+      <aside
+        className={cn(
+          "lg:hidden fixed top-0 left-0 z-50 w-[212px] h-full flex flex-col bg-[#0f0f11] border-r border-white/[0.06]",
+          "transition-transform duration-200 ease-out",
+          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Logo + close button */}
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Shield className="w-[18px] h-[18px] text-amber-400 flex-shrink-0" />
+              <span className="text-[13px] font-semibold text-white tracking-tight leading-none">
+                Claim Remedy
+              </span>
+            </div>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="flex items-center justify-center w-7 h-7 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Close navigation menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-[11px] text-zinc-600 mt-1.5 pl-[26px] leading-none">
+            Lead Intelligence
+          </p>
+        </div>
+
+        <div className="mx-4 h-px bg-white/[0.06]" />
+
+        {/* Nav */}
+        <nav className="flex-1 px-2 pt-3 pb-2 flex flex-col gap-0.5">
+          {navItems.map(({ id, icon: Icon, label, path, count, tooltip }) => (
+            <Tooltip key={id} text={tooltip} position="bottom">
+              <button
+                onClick={() => handleNavClick(path)}
+                className={cn(
+                  "nav-item",
+                  activeTab === id ? "nav-item-active" : "nav-item-inactive",
+                )}
+              >
+                <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+                <span className="flex-1 text-left">{label}</span>
+                {count != null && count > 0 && (
+                  <span
+                    className={cn(
+                      "text-[11px] score-number tabular-nums",
+                      activeTab === id ? "text-zinc-400" : "text-zinc-700",
+                    )}
+                  >
+                    {count.toLocaleString()}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="px-4 py-4 border-t border-white/[0.06]">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
+            <span className="text-[11px] text-zinc-600 leading-none">
+              {headerLastUpdated
+                ? `Updated ${timeAgo(headerLastUpdated)}`
+                : "Syncing..."}
+            </span>
+          </div>
+          <p className="text-[11px] text-zinc-700 pl-[14px] leading-none">
+            {headerTotalCount > 0
+              ? `${headerTotalCount.toLocaleString()} ${headerEntityLabel}`
+              : "Loading..."}
+          </p>
+        </div>
+      </aside>
+
+      {/* ── Desktop: Sidebar ── */}
+      <aside className="hidden lg:flex w-[212px] flex-shrink-0 flex flex-col bg-[#0f0f11] border-r border-white/[0.06]">
         {/* Logo */}
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-center gap-2.5">
@@ -878,7 +982,7 @@ export default function App() {
           {navItems.map(({ id, icon: Icon, label, path, count, tooltip }) => (
             <Tooltip key={id} text={tooltip} position="bottom">
               <button
-                onClick={() => navigate(path)}
+                onClick={() => handleNavClick(path)}
                 className={cn(
                   "nav-item",
                   activeTab === id ? "nav-item-active" : "nav-item-inactive",

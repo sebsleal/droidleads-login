@@ -61,10 +61,11 @@ export default function StormWatchTable({
           <span className="text-zinc-900 font-semibold score-number">{totalCandidates}</span>{' '}
           {totalCandidates === 1 ? 'candidate' : 'candidates'} found
         </p>
-        <p className="text-xs text-slate-400">Area-based opportunities stay separate from permit leads</p>
+        <p className="text-xs text-slate-400 hidden lg:block">Area-based opportunities stay separate from permit leads</p>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop table — hidden on mobile, visible on lg+ */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/60">
@@ -169,6 +170,77 @@ export default function StormWatchTable({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile card layout — visible on mobile, hidden on lg+ */}
+      <div className="lg:hidden divide-y divide-slate-100">
+        {candidates.map((candidate) => (
+          <button
+            key={candidate.id}
+            onClick={() => onSelectCandidate(candidate)}
+            className={cn(
+              'w-full text-left px-4 py-3.5 transition-colors duration-100',
+              'hover:bg-slate-50/80 focus:outline-none',
+              selectedCandidateId === candidate.id && 'bg-blue-50/50',
+            )}
+          >
+            {/* Row 1: Location + Score badge */}
+            <div className="flex items-start justify-between gap-3 mb-1.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-slate-900 truncate">
+                  {candidate.locationLabel}
+                </p>
+                <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span>
+                    {COUNTY_LABELS[candidate.county]}
+                    {candidate.city ? `, ${candidate.city}` : ''}
+                    {candidate.zip ? ` ${candidate.zip}` : ''}
+                  </span>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <ScoreBadge score={candidate.score} size="sm" />
+              </div>
+            </div>
+
+            {/* Row 2: Storm event + Candidate type */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-slate-700 truncate">
+                  {candidate.stormEvent}
+                </p>
+                <p className="text-[11px] text-slate-400">{candidate.eventType}</p>
+              </div>
+              <span className={cn(
+                'badge flex-shrink-0',
+                candidate.candidateType === 'area'
+                  ? 'bg-sky-50 text-sky-700 border-sky-200'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+              )}>
+                {candidate.candidateType === 'area' ? 'Area-based' : 'Property-based'}
+              </span>
+            </div>
+
+            {/* Row 3: Status + FEMA + Date + Index */}
+            <div className="flex items-center justify-between gap-2">
+              <span className={cn('badge', STATUS_STYLES[candidate.status])}>
+                {candidate.status}
+              </span>
+              <div className="flex items-center gap-3">
+                {candidate.femaDeclarationNumber ? (
+                  <div className="flex items-center gap-1 text-orange-700 font-medium">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span className="whitespace-nowrap text-[11px]">{candidate.femaDeclarationNumber}</span>
+                  </div>
+                ) : null}
+                <span className="text-slate-400 text-[11px] score-number">
+                  {formatDate(candidate.eventDate)}
+                </span>
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
 
       <Pagination

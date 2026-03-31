@@ -66,10 +66,11 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
           <span className="text-zinc-900 font-semibold score-number">{totalLeads.toLocaleString()}</span>
           {' '}{totalLeads === 1 ? 'lead' : 'leads'} found
         </p>
-        <p className="text-[11px] text-zinc-300">Click a row to view details</p>
+        <p className="text-[11px] text-zinc-300 hidden lg:block">Click a row to view details</p>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop table — hidden on mobile, visible on lg+ */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50/40">
@@ -213,6 +214,95 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile card layout — visible on mobile, hidden on lg+ */}
+      <div className="lg:hidden divide-y divide-zinc-50">
+        {leads.map((lead, idx) => {
+          const { display: ownerDisplay, isPlaceholder } = displayOwnerName(lead.ownerName);
+          return (
+            <button
+              key={lead.id}
+              onClick={() => onSelectLead(lead)}
+              className={cn(
+                'w-full text-left px-4 py-3.5 transition-colors duration-100',
+                'hover:bg-zinc-50/80 focus:outline-none',
+                selectedLeadId === lead.id && 'bg-blue-50/50'
+              )}
+            >
+              {/* Row 1: Address + Score badge */}
+              <div className="flex items-start justify-between gap-3 mb-1.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-zinc-900 truncate">
+                    {lead.propertyAddress}
+                  </p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {lead.city}, FL {lead.zip}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => handleScoreClick(e, lead)}
+                  className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity focus:outline-none"
+                  title="Click to see score breakdown"
+                >
+                  <ScoreBadge score={lead.score} size="sm" />
+                </button>
+              </div>
+
+              {/* Row 2: Owner + Damage type */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={cn(
+                  'text-[12px] truncate',
+                  isPlaceholder ? 'text-zinc-300 italic' : 'text-zinc-700 font-medium'
+                )}>
+                  {ownerDisplay}
+                </span>
+                <span className={cn('badge', damageTypeColor(lead.damageType))}>
+                  {lead.damageType}
+                </span>
+              </div>
+
+              {/* Row 3: Status + Contact icons + Index */}
+              <div className="flex items-center justify-between gap-2">
+                <span className={cn('badge', STATUS_STYLES[lead.status])}>
+                  {lead.status}
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    {lead.contact?.email ? (
+                      <a
+                        href={`mailto:${lead.contact.email}`}
+                        title={lead.contact.email}
+                        aria-label={lead.contact.email}
+                        className="text-blue-300 hover:text-blue-500 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                      </a>
+                    ) : null}
+                    {lead.contact?.phone ? (
+                      <a
+                        href={`tel:${lead.contact.phone}`}
+                        title={lead.contact.phone}
+                        aria-label={lead.contact.phone}
+                        className="text-emerald-400 hover:text-emerald-600 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                      </a>
+                    ) : null}
+                    {!lead.contact?.email && !lead.contact?.phone && (
+                      <span className="text-zinc-200 text-[11px]">—</span>
+                    )}
+                  </div>
+                  <span className="text-zinc-300 text-[11px] score-number">
+                    {(currentPage - 1) * pageSize + idx + 1}
+                  </span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <Pagination

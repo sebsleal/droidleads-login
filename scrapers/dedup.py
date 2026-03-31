@@ -4,16 +4,79 @@ Deduplication helper for leads.
 Uses MD5 hash of (address + permit_date) as the dedup key.
 Supports both in-memory dedup (for a single scrape run) and
 persistent dedup against a set of already-seen hashes from the database.
+
+Address normalization:
+- Street suffixes are canonicalized: St→Street, Ave→Avenue, Blvd→Boulevard,
+  Dr→Drive, Ln→Lane, Ct→Court, Rd→Road
+- Directionals (NW/NE/SW/SE) are uppercased and have spaces normalized
+- Normalization is case-insensitive and idempotent.
 """
 
+import re
 import hashlib
 from typing import Any
+
+# Suffix replacements — order matters (longer forms first to avoid partial replacement)
+_SUFFIX_REPLACEMENTS: list[tuple[str, str]] = [
+    ("Street", "Street"),
+    ("St", "Street"),
+    ("Avenue", "Avenue"),
+    ("Ave", "Avenue"),
+    ("Boulevard", "Boulevard"),
+    ("Blvd", "Boulevard"),
+    ("Drive", "Drive"),
+    ("Dr", "Drive"),
+    ("Lane", "Lane"),
+    ("Ln", "Lane"),
+    ("Court", "Court"),
+    ("Ct", "Court"),
+    ("Road", "Road"),
+    ("Rd", "Road"),
+]
+
+# Regex for directional prefix/suffix (NW, NE, SW, SE with optional comma/dot separators)
+_DIRECTIONAL_RE = re.compile(
+    r"\b(NW|NE|SW|SE)\b",
+    re.IGNORECASE,
+)
+
+
+def normalize_address(address: str) -> str:
+    """
+    Canonicalize a street address for consistent hashing.
+
+    Replaces common abbreviations with their full forms (St→Street, Ave→Avenue,
+    Blvd→Boulevard, Dr→Drive, Ln→Lane, Ct→Court, Rd→Road), uppercases directionals
+    (NW/NE/SW/SE), strips leading/trailing whitespace, and lowercases the result.
+
+    Normalization is idempotent: calling it multiple times yields the same result.
+
+    Args:
+        address: Raw address string.
+
+    Returns:
+        Canonical lowercase address string.
+    """
+    addr = address.lower().strip()
+
+    # Uppercase directionals for consistency (nw → NW)
+    addr = _DIRECTIONAL_RE.sub(lambda m: m.group(0).upper(), addr)
+
+    # Replace suffix abbreviations with full forms (case-insensitive via regex)
+    for abbrev, full in _SUFFIX_REPLACEMENTS:
+        # Replace word-boundary abbrev with full form (case-insensitive)
+        pattern = re.compile(r"\b" + re.escape(abbrev) + r"\b", re.IGNORECASE)
+        addr = pattern.sub(full, addr)
+
+    return addr
 
 
 def make_hash(address: str, permit_date: str) -> str:
     """
     Generate a 12-character hex hash from address + permit_date.
     Case-insensitive; strips leading/trailing whitespace.
+    Address is normalized before hashing so that abbreviated and
+    full-form addresses produce the same hash.
 
     Args:
         address: Property street address string.
@@ -22,7 +85,7 @@ def make_hash(address: str, permit_date: str) -> str:
     Returns:
         12-character lowercase hex string.
     """
-    key = f"{address.lower().strip()}|{permit_date.strip()}"
+    key = f"{normalize_address(address)}|{permit_date.strip()}"
     return hashlib.md5(key.encode("utf-8")).hexdigest()[:12]
 
 

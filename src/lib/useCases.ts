@@ -23,6 +23,8 @@ type CasePatch = Partial<
   >
 >;
 
+const MIN_INITIAL_LOADING_MS = 300;
+
 function recordToCase(r: CaseRecord): Case {
   return {
     id: r.id,
@@ -63,9 +65,27 @@ export function useCases() {
 
   // Fetch all cases on mount
   useEffect(() => {
+    let cancelled = false;
+    const loadingStart = Date.now();
+
+    const finishLoading = () => {
+      const remaining = Math.max(
+        0,
+        MIN_INITIAL_LOADING_MS - (Date.now() - loadingStart),
+      );
+
+      window.setTimeout(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }, remaining);
+    };
+
     if (!supabase) {
-      setLoading(false);
-      return;
+      finishLoading();
+      return () => {
+        cancelled = true;
+      };
     }
 
     supabase
@@ -73,13 +93,20 @@ export function useCases() {
       .select("*")
       .order("date_logged", { ascending: false })
       .then(({ data, error }) => {
-        setLoading(false);
         if (error) {
           console.warn("[cases] Failed to load cases:", error.message);
           return;
         }
-        setCases((data ?? []).map((r) => recordToCase(r as CaseRecord)));
-      });
+
+        if (!cancelled) {
+          setCases((data ?? []).map((r) => recordToCase(r as CaseRecord)));
+        }
+      })
+      .then(finishLoading, finishLoading);
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Update a case field. Applies optimistic update immediately, syncs to Supabase.

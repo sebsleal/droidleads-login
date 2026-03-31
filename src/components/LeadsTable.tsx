@@ -5,6 +5,7 @@ import { formatDate, damageTypeColor, cn, displayOwnerName } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
 import ScoreBreakdownPopover from '@/components/ScoreBreakdownPopover'
 import Pagination, { type PageSize } from '@/components/Pagination'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface LeadsTableProps {
   leads: Lead[]
@@ -15,6 +16,7 @@ interface LeadsTableProps {
   onPageSizeChange: (size: PageSize) => void
   onSelectLead: (lead: Lead) => void
   selectedLeadId?: string
+  loading?: boolean
 }
 
 const STATUS_STYLES: Record<Lead['status'], string> = {
@@ -31,7 +33,7 @@ interface ScorePopoverState {
   anchorRect: DOMRect
 }
 
-export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, onPageChange, onPageSizeChange, onSelectLead, selectedLeadId }: LeadsTableProps) {
+export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, onPageChange, onPageSizeChange, onSelectLead, selectedLeadId, loading }: LeadsTableProps) {
   const [scorePopover, setScorePopover] = useState<ScorePopoverState | null>(null)
 
   const handleScoreClick = useCallback((e: React.MouseEvent, lead: Lead) => {
@@ -41,6 +43,10 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
       prev?.lead.id === lead.id ? null : { lead, anchorRect: rect }
     )
   }, [])
+
+  if (loading) {
+    return <LoadingSpinner label="Loading leads..." />
+  }
 
   if (leads.length === 0) {
     return (
@@ -164,17 +170,29 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
                 {/* Contact icons */}
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-1.5">
-                    {lead.contact?.email && (
-                      <span title={lead.contact.email} className="text-blue-300 hover:text-blue-500 transition-colors">
+                    {lead.contact?.email ? (
+                      <a
+                        href={`mailto:${lead.contact.email}`}
+                        title={lead.contact.email}
+                        aria-label={lead.contact.email}
+                        className="text-blue-300 hover:text-blue-500 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Mail className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-                    {lead.contact?.phone && (
-                      <span title={lead.contact.phone} className="text-emerald-400 hover:text-emerald-600 transition-colors">
+                      </a>
+                    ) : null}
+                    {lead.contact?.phone ? (
+                      <a
+                        href={`tel:${lead.contact.phone}`}
+                        title={lead.contact.phone}
+                        aria-label={lead.contact.phone}
+                        className="text-emerald-400 hover:text-emerald-600 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Phone className="w-3.5 h-3.5" />
-                      </span>
-                    )}
-                    {!lead.contact && (
+                      </a>
+                    ) : null}
+                    {!lead.contact?.email && !lead.contact?.phone && (
                       <span className="text-zinc-200 text-[11px]">—</span>
                     )}
                   </div>

@@ -69,6 +69,8 @@ const DEFAULT_CASE_FILTERS: CaseFilterState = {
   dateRange: "all",
 };
 
+const MIN_INITIAL_LOADING_MS = 300;
+
 function timeAgo(isoString: string): string {
   const now = Date.now();
   const then = new Date(isoString).getTime();
@@ -103,6 +105,8 @@ export default function App() {
   const [lastStormGenerated, setLastStormGenerated] = useState<string | null>(
     null,
   );
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
+  const [isLoadingStorm, setIsLoadingStorm] = useState(true);
 
   // Pagination state for all three tables
   const [leadsPage, setLeadsPage] = useState(1);
@@ -122,7 +126,7 @@ export default function App() {
     saveTracking: saveStormTracking,
     readOnly: stormReadOnly,
   } = useStormTracking();
-  const { cases, saveCase, readOnly: caseReadOnly } = useCases();
+  const { cases, saveCase, loading: isLoadingCases, readOnly: caseReadOnly } = useCases();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -136,6 +140,22 @@ export default function App() {
           : "leads";
 
   useEffect(() => {
+    let cancelled = false;
+    const loadingStart = Date.now();
+
+    const finishLoading = () => {
+      const remaining = Math.max(
+        0,
+        MIN_INITIAL_LOADING_MS - (Date.now() - loadingStart),
+      );
+
+      window.setTimeout(() => {
+        if (!cancelled) {
+          setIsLoadingLeads(false);
+        }
+      }, remaining);
+    };
+
     const cacheBust = Date.now();
     fetch(`/leads.json?_=${cacheBust}`, { cache: "no-store" })
       .then((response) => {
@@ -143,17 +163,38 @@ export default function App() {
         return response.json();
       })
       .then((data: { leads: Lead[]; lastScraped: string }) => {
-        if (data.leads?.length > 0) {
+        if (!cancelled && data.leads?.length > 0) {
           setRawLeads(data.leads);
           setLastScraped(data.lastScraped);
         }
       })
       .catch(() => {
         // No leads.json available.
-      });
+      })
+      .finally(finishLoading);
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadingStart = Date.now();
+
+    const finishLoading = () => {
+      const remaining = Math.max(
+        0,
+        MIN_INITIAL_LOADING_MS - (Date.now() - loadingStart),
+      );
+
+      window.setTimeout(() => {
+        if (!cancelled) {
+          setIsLoadingStorm(false);
+        }
+      }, remaining);
+    };
+
     const cacheBust = Date.now();
     fetch(`/storm_candidates.json?_=${cacheBust}`, { cache: "no-store" })
       .then((response) => {
@@ -161,14 +202,19 @@ export default function App() {
         return response.json();
       })
       .then((data: { candidates: StormCandidate[]; lastGenerated: string }) => {
-        if (Array.isArray(data.candidates)) {
+        if (!cancelled && Array.isArray(data.candidates)) {
           setRawStormCandidates(data.candidates);
           setLastStormGenerated(data.lastGenerated);
         }
       })
       .catch(() => {
         // No storm_candidates.json available.
-      });
+      })
+      .finally(finishLoading);
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -770,6 +816,7 @@ export default function App() {
                           onPageSizeChange={setLeadsPageSize}
                           onSelectLead={setSelectedLead}
                           selectedLeadId={selectedLead?.id}
+                          loading={isLoadingLeads}
                         />
                       )}
                     </div>
@@ -796,6 +843,7 @@ export default function App() {
                         onPageSizeChange={setStormPageSize}
                         onSelectCandidate={setSelectedStormCandidate}
                         selectedCandidateId={selectedStormCandidate?.id}
+                        loading={isLoadingStorm}
                       />
                     </div>
                   </>
@@ -822,6 +870,7 @@ export default function App() {
                         onPageSizeChange={setCasesPageSize}
                         onSelectCase={setSelectedCase}
                         selectedCaseId={syncedSelectedCase?.id}
+                        loading={isLoadingCases}
                       />
                     </div>
                   </>

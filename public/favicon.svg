@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Claim Remedy Adjusters</title>
+  <rect width="64" height="64" rx="16" fill="#18181b" />
+  <path d="M32 10 48 16v12c0 12.3-7 23.7-18 28-11-4.3-18-15.7-18-28V16l20-6Z" fill="#fbbf24" fill-opacity="0.16" stroke="#fbbf24" stroke-width="3" stroke-linejoin="round" />
+  <path d="M24 32h16" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" />
+  <path d="M32 24v16" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" />
+</svg>

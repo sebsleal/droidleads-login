@@ -2,6 +2,7 @@ import { ChevronRight, Briefcase } from 'lucide-react'
 import type { Case } from '@/types'
 import { cn } from '@/lib/utils'
 import Pagination, { type PageSize } from '@/components/Pagination'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface CasesTableProps {
   cases: Case[]
@@ -12,6 +13,7 @@ interface CasesTableProps {
   onPageSizeChange: (size: PageSize) => void
   onSelectCase: (c: Case) => void
   selectedCaseId?: string
+  loading?: boolean
 }
 
 export function caseStatusColor(phase: string): string {
@@ -41,7 +43,11 @@ function perilBadgeColor(peril: string): string {
   return 'bg-slate-100 text-slate-600 border-slate-200'
 }
 
-export default function CasesTable({ cases, totalCases, currentPage, pageSize, onPageChange, onPageSizeChange, onSelectCase, selectedCaseId }: CasesTableProps) {
+export default function CasesTable({ cases, totalCases, currentPage, pageSize, onPageChange, onPageSizeChange, onSelectCase, selectedCaseId, loading }: CasesTableProps) {
+  if (loading) {
+    return <LoadingSpinner label="Loading cases..." />
+  }
+
   if (cases.length === 0) {
     return (
       <div className="card px-6 py-16 text-center">

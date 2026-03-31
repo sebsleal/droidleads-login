@@ -8,7 +8,12 @@ import PasswordGate from './components/PasswordGate.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <PasswordGate>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <App />
       </BrowserRouter>
     </PasswordGate>

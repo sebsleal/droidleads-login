@@ -4,6 +4,7 @@ import { COUNTY_LABELS } from '@/types'
 import { cn, formatDate } from '@/lib/utils'
 import ScoreBadge from '@/components/ScoreBadge'
 import Pagination, { type PageSize } from '@/components/Pagination'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface StormWatchTableProps {
   candidates: StormCandidate[]
@@ -14,6 +15,7 @@ interface StormWatchTableProps {
   onPageSizeChange: (size: PageSize) => void
   onSelectCandidate: (candidate: StormCandidate) => void
   selectedCandidateId?: string
+  loading?: boolean
 }
 
 const STATUS_STYLES: Record<StormWatchStatus, string> = {
@@ -34,7 +36,12 @@ export default function StormWatchTable({
   onPageSizeChange,
   onSelectCandidate,
   selectedCandidateId,
+  loading,
 }: StormWatchTableProps) {
+  if (loading) {
+    return <LoadingSpinner label="Loading storm candidates..." />
+  }
+
   if (candidates.length === 0) {
     return (
       <div className="card flex flex-col items-center justify-center py-20 text-center">

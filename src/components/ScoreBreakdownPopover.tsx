@@ -38,6 +38,11 @@ export default function ScoreBreakdownPopover({
 
   const tier = getScoreTier(score)
   const colors = scoreTierColors(tier)
+  const isExpectedValueFactor = (label: string) => /(^|\b)(ev|expected value)(\b|$)/i.test(label)
+  const expectedValueFactor = breakdown?.factors.find((factor) => isExpectedValueFactor(factor.label))
+  const orderedFactors = breakdown
+    ? breakdown.factors.filter((factor) => factor !== expectedValueFactor)
+    : []
 
   // Position the popover below (or above) the anchor
   const viewportH = window.innerHeight
@@ -86,9 +91,29 @@ export default function ScoreBreakdownPopover({
               <span className="text-[12px] font-semibold text-zinc-400 score-number">+{breakdown.base}</span>
             </div>
 
+            {expectedValueFactor ? (
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2 mt-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700">EV factor</p>
+                    <p className="text-[12px] font-medium text-emerald-900 leading-tight mt-0.5">{expectedValueFactor.label}</p>
+                  </div>
+                  <span className={cn(
+                    'text-[12px] font-bold score-number shrink-0',
+                    expectedValueFactor.delta > 0 ? 'text-emerald-700' : 'text-red-500'
+                  )}>
+                    {expectedValueFactor.delta > 0 ? '+' : ''}{expectedValueFactor.delta}
+                  </span>
+                </div>
+                {expectedValueFactor.note && (
+                  <p className="text-[10px] text-emerald-800/80 leading-snug mt-1.5">{expectedValueFactor.note}</p>
+                )}
+              </div>
+            ) : null}
+
             {/* Factor rows */}
-            {breakdown.factors.map((f, i) => (
-              <div key={i} className="py-1.5 flex items-start justify-between gap-3">
+            {orderedFactors.map((f, i) => (
+              <div key={`${f.label}-${i}`} className="py-1.5 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[12px] font-medium text-zinc-700 leading-tight">{f.label}</p>
                   {f.note && (
@@ -103,6 +128,13 @@ export default function ScoreBreakdownPopover({
                 </span>
               </div>
             ))}
+
+            {!expectedValueFactor ? (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 mt-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">EV factor</p>
+                <p className="text-[12px] text-zinc-500 mt-1">Expected value data is not available for this lead yet.</p>
+              </div>
+            ) : null}
 
             {/* Total */}
             <div className="flex items-center justify-between pt-2 mt-1 border-t border-zinc-100">

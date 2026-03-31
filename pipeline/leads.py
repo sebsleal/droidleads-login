@@ -59,6 +59,7 @@ class LeadPipelineResult:
     permit_count: int
     storm_count: int
     pre_permit_count: int
+    candidate_lead_count: int
     fema_tagged_count: int
     county_counts: dict[str, int]
 
@@ -407,6 +408,174 @@ def build_pre_permit_leads(
     return pre_permit
 
 
+# ---------------------------------------------------------------------------
+# Storm-candidate-to-lead pipeline
+# ---------------------------------------------------------------------------
+
+SCORE_THRESHOLD = 75
+
+# ZIP-code sets per county for targeted parcel scans.
+# Only Miami-Dade has a public GeoProp REST API; Broward and Palm Beach
+# are scanned via their respective county endpoints when available.
+_BROWARD_ZIPS = [
+    33301, 33302, 33303, 33304, 33305, 33306, 33307, 33308, 33309,
+    33310, 33311, 33312, 33313, 33314, 33315, 33316, 33317, 33319,
+    33320, 33321, 33322, 33323, 33324, 33325, 33326, 33327, 33328,
+    33329, 33330, 33331, 33332, 33334, 33335, 33336, 33337, 33338,
+    33339, 33340, 33341, 33342, 33343, 33344, 33345, 33346, 33348,
+    33349, 33351, 33355, 33359, 33388, 33394,
+]
+
+_PALM_BEACH_ZIPS = [
+    33401, 33402, 33403, 33404, 33405, 33406, 33407, 33408, 33409,
+    33410, 33411, 33412, 33413, 33414, 33415, 33416, 33417, 33418,
+    33419, 33420, 33421, 33422, 33424, 33425, 33426, 33427, 33428,
+    33429, 33430, 33431, 33432, 33433, 33434, 33435, 33436, 33437,
+    33438, 33439, 33440, 33441, 33442, 33443, 33444, 33445, 33446,
+    33447, 33448, 33449, 33454, 33455, 33458, 33459, 33460, 33461,
+    33462, 33463, 33464, 33465, 33466, 33467, 33468, 33469, 33470,
+    33471, 33472, 33473, 33474, 33475, 33476, 33477, 33478, 33480,
+    33481, 33482, 33483, 33484, 33486, 33487, 33488, 33493, 33496,
+    33497, 33498, 33499,
+]
+
+_COUNTY_ZIPS: dict[str, list[int]] = {
+    "miami-dade": MIAMI_DADE_ZIPS,
+    "broward":    _BROWARD_ZIPS,
+    "palm-beach": _PALM_BEACH_ZIPS,
+}
+
+_COUNTY_CITY_DEFAULTS: dict[str, str] = {
+    "miami-dade": "Miami",
+    "broward":    "Fort Lauderdale",
+    "palm-beach": "West Palm Beach",
+}
+
+
+def _storm_event_damage_type(event_type: str) -> str:
+    """Map NOAA event type to canonical damage type."""
+    et = event_type.lower()
+    if "flood" in et or "surge" in et or "rain" in et:
+        return "Flood"
+    if "fire" in et or "wildfire" in et:
+        return "Fire"
+    if "hurricane" in et or "tropical" in et or "tornado" in et or "wind" in et:
+        return "Hurricane/Wind"
+    if "lightning" in et or "hail" in et:
+        return "Hurricane/Wind"
+    if "structural" in et or "collapse" in et:
+        return "Structural"
+    return "Hurricane/Wind"
+
+
+def build_storm_leads_from_candidates(
+    candidates: list[dict[str, Any]] | None = None,
+    candidates_path: Path = PROJECT_ROOT / "public" / "storm_candidates.json",
+    existing_permit_leads: list[dict[str, Any]] | None = None,
+    limit_per_zip: int = 100,
+) -> list[dict[str, Any]]:
+    """
+    Convert high-scoring storm candidates into pre-permit leads.
+
+    For each candidate in storm_candidates.json with score >= 75:
+      1. Run a targeted parcel scan for that candidate's county.
+      2. Skip parcels whose addresses already appear in permit_leads.
+      3. Produce canonical leads with source='storm', source_detail='storm_event',
+         storm_event / fema fields populated from the candidate.
+
+    Args:
+        candidates:          Override list of candidate dicts (e.g. for tests).
+                             If None, loaded from candidates_path.
+        candidates_path:     Path to storm_candidates.json.
+        existing_permit_leads: Leads from the permit pipeline to filter against.
+        limit_per_zip:       Max parcels per ZIP code (passed to fetch_parcels_by_zip).
+
+    Returns:
+        List of canonical lead dicts with source_detail='storm_event'.
+    """
+    if candidates is None:
+        if not candidates_path.exists():
+            print(f"[storm-to-lead] {candidates_path} not found — skipping")
+            return []
+        try:
+            payload = json.loads(candidates_path.read_text(encoding="utf-8"))
+            candidates = payload.get("candidates") or []
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"[storm-to-lead] Could not load {candidates_path}: {exc}")
+            return []
+
+    if not candidates:
+        return []
+
+    high_scoring = [c for c in candidates if (c.get("score") or 0) >= SCORE_THRESHOLD]
+    if not high_scoring:
+        return []
+
+    existing_addresses: set[str] = set()
+    if existing_permit_leads:
+        existing_addresses = {
+            (lead.get("address") or "").lower().strip()
+            for lead in existing_permit_leads
+            if lead.get("address")
+        }
+
+    storm_leads: list[dict[str, Any]] = []
+
+    for candidate in high_scoring:
+        county = candidate.get("county") or "miami-dade"
+        county_zips = _COUNTY_ZIPS.get(county, MIAMI_DADE_ZIPS)
+        city = candidate.get("city") or _COUNTY_CITY_DEFAULTS.get(county, "Miami")
+        event_date = candidate.get("eventDate") or datetime.now(timezone.utc).date().isoformat()
+        storm_event = candidate.get("stormEvent") or ""
+        event_type = candidate.get("eventType") or ""
+        damage_type = _storm_event_damage_type(event_type)
+        fema_declaration = candidate.get("femaDeclarationNumber") or ""
+        fema_incident = candidate.get("femaIncidentType") or ""
+        candidate_id = candidate.get("id") or ""
+
+        try:
+            parcels = fetch_parcels_by_zip(county_zips, limit_per_zip=limit_per_zip)
+        except Exception as exc:
+            print(f"[storm-to-lead] Parcel fetch failed for county {county}: {exc}")
+            parcels = []
+
+        for parcel in parcels:
+            address = (parcel.get("propertyAddress") or "").strip()
+            if not address:
+                continue
+            normalized_address = address.lower().strip()
+            if normalized_address in existing_addresses:
+                continue
+
+            storm_leads.append(
+                canonicalize_lead({
+                    "owner_name": "Property Owner",
+                    "address": address,
+                    "city": city,
+                    "zip": parcel.get("zip") or "",
+                    "folio_number": parcel.get("folioNumber") or "",
+                    "damage_type": damage_type,
+                    "permit_type": "Pre-Permit Storm Opportunity",
+                    "permit_date": event_date,
+                    "storm_event": storm_event,
+                    "status": "New",
+                    "source": "storm",
+                    "source_detail": "storm_event",
+                    "county": county,
+                    "fema_declaration_number": fema_declaration,
+                    "fema_incident_type": fema_incident,
+                    "noaa_episode_id": candidate_id,
+                })
+            )
+
+    print(
+        f"[storm-to-lead] {len(candidates)} candidates → "
+        f"{len(high_scoring)} above threshold → "
+        f"{len(storm_leads)} leads from parcel scans"
+    )
+    return storm_leads
+
+
 def apply_fema_enrichment(
     leads: list[dict[str, Any]], fema_windows: list[dict[str, Any]]
 ) -> int:
@@ -545,9 +714,17 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
     except Exception as exc:
         print(f"[lead-pipeline] Pre-permit lead build failed: {exc}")
 
-    all_leads = permit_leads + storm_leads + pre_permit_leads
+    candidate_leads: list[dict[str, Any]] = []
+    try:
+        candidate_leads = build_storm_leads_from_candidates(
+            existing_permit_leads=permit_leads,
+        )
+    except Exception as exc:
+        print(f"[lead-pipeline] Storm-candidate lead build failed: {exc}")
+
+    all_leads = permit_leads + storm_leads + pre_permit_leads + candidate_leads
     if not all_leads:
-        return LeadPipelineResult([], 0, 0, 0, 0, {})
+        return LeadPipelineResult([], 0, 0, 0, 0, 0, {})
 
     fema_tagged_count = (
         apply_fema_enrichment(all_leads, fema_windows) if fema_windows else 0
@@ -598,6 +775,7 @@ def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineRes
         permit_count=len(permit_leads),
         storm_count=len(storm_leads),
         pre_permit_count=len(pre_permit_leads),
+        candidate_lead_count=len(candidate_leads),
         fema_tagged_count=fema_tagged_count,
         county_counts=dict(sorted(county_counts.items())),
     )

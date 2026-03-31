@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Routes, Route, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { BarChart2, Users, CloudLightning, Briefcase, Shield } from "lucide-react";
 import type {
   FilterState,
@@ -73,6 +73,77 @@ const DEFAULT_CASE_FILTERS: CaseFilterState = {
 
 const MIN_INITIAL_LOADING_MS = 300;
 
+// ── URL Param Helpers ────────────────────────────────────────────────────────
+
+function parseUrlParams(
+  sp: URLSearchParams,
+): {
+  filters: FilterState;
+  page?: number;
+  pageSize?: PageSize;
+} {
+  const f: FilterState = { ...DEFAULT_FILTERS };
+
+  const search = sp.get("search");
+  if (typeof search === "string" && search.trim()) f.search = search.trim();
+
+  const sort = sp.get("sort");
+  if (sort === "oldest" || sort === "score" || sort === "assessedValue" || sort === "permitValue")
+    f.sortOrder = sort;
+
+  const status = sp.get("status");
+  if (status === "New" || status === "Contacted" || status === "Converted" || status === "Closed")
+    f.statusFilter = status;
+
+  const insurer = sp.get("insurer");
+  if (typeof insurer === "string" && insurer.trim()) f.insurerFilter = insurer.trim();
+
+  const fema = sp.get("fema");
+  if (fema === "Tagged" || fema === "Untagged") f.femaFilter = fema;
+
+  const zip = sp.get("zip");
+  if (typeof zip === "string" && /^\d{1,5}$/.test(zip)) f.zip = zip;
+
+  const damage = sp.get("damage");
+  if (
+    damage === "Hurricane/Wind" ||
+    damage === "Flood" ||
+    damage === "Roof" ||
+    damage === "Fire" ||
+    damage === "Structural" ||
+    damage === "Accidental Discharge"
+  )
+    f.damageType = damage;
+
+  const tier = sp.get("tier");
+  if (tier === "High" || tier === "Medium" || tier === "Low") f.scoreTier = tier;
+
+  const days = sp.get("days");
+  if (days === "7" || days === "30" || days === "90") f.dateRange = days;
+
+  const county = sp.get("county");
+  if (county === "miami-dade" || county === "broward" || county === "palm-beach") f.county = county;
+
+  if (sp.get("hasContact") === "1") f.hasContact = true;
+  if (sp.get("absentee") === "1") f.absenteeOwner = true;
+  if (sp.get("underpaid") === "1") f.underpaid = true;
+  if (sp.get("noContractor") === "1") f.noContractor = true;
+  if (sp.get("stormFirst") === "1") f.stormFirst = true;
+
+  let page: number | undefined;
+  const pageStr = sp.get("page");
+  if (pageStr) {
+    const n = parseInt(pageStr, 10);
+    if (!isNaN(n) && n >= 1) page = n;
+  }
+
+  let pageSize: PageSize | undefined;
+  const sizeStr = sp.get("size");
+  if (sizeStr === "25" || sizeStr === "50" || sizeStr === "100") pageSize = Number(sizeStr) as PageSize;
+
+  return { filters: f, page, pageSize };
+}
+
 function timeAgo(isoString: string): string {
   const now = Date.now();
   const then = new Date(isoString).getTime();
@@ -134,6 +205,7 @@ export default function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeTab =
     location.pathname === "/analytics"
       ? "analytics"
@@ -226,6 +298,67 @@ export default function App() {
     setSelectedStormCandidate(null);
     setSelectedCase(null);
   }, [location.pathname]);
+
+  // ── URL State Sync ──────────────────────────────────────────────────────────
+  // Track the last search params string we set ourselves (to skip self-triggered syncs).
+  const lastParamsRef = useRef<string>("");
+
+  // Single effect: handles both reading URL params (back/forward/direct nav) and
+  // writing filter/page state to the URL when it changes.
+  useEffect(() => {
+    if (activeTab !== "leads") return;
+
+    const params: Record<string, string> = {};
+    if (filters.search) params.search = filters.search;
+    if (filters.sortOrder !== "newest") params.sort = filters.sortOrder;
+    if (filters.statusFilter !== "All") params.status = filters.statusFilter;
+    if (filters.insurerFilter) params.insurer = filters.insurerFilter;
+    if (filters.femaFilter !== "All") params.fema = filters.femaFilter;
+    if (filters.zip) params.zip = filters.zip;
+    if (filters.damageType !== "All") params.damage = filters.damageType;
+    if (filters.scoreTier !== "All") params.tier = filters.scoreTier;
+    if (filters.dateRange !== "all") params.days = filters.dateRange;
+    if (filters.county !== "All") params.county = filters.county;
+    if (filters.hasContact) params.hasContact = "1";
+    if (filters.absenteeOwner) params.absentee = "1";
+    if (filters.underpaid) params.underpaid = "1";
+    if (filters.noContractor) params.noContractor = "1";
+    if (filters.stormFirst) params.stormFirst = "1";
+    if (leadsPage !== 1) params.page = String(leadsPage);
+    if (leadsPageSize !== 25) params.size = String(leadsPageSize);
+
+    const nextParams = new URLSearchParams(params);
+    const nextStr = nextParams.toString();
+
+    if (nextStr === lastParamsRef.current) {
+      // Params match what we set last time — URL is already correct, but
+      // if the URL has params we haven't applied yet, apply them now.
+      const currentStr = searchParams.toString();
+      if (currentStr && currentStr !== lastParamsRef.current) {
+        const parsed = parseUrlParams(searchParams);
+        setFilters(parsed.filters);
+        if (parsed.page) setLeadsPage(parsed.page);
+        else setLeadsPage(1);
+        if (parsed.pageSize) setLeadsPageSize(parsed.pageSize);
+        lastParamsRef.current = currentStr;
+      }
+      return;
+    }
+
+    // Params differ from what we last set. Two possibilities:
+    // 1. User changed a filter → nextStr != currentStr → write to URL.
+    // 2. URL changed externally (back/forward) → nextStr == currentStr
+    //    and currentStr != lastParamsRef → read from URL.
+    if (nextStr === searchParams.toString()) {
+      // URL already matches desired state — just record it and skip writing.
+      lastParamsRef.current = nextStr;
+      return;
+    }
+
+    // User changed a filter — write to URL.
+    lastParamsRef.current = nextStr;
+    setSearchParams(params, { replace: true });
+  }, [activeTab, filters, leadsPage, leadsPageSize, searchParams, setSearchParams]);
 
   // Reset leads pagination to page 1 when any filter, search, sort, or page size changes
   useEffect(() => {

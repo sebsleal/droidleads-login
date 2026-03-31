@@ -1,0 +1,26 @@
+{
+  "featureId": "db-schema-migration",
+  "reviewedAt": "2026-03-31T22:18:06Z",
+  "commitId": "0bff2d9",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Feature implementation matches the spec: migration 0006 adds expected_value, score_breakdown, and outreach_sent_at to leads; schema.sql and setup_all.sql were updated consistently; and upsert_leads() now conditionally includes the new fields only when non-None so default_to_null=False preserves existing DB values.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Worker had to install/upgrade websockets during implementation to import db.insert for new tests, indicating an environment dependency gotcha (supabase import chain expecting websockets.asyncio) that is not documented in shared state.",
+      "evidence": "Transcript skeleton includes `python3 -m pip install 'websockets>=12.0'` and `python3 -m pip install --upgrade websockets` before `from db.insert import upsert_leads` succeeded. .factory/library/environment.md and mission AGENTS.md do not mention this caveat."
+    },
+    {
+      "area": "skills",
+      "observation": "python-backend skill prescribes test-first (RED→GREEN), but this run implemented migration/code before creating tests; the procedure is not reflected in actual execution order.",
+      "evidence": "Transcript skeleton shows Create/Edit calls for db/migrations/0006_new_lead_columns.sql, db/schema.sql, db/setup_all.sql, and db/insert.py before tests/test_db_insert.py was created and run."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature db-schema-migration at commit 0bff2d9. Diff and transcript support a PASS: required DB columns and conditional upsert behavior were implemented with focused test coverage. Logged shared-state observations about an undocumented websockets import caveat and a skill procedure mismatch (test-first not followed in sequence)."
+}

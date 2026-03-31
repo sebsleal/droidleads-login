@@ -1,0 +1,28 @@
+{
+  "featureId": "url-state-persistence",
+  "reviewedAt": "2026-03-31T22:18:54Z",
+  "commitId": "3e1f5d0",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature correctly serializes/deserializes most leads filter state to URL params and sanitizes invalid values, but it has a back/forward regression: navigating to an empty query string does not re-apply default filter state, so UI state can diverge from URL.",
+    "issues": [
+      {
+        "file": "src/App.tsx",
+        "line": 338,
+        "severity": "blocking",
+        "description": "URL→state sync is gated by `if (currentStr && currentStr !== lastParamsRef.current)`, which skips parsing when `currentStr` is empty. After filters are set and the user navigates back to `/` (no query params), the effect returns without resetting filters/page to defaults. This violates expected back/forward URL-state behavior and leaves stale filter state while URL is empty."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The mission validation contract for this feature does not explicitly cover the back/forward behavior required in the feature definition, which allowed a URL/history sync bug to pass implementation verification.",
+      "evidence": "features.json (url-state-persistence expectedBehavior) includes 'Browser back/forward preserves filter state', while validation-contract.md only defines VAL-INFRA-011 (URL reflects filter state) and VAL-INFRA-012 (params pre-apply on load). The gap is visible in src/App.tsx:338 where empty-query back navigation is not handled."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed handoff, commit 3e1f5d0 diff, transcript skeleton, and shared-state docs. Result: fail due to a blocking URL/history synchronization bug when navigating back to an empty query string; all other requested URL param mappings are present."
+}

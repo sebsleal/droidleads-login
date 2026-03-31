@@ -1,0 +1,45 @@
+{
+  "featureId": "concurrent-scrapes-and-caching",
+  "reviewedAt": "2026-03-31T22:19:47Z",
+  "commitId": "137f282",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds ThreadPoolExecutor county scraping and introduces Sunbiz/PA caches, but there are blocking correctness and verification gaps: PA county routing can cache incorrect county results due to inconsistent normalization, the concurrent scraper path crashes when zero counties are enabled, and the new concurrency test can pass even for sequential execution so it does not actually verify parallelism.",
+    "issues": [
+      {
+        "file": "scrapers/property.py",
+        "line": 70,
+        "severity": "blocking",
+        "description": "County routing uses the raw `county` string (`if county == \"broward\"`) while the cache key normalizes `county.strip().lower()`. Inputs like `\" BROWARD \"` route to Miami-Dade, then cache that result under normalized key `('folio', 'broward')`; a later canonical `county='broward'` call returns the wrong cached county result. Repro with mocks shows BCPA is never called and Miami-Dade result is reused for Broward key."
+      },
+      {
+        "file": "pipeline/leads.py",
+        "line": 776,
+        "severity": "blocking",
+        "description": "`ThreadPoolExecutor(max_workers=len(enabled_counties))` raises `ValueError: max_workers must be greater than 0` when all counties are disabled. The previous sequential loop handled zero enabled counties gracefully; this change introduces a hard failure edge case in pipeline orchestration."
+      },
+      {
+        "file": "tests/test_concurrent_caching.py",
+        "line": 258,
+        "severity": "blocking",
+        "description": "The concurrency assertion `start_bw < end_md or start_md < end_bw` does not distinguish concurrent from sequential execution (it evaluates true for sequential order `start-md, end-md, start-bw, end-bw`). This means the test can pass without real parallelism and does not satisfy the requirement to verify concurrent county scraping behavior."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "python-backend skill mandates RED->GREEN (write failing tests first), but this feature run implemented production changes before creating new tests.",
+      "evidence": "Transcript skeleton shows Edit calls in pipeline/leads.py, scrapers/sunbiz.py, and scrapers/property.py before Create of tests/test_concurrent_caching.py and before the first full test run."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Validation contract expectation for VAL-INFRA-006 specifies a timed performance check (sleep stubs + threshold), but the implemented test uses an interleaving heuristic that is not equivalent and is currently unsound. This indicates a gap between contract requirements and what workers/tests enforce.",
+      "evidence": "validation-contract.md lines 515-519 require timed evidence (<2.5s for 3 counties); tests/test_concurrent_caching.py uses only call-order assertions and no timing threshold."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed concurrent-scrapes-and-caching (commit 137f282) with transcript skeleton and diff. Marked FAIL due to two functional regressions (PA county routing/cache mismatch and zero-enabled-counties crash) plus an invalid concurrency verification test that can pass for sequential execution. Shared-state notes were recorded for a skill-procedure mismatch and a validation-contract/testing alignment gap."
+}

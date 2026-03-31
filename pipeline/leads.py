@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -756,16 +757,30 @@ def write_leads_json(
 
 def build_canonical_lead_dataset(supabase: Any | None = None) -> LeadPipelineResult:
     permit_leads: list[dict[str, Any]] = []
-    for county, config in COUNTY_CONFIGS.items():
-        if not config.get("enabled"):
-            continue
+
+    def _scrape_county(county: str) -> tuple[str, list[dict[str, Any]]]:
         try:
-            permit_leads.extend(
+            leads = [
                 canonicalize_lead(lead)
                 for lead in scrape_damage_permits(county=county, max_records=5000, lookback_days=365)
-            )
+            ]
+            return county, leads
         except Exception as exc:
             print(f"[lead-pipeline] Permit scrape failed for {county}: {exc}")
+            return county, []
+
+    enabled_counties = [
+        county for county, config in COUNTY_CONFIGS.items()
+        if config.get("enabled")
+    ]
+    with ThreadPoolExecutor(max_workers=len(enabled_counties)) as executor:
+        futures = {
+            executor.submit(_scrape_county, county): county
+            for county in enabled_counties
+        }
+        for future in as_completed(futures):
+            county, leads = future.result()
+            permit_leads.extend(leads)
 
     storm_leads: list[dict[str, Any]] = []
     try:

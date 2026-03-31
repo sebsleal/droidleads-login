@@ -154,6 +154,11 @@ class BrowardPermitsTests(unittest.TestCase):
 class BrowardPARoutingTests(unittest.TestCase):
     """VAL-EXPAND-002: Broward leads enriched via BCPA; Miami-Dade via MD PA."""
 
+    def setUp(self) -> None:
+        # Wipe the PA cache so each test starts fresh.
+        import scrapers.property as prop_module
+        prop_module._pa_cache.clear()
+
     def test_lookup_by_folio_routes_to_bcpa_for_broward(self) -> None:
         """lookup_by_folio routes to BCPA endpoint when county='broward'."""
         with patch("scrapers.property.requests.get") as mock_get:

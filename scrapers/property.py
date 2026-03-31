@@ -16,6 +16,9 @@ import time
 import requests
 from typing import Any
 
+# Module-level cache for PA lookups: keyed by (folio_number, county_slug).
+_pa_cache: dict[tuple[str, str], dict[str, Any] | None] = {}
+
 # ---------------------------------------------------------------------------
 # Miami-Dade PA
 # ---------------------------------------------------------------------------
@@ -58,9 +61,17 @@ def lookup_by_folio(folio_number: str, county: str = "miami-dade") -> dict[str, 
         site_zip, homestead, assessed_value
     or None if not found / request failed.
     """
+    cache_key = (folio_number.strip(), county.strip().lower())
+    if cache_key in _pa_cache:
+        return _pa_cache[cache_key]
+
     if county == "broward":
-        return _lookup_by_folio_bcpa(folio_number)
-    return _lookup_by_folio_miami_dade(folio_number)
+        result = _lookup_by_folio_bcpa(folio_number)
+    else:
+        result = _lookup_by_folio_miami_dade(folio_number)
+
+    _pa_cache[cache_key] = result
+    return result
 
 
 def _lookup_by_folio_miami_dade(folio_number: str) -> dict[str, Any] | None:

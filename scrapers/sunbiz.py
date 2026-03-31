@@ -18,6 +18,9 @@ import time
 import requests
 from typing import Any
 
+# Module-level cache for Sunbiz lookups: keyed by normalized entity name.
+_sunbiz_cache: dict[str, dict[str, Any] | None] = {}
+
 SUNBIZ_SEARCH_URL = "https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults"
 SUNBIZ_DETAIL_BASE = "https://search.sunbiz.org"
 
@@ -195,6 +198,11 @@ def search_sunbiz(entity_name: str) -> dict[str, Any] | None:
     Fetches the detail page to return registered agent contact info
     and officer/director names.
     """
+    # Normalize the cache key: uppercase-stripped entity name.
+    cache_key = entity_name.upper().strip()
+    if cache_key in _sunbiz_cache:
+        return _sunbiz_cache[cache_key]
+
     # Clean up LLC suffix variations for search
     search_name = re.sub(r"\bL\.?L\.?C\.?\b", "LLC", entity_name, flags=re.IGNORECASE).strip()
     # Remove common suffixes to improve search hit rate
@@ -210,6 +218,7 @@ def search_sunbiz(entity_name: str) -> dict[str, Any] | None:
         "ListPage": "1",
     }
 
+    result: dict[str, Any] | None = None
     try:
         resp = requests.get(
             SUNBIZ_SEARCH_URL, params=params, headers=HEADERS, timeout=15
@@ -229,13 +238,16 @@ def search_sunbiz(entity_name: str) -> dict[str, Any] | None:
             parsed = _parse_detail_page(search_html)
 
         if not parsed["registered_agent_name"] and not parsed["officers"]:
-            return None
-
-        return parsed
+            result = None
+        else:
+            result = parsed
 
     except Exception as e:
         print(f"[sunbiz] Search failed for '{entity_name}': {e}")
-        return None
+        result = None
+
+    _sunbiz_cache[cache_key] = result
+    return result
 
 
 def enrich_business_owners(

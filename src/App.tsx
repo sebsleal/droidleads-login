@@ -39,6 +39,7 @@ const DEFAULT_FILTERS: FilterState = {
   scoreTier: "All",
   dateRange: "all",
   sortOrder: "newest",
+  search: "",
   hasContact: false,
   absenteeOwner: false,
   underpaid: false,
@@ -198,7 +199,17 @@ export default function App() {
   }, [rawStormCandidates, stormTrackingMap]);
 
   const filteredLeads = useMemo(() => {
+    const searchTerm = filters.search.trim().toLowerCase();
+
     return leads.filter((lead) => {
+      // Text search — case-insensitive partial match on ownerName, propertyAddress, folioNumber
+      if (searchTerm) {
+        const matchesOwner = lead.ownerName?.toLowerCase().includes(searchTerm);
+        const matchesAddress = lead.propertyAddress?.toLowerCase().includes(searchTerm);
+        const matchesFolio = lead.folioNumber?.toLowerCase().includes(searchTerm);
+        if (!matchesOwner && !matchesAddress && !matchesFolio) return false;
+      }
+
       if (filters.zip && !lead.zip.includes(filters.zip)) return false;
       if (
         filters.damageType !== "All" &&
@@ -240,8 +251,33 @@ export default function App() {
 
       return true;
     }).sort((a, b) => {
-      const diff = new Date(b.date).getTime() - new Date(a.date).getTime();
-      return filters.sortOrder === "oldest" ? -diff : diff;
+      switch (filters.sortOrder) {
+        case "score": {
+          // High → low; nulls to bottom
+          const aScore = a.score ?? -Infinity;
+          const bScore = b.score ?? -Infinity;
+          return bScore - aScore;
+        }
+        case "assessedValue": {
+          // High → low; nulls to bottom
+          const aVal = a.assessedValue ?? -Infinity;
+          const bVal = b.assessedValue ?? -Infinity;
+          return bVal - aVal;
+        }
+        case "permitValue": {
+          // High → low; nulls to bottom
+          const aVal = a.permitValue ?? -Infinity;
+          const bVal = b.permitValue ?? -Infinity;
+          return bVal - aVal;
+        }
+        case "oldest": {
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        }
+        case "newest":
+        default: {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        }
+      }
     });
   }, [leads, filters]);
 

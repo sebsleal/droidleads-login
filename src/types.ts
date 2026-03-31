@@ -106,7 +106,8 @@ export interface FilterState {
   damageType: DamageType | "All";
   scoreTier: "All" | "High" | "Medium" | "Low";
   dateRange: "7" | "30" | "90" | "all";
-  sortOrder: "newest" | "oldest";
+  sortOrder: "newest" | "oldest" | "score" | "assessedValue" | "permitValue";
+  search: string;
   hasContact: boolean;
   absenteeOwner: boolean;
   underpaid: boolean;

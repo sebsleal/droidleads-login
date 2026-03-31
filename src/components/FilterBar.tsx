@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import type { FilterState, DamageType } from '@/types'
 import { cn } from '@/lib/utils'
 import Tooltip from './Tooltip'
@@ -39,6 +39,7 @@ const isDefaultFilters = (f: FilterState) =>
   f.scoreTier === 'All' &&
   f.dateRange === 'all' &&
   f.sortOrder === 'newest' &&
+  f.search === '' &&
   !f.hasContact &&
   !f.absenteeOwner &&
   !f.underpaid &&
@@ -104,8 +105,27 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
 
   return (
     <div className="bg-white border border-zinc-100 rounded-lg divide-y divide-zinc-50">
-      {/* Row 1: dropdowns */}
+      {/* Row 1: search + dropdowns */}
       <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap">
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <FilterLabel text="Search" tooltip="Search leads by owner name, property address, or folio number." />
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Owner, address, folio…"
+              value={filters.search}
+              onChange={(e) => update('search', e.target.value)}
+              className="w-52 rounded-md border border-zinc-200 bg-zinc-50 pl-8 pr-2.5 py-1 text-[13px] text-zinc-700
+                         focus:bg-white focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
+                         placeholder:text-zinc-300 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="w-px h-4 bg-zinc-100 flex-shrink-0" />
+
         {/* ZIP */}
         <div className="flex items-center gap-2">
           <FilterLabel text="ZIP" tooltip="Filter leads by ZIP code. Only shows properties in that ZIP." />
@@ -177,14 +197,17 @@ export default function FilterBar({ filters, onChange, onClear }: FilterBarProps
         </div>
 
         <div className="flex items-center gap-2">
-          <FilterLabel text="Sort" tooltip="Sort leads by permit date — newest first shows the most recently filed at the top." />
+          <FilterLabel text="Sort" tooltip="Sort leads by date, score, assessed value, or permit value." />
           <select
             value={filters.sortOrder}
             onChange={(e) => update('sortOrder', e.target.value as FilterState['sortOrder'])}
-            className="select-input w-32"
+            className="select-input w-44"
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
+            <option value="score">Score (high→low)</option>
+            <option value="assessedValue">Assessed Value (high→low)</option>
+            <option value="permitValue">Permit Value (high→low)</option>
           </select>
         </div>
 

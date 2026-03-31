@@ -57,6 +57,9 @@ create table if not exists public.leads (
     insurer_risk             text,
     insurer_risk_label       text,
     enriched_at              timestamptz,
+    expected_value          numeric,
+    score_breakdown         jsonb,
+    outreach_sent_at        timestamptz,
     created_at               timestamptz not null default now(),
     updated_at               timestamptz not null default now(),
     constraint leads_damage_type_check check (

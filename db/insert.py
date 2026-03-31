@@ -116,6 +116,16 @@ def upsert_leads(
             "insurer_risk_label": pick("insurer_risk_label", "insurerRiskLabel"),
         }
 
+        # Enrichment fields — only include when non-None so that
+        # default_to_null=False preserves existing DB values on re-runs.
+        if lead.get("expected_value") is not None:
+            row["expected_value"] = lead["expected_value"]
+        if lead.get("score_breakdown") is not None:
+            row["score_breakdown"] = lead["score_breakdown"]
+        _outreach_sent_at = pick("outreach_sent_at", "outreachSentAt")
+        if _outreach_sent_at is not None:
+            row["outreach_sent_at"] = _outreach_sent_at
+
         # Only include user-protected fields when they carry a real value so
         # that default_to_null=False can preserve whatever the adjuster set
         # in a previous session.

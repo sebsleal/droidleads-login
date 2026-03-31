@@ -57,6 +57,9 @@ create table if not exists public.leads (
     insurer_risk             text,
     insurer_risk_label       text,
     enriched_at              timestamptz,
+    expected_value          numeric,
+    score_breakdown         jsonb,
+    outreach_sent_at        timestamptz,
     created_at               timestamptz not null default now(),
     updated_at               timestamptz not null default now()
 );
@@ -75,6 +78,9 @@ alter table public.leads add column if not exists roof_age integer;
 alter table public.leads add column if not exists insurance_company text;
 alter table public.leads add column if not exists insurer_risk text;
 alter table public.leads add column if not exists insurer_risk_label text;
+alter table public.leads add column if not exists expected_value numeric;
+alter table public.leads add column if not exists score_breakdown jsonb;
+alter table public.leads add column if not exists outreach_sent_at timestamptz;
 
 update public.leads
 set damage_type = 'Accidental Discharge'

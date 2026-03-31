@@ -40,12 +40,14 @@ class BrowardPermitsTests(unittest.TestCase):
 
     def test_broward_scrapes_multiple_endpoints(self) -> None:
         """
-        scrape_damage_permits('broward') contacts ≥2 distinct Broward hostnames.
+        scrape_damage_permits('broward') contacts ≥3 distinct Broward hostnames.
 
         Confirmed working Broward endpoints (2026-03):
           1. Fort Lauderdale MapServer (gis.fortlauderdale.gov)
           2. Broward REST View county-wide (services5.arcgis.com/DllnbBENKfts6TQD)
              — covers unincorporated Broward + municipalities that report to the county
+          3. Broward HCED Posse Permits (bcgishub.broward.org)
+             — county-wide permits from HCED Posse system, updated daily
 
         Additional cities (Hollywood, Pembroke Pines, Coral Springs, Pompano Beach)
         do not publish public ArcGIS endpoints — their permit systems are Click2Gov
@@ -68,9 +70,12 @@ class BrowardPermitsTests(unittest.TestCase):
         with patch("scrapers.permits.requests.get", side_effect=capture_get):
             leads = scrape_damage_permits("broward", max_records=10, lookback_days=90)
 
-        # Should have contacted both endpoints (fort-lauderdale + broward-county-wide)
-        self.assertGreaterEqual(len(seen_hosts), 2,
-            f"Expected ≥2 distinct hosts, got {len(seen_hosts)}: {seen_hosts}")
+        # Should have contacted all three endpoints:
+        # 1. Fort Lauderdale MapServer (gis.fortlauderdale.gov)
+        # 2. Broward REST View county-wide (services5.arcgis.com/DllnbBENKfts6TQD)
+        # 3. Broward HCED Posse Permits (bcgishub.broward.org)
+        self.assertGreaterEqual(len(seen_hosts), 3,
+            f"Expected ≥3 distinct hosts, got {len(seen_hosts)}: {seen_hosts}")
 
     def test_broward_leads_have_county_broward(self) -> None:
         """All Broward leads have county='broward'."""
@@ -96,7 +101,7 @@ class BrowardPermitsTests(unittest.TestCase):
         def fake_get(url: str, **kwargs: object) -> MagicMock:
             mock_resp = MagicMock()
             mock_resp.raise_for_status = MagicMock()
-            # Fort Lauderdale endpoint returns one city, Broward-wide returns another
+            # 1. Fort Lauderdale endpoint
             if "fortlauderdale" in url:
                 features = [{"attributes": {
                     "PERMITID": "FL-001", "PERMITTYPE": "General",
@@ -107,13 +112,25 @@ class BrowardPermitsTests(unittest.TestCase):
                     "CONTRACTOR": "", "CONTRACTPH": "", "ESTCOST": 20000,
                     "LASTUPDATEDATE": None,
                 }, "geometry": {"x": -80.1, "y": 26.1}}]
-            else:
+            # 2. Broward REST View county-wide
+            elif "DllnbBENKfts6TQD" in url:
                 features = [{"attributes": {
                     "PermitID": "BC-001", "TYPE": "General",
                     "description": "Hurricane Damage", "submissionDate": 1933929600000,
                     "Address": "200 Broward Blvd", "applicantName": "John Smith",
                     "applicantPhone": "9545559999", "total_cost": 35000.0,
                 }, "geometry": {"x": -80.1, "y": 26.1}}]
+            # 3. Broward HCED Posse Permits
+            else:
+                features = [{"attributes": {
+                    "PERMITNUM": "HCED-001", "PERMITTYPE": "Roof",
+                    "FISTATUS": "Active", "PERMITTEE": "Roof Co",
+                    "OWNER": "Jane HCED", "ISSUEDATE": 1933929600000,
+                    "JOBADDRESS": "300 SE 3rd St", "LOCATION": "300 SE 3rd St Pompano Beach FL",
+                    "WORKDESCRIPTION": "Roof Replacement Due to Hurricane",
+                    "CITY": "POMPANO BEACH", "CONTACT": "9545551234",
+                    "ZIPCODE": 33060,
+                }, "geometry": {"x": -80.1, "y": 26.2}}]
             mock_resp.json = MagicMock(return_value={
                 "features": features,
                 "exceededTransferLimit": False,

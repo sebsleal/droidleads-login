@@ -88,6 +88,8 @@ COUNTY_CONFIGS: dict[str, dict] = {
         #   - Fort Lauderdale: https://gis.fortlauderdale.gov (MapServer)
         #   - Broward REST View: https://services5.arcgis.com/DllnbBENKfts6TQD (FeatureServer)
         #     Covers unincorporated Broward + municipalities that report to the county.
+        #   - Broward HCED Posse Permits: https://bcgishub.broward.org (FeatureServer/layer 4)
+        #     Covers unincorporated Broward + all municipalities, updated daily.
         #
         # Researched but not available / not working (2026-03):
         #   - Hollywood GIS portal: requires authentication (HTTP 499)
@@ -143,6 +145,28 @@ COUNTY_CONFIGS: dict[str, dict] = {
                 "value_field":   "total_cost",
                 "inspection_field": None,
                 "city_field":    None,
+                "default_city":  "Broward County",
+            },
+            {
+                "name":        "broward-hced-posse",
+                "url": (
+                    "https://bcgishub.broward.org/posse/rest/services/"
+                    "HCED/HCEDPossePermitsRef/FeatureServer/4/query"
+                ),
+                "where_field":  "WORKDESCRIPTION",
+                "out_fields": (
+                    "PERMITNUM,PERMITTYPE,FISTATUS,PERMITTEE,OWNER,ISSUEDATE,"
+                    "JOBADDRESS,LOCATION,WORKDESCRIPTION,CITY,CONTACT,ZIPCODE"
+                ),
+                "date_field":   "ISSUEDATE",
+                "address_field": "JOBADDRESS",
+                "owner_field":  "OWNER",
+                "folio_field":   None,
+                "phone_field":   "CONTACT",
+                "contractor_field": "PERMITTEE",
+                "value_field":   None,
+                "inspection_field": None,
+                "city_field":    "CITY",
                 "default_city":  "Broward County",
             },
         ],

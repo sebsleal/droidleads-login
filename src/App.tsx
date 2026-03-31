@@ -934,7 +934,10 @@ export default function App() {
       {syncedSelectedCase && (
         <CaseDrawer
           kase={syncedSelectedCase}
-          onClose={() => setSelectedCase(null)}
+          onClose={() => {
+            setSelectedCase(null);
+            setCaseToOpen(null);
+          }}
           onSave={saveCase}
           readOnly={caseReadOnly}
         />

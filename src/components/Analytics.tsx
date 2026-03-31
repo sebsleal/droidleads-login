@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import type { Lead, DamageType, Case } from "@/types";
 import companyMetricsData from "@/data/companyMetrics.json";
+import { computeAgeDistribution } from "@/utils/ageDistribution";
 
 interface AnalyticsProps {
   leads: Lead[];
@@ -211,23 +212,10 @@ export default function Analytics({
   // -----------------------------------------------------------------------
   // Lead Age Distribution
   // -----------------------------------------------------------------------
-  const ageBuckets = [
-    { label: "0-7d", min: 0, max: 7 },
-    { label: "8-30d", min: 8, max: 30 },
-    { label: "31-60d", min: 31, max: 60 },
-    { label: "60+d", min: 61, max: Infinity },
-  ];
-  const ageData = ageBuckets.map((bucket) => {
-    const now = Date.now();
-    const cutoff = now - bucket.max * 24 * 60 * 60 * 1000;
-    const cutoffMin = now - (bucket.min - 1) * 24 * 60 * 60 * 1000;
-    const count = leads.filter((l) => {
-      const d = new Date(l.date).getTime();
-      if (bucket.max === Infinity) return d <= cutoff;
-      return d >= cutoff && d <= cutoffMin;
-    }).length;
-    return { bucket: bucket.label, count };
-  });
+  const ageData = useMemo(
+    () => computeAgeDistribution(leads),
+    [leads],
+  );
 
   const companyKpis = useMemo(() => {
     if (!hasCompanyMetrics) return null;

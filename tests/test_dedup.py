@@ -95,6 +95,49 @@ class TestNormalizeAddress(unittest.TestCase):
         addr = "123 Main St"
         self.assertEqual(normalize_address(addr), normalize_address(addr))
 
+    def test_normalization_is_idempotent_with_suffixes(self):
+        """Idempotency should hold for abbreviated-suffix addresses."""
+        addr = "456 NW 7th St"
+        self.assertEqual(
+            normalize_address(addr),
+            normalize_address(normalize_address(addr)),
+        )
+
+    def test_nw7th_and_nw_7th_same_normalized(self):
+        """NW7th (no space) and NW 7th (with space) should normalize identically."""
+        self.assertEqual(
+            normalize_address("123 NW7th Ave"),
+            normalize_address("123 NW 7th Ave"),
+        )
+
+    def test_sw5th_various_spacing(self):
+        """SW5th variants with various spacing should all normalize the same."""
+        forms = ["1 SW5th St", "1 SW 5th St", "1 sw5th st", "1 sw 5th st"]
+        normalized = [normalize_address(f) for f in forms]
+        self.assertEqual(len(set(normalized)), 1, "All spacing forms should match")
+
+    def test_se3rd_no_space_dedup(self):
+        """SE3rd (no space) and SE 3rd should hash identically and dedup."""
+        self.assertEqual(
+            make_hash("321 SE3rd Blvd", "2026-03-15"),
+            make_hash("321 SE 3rd Blvd", "2026-03-15"),
+        )
+
+    def test_ne9th_no_space_dedup(self):
+        """NE9th (no space) and NE 9th should hash identically."""
+        self.assertEqual(
+            make_hash("99 NE9th Ave", "2026-03-20"),
+            make_hash("99 NE 9th Ave", "2026-03-20"),
+        )
+
+    def test_idempotency_with_no_space_directional(self):
+        """Idempotency: re-applying normalization to NW7th form doesn't change result."""
+        addr = "789 NW7th St"
+        self.assertEqual(
+            normalize_address(addr),
+            normalize_address(normalize_address(addr)),
+        )
+
     def test_mixed_case_normalized(self):
         """Mixed case addresses should normalize consistently."""
         self.assertEqual(

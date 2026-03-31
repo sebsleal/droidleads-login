@@ -47,7 +47,9 @@ def normalize_address(address: str) -> str:
 
     Replaces common abbreviations with their full forms (St→Street, Ave→Avenue,
     Blvd→Boulevard, Dr→Drive, Ln→Lane, Ct→Court, Rd→Road), uppercases directionals
-    (NW/NE/SW/SE), strips leading/trailing whitespace, and lowercases the result.
+    (NW/NE/SW/SE), and normalizes directional spacing so that forms like NW7th
+    and NW 7th produce identical output. Strips leading/trailing whitespace and
+    lowercases the result.
 
     Normalization is idempotent: calling it multiple times yields the same result.
 
@@ -59,7 +61,19 @@ def normalize_address(address: str) -> str:
     """
     addr = address.lower().strip()
 
-    # Uppercase directionals for consistency (nw → NW)
+    # Normalize directional spacing: ensure a space between directional and
+    # the following number so that NW7th and NW 7th canonicalize identically.
+    # Matches a directional at a word boundary, directly followed by a digit
+    # (no trailing \b needed — the digit itself satisfies the boundary).
+    # The regex is case-insensitive so it catches nw7th, NW7th, etc.
+    addr = re.sub(
+        r"\b(NW|NE|SW|SE)(\d)",
+        lambda m: m.group(1).upper() + " " + m.group(2),
+        addr,
+        flags=re.IGNORECASE,
+    )
+
+    # Uppercase remaining directionals for consistency (already-spaced forms)
     addr = _DIRECTIONAL_RE.sub(lambda m: m.group(0).upper(), addr)
 
     # Replace suffix abbreviations with full forms (case-insensitive via regex)

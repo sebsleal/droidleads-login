@@ -260,9 +260,19 @@ def _scrape_endpoint(
     county: str,
     max_records: int,
     lookback_days: int,
+    city_filter: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Fetch and normalize damage permits from a single ArcGIS endpoint.
+
+    Args:
+        endpoint:    Endpoint config dict.
+        county:      County slug.
+        max_records: Max records per endpoint.
+        lookback_days: Lookback window.
+        city_filter: Optional city name (case-insensitive) to filter results.
+                     When set, records whose parsed city does not match are
+                     dropped. Useful for area-specific storm candidate scans.
 
     Returns lead dicts with 'county' set to the county slug.
     """
@@ -356,6 +366,16 @@ def _scrape_endpoint(
         if not city:
             city = endpoint_default_city or "Broward"
 
+        # Apply area-specific city filter when candidate has city specificity.
+        # Use case-insensitive partial match so "Deerfield" matches "Deerfield Beach".
+        if city_filter:
+            city_lower = city.lower()
+            filter_lower = city_filter.lower()
+            # Match if filter is contained in the record's city OR record's city
+            # is contained in the filter (handles reversed specificity)
+            if filter_lower not in city_lower and city_lower not in filter_lower:
+                continue
+
         folio = (attrs.get(folio_field) or "").strip() if folio_field else ""
         phone = (attrs.get(phone_field) or "").strip() if phone_field else None
         contractor = (attrs.get(contractor_field) or "").strip() if contractor_field else None
@@ -398,6 +418,7 @@ def scrape_damage_permits(
     county: str = "miami-dade",
     max_records: int = 500,
     lookback_days: int = 90,
+    city: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Fetch damage-related building permits for the given county.
@@ -405,6 +426,15 @@ def scrape_damage_permits(
     Supports two config structures:
       - Single-endpoint (miami-dade, palm-beach): uses `url` key directly
       - Multi-endpoint (broward): iterates over `endpoints` list, aggregates results
+
+    Args:
+        county:        County slug (e.g. "broward", "miami-dade").
+        max_records:   Maximum total records to return across all endpoints.
+        lookback_days: How many days back to search.
+        city:          Optional city name to filter results to a specific
+                       municipality within the county. When provided, only
+                       records whose parsed city matches (case-insensitive)
+                       are included.
 
     Returns a list of normalised lead dicts ready for dedup and insert.
     Each lead dict includes a 'county' field set to the county slug.
@@ -424,7 +454,9 @@ def scrape_damage_permits(
         # Collect up to max_records per endpoint
         per_endpoint = min(max_records, 500)
         for endpoint in endpoints:
-            results = _scrape_endpoint(endpoint, county, per_endpoint, lookback_days)
+            results = _scrape_endpoint(
+                endpoint, county, per_endpoint, lookback_days, city_filter=city
+            )
             all_results.extend(results)
             print(f"[permits] {county}: total so far {len(all_results)} damage-related permits")
             if len(all_results) >= max_records:
@@ -454,7 +486,7 @@ def scrape_damage_permits(
         "default_city":     config["default_city"],
         "where_keywords":   config.get("where_keywords", DAMAGE_KEYWORDS),
     }
-    return _scrape_endpoint(single_endpoint, county, max_records, lookback_days)
+    return _scrape_endpoint(single_endpoint, county, max_records, lookback_days, city_filter=city)
 
 
 if __name__ == "__main__":

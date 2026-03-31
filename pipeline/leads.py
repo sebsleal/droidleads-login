@@ -521,10 +521,16 @@ def build_storm_leads_from_candidates(
 
     storm_leads: list[dict[str, Any]] = []
 
+    # Counties that have a dedicated permit scraper (county-specific scan path).
+    # Palm Beach has no public endpoint as of 2026-03.
+    COUNTIES_WITH_PERMIT_SCRAPER = {"broward"}
+    # Counties that have a parcel layer (GeoProp only covers Miami-Dade).
+    COUNTIES_WITH_PARCEL_API = {"miami-dade"}
+
     for candidate in high_scoring:
         county = candidate.get("county") or "miami-dade"
-        county_zips = _COUNTY_ZIPS.get(county, MIAMI_DADE_ZIPS)
-        city = candidate.get("city") or _COUNTY_CITY_DEFAULTS.get(county, "Miami")
+        candidate_city = candidate.get("city") or ""
+        candidate_zip = candidate.get("zip") or ""
         event_date = candidate.get("eventDate") or datetime.now(timezone.utc).date().isoformat()
         storm_event = candidate.get("stormEvent") or ""
         event_type = candidate.get("eventType") or ""
@@ -533,40 +539,111 @@ def build_storm_leads_from_candidates(
         fema_incident = candidate.get("femaIncidentType") or ""
         candidate_id = candidate.get("id") or ""
 
-        try:
-            parcels = fetch_parcels_by_zip(county_zips, limit_per_zip=limit_per_zip)
-        except Exception as exc:
-            print(f"[storm-to-lead] Parcel fetch failed for county {county}: {exc}")
-            parcels = []
+        # Determine the city name to use on generated leads.
+        city = candidate_city or _COUNTY_CITY_DEFAULTS.get(county, "Miami")
 
-        for parcel in parcels:
-            address = (parcel.get("propertyAddress") or "").strip()
-            if not address:
-                continue
-            normalized_address = address.lower().strip()
-            if normalized_address in existing_addresses:
-                continue
+        # ------------------------------------------------------------------
+        # Route: Miami-Dade — use GeoProp parcel layer with optional ZIP
+        # specificity. Only the Miami-Dade GeoProp API covers this county.
+        # ------------------------------------------------------------------
+        if county in COUNTIES_WITH_PARCEL_API:
+            # Honour candidate area specificity: narrow to single ZIP if provided,
+            # otherwise use the full county ZIP set.
+            if candidate_zip:
+                zips_to_scan = [int(candidate_zip)]
+            else:
+                zips_to_scan = MIAMI_DADE_ZIPS
 
-            storm_leads.append(
-                canonicalize_lead({
-                    "owner_name": "Property Owner",
-                    "address": address,
-                    "city": city,
-                    "zip": parcel.get("zip") or "",
-                    "folio_number": parcel.get("folioNumber") or "",
-                    "damage_type": damage_type,
-                    "permit_type": "Pre-Permit Storm Opportunity",
-                    "permit_date": event_date,
-                    "storm_event": storm_event,
-                    "status": "New",
-                    "source": "storm",
-                    "source_detail": "storm_event",
-                    "county": county,
-                    "fema_declaration_number": fema_declaration,
-                    "fema_incident_type": fema_incident,
-                    "noaa_episode_id": candidate_id,
-                })
-            )
+            try:
+                parcels = fetch_parcels_by_zip(zips_to_scan, limit_per_zip=limit_per_zip)
+            except Exception as exc:
+                print(f"[storm-to-lead] Parcel fetch failed for county {county}: {exc}")
+                parcels = []
+
+            for parcel in parcels:
+                address = (parcel.get("propertyAddress") or "").strip()
+                if not address:
+                    continue
+                normalized_address = address.lower().strip()
+                if normalized_address in existing_addresses:
+                    continue
+
+                storm_leads.append(
+                    canonicalize_lead({
+                        "owner_name": "Property Owner",
+                        "address": address,
+                        "city": city,
+                        "zip": parcel.get("zip") or "",
+                        "folio_number": parcel.get("folioNumber") or "",
+                        "damage_type": damage_type,
+                        "permit_type": "Pre-Permit Storm Opportunity",
+                        "permit_date": event_date,
+                        "storm_event": storm_event,
+                        "status": "New",
+                        "source": "storm",
+                        "source_detail": "storm_event",
+                        "county": county,
+                        "fema_declaration_number": fema_declaration,
+                        "fema_incident_type": fema_incident,
+                        "noaa_episode_id": candidate_id,
+                    })
+                )
+
+        # ------------------------------------------------------------------
+        # Route: Broward — use the county-specific permit scraper with
+        # optional city specificity. The permit scraper covers all Broward
+        # municipalities via its multiple ArcGIS endpoints.
+        # ------------------------------------------------------------------
+        elif county in COUNTIES_WITH_PERMIT_SCRAPER:
+            area_city = candidate_city if candidate_city else None
+            try:
+                permits = scrape_damage_permits(
+                    county=county,
+                    max_records=500,
+                    lookback_days=365,
+                    city=area_city,
+                )
+            except Exception as exc:
+                print(f"[storm-to-lead] Permit scan failed for county {county}: {exc}")
+                permits = []
+
+            for raw in permits:
+                address = (raw.get("address") or "").strip()
+                if not address:
+                    continue
+                normalized_address = address.lower().strip()
+                if normalized_address in existing_addresses:
+                    continue
+
+                storm_leads.append(
+                    canonicalize_lead({
+                        "owner_name": raw.get("owner_name") or "Property Owner",
+                        "address": address,
+                        "city": raw.get("city") or city,
+                        "zip": raw.get("zip") or "",
+                        "folio_number": raw.get("folio_number") or "",
+                        "damage_type": raw.get("damage_type") or damage_type,
+                        "permit_type": raw.get("permit_type") or "Pre-Permit Storm Opportunity",
+                        "permit_date": raw.get("permit_date") or event_date,
+                        "permit_value": raw.get("permit_value") or 0,
+                        "contractor_name": raw.get("contractor_name"),
+                        "storm_event": storm_event,
+                        "status": "New",
+                        "source": "storm",
+                        "source_detail": "storm_event",
+                        "county": county,
+                        "fema_declaration_number": fema_declaration,
+                        "fema_incident_type": fema_incident,
+                        "noaa_episode_id": candidate_id,
+                    })
+                )
+
+        # ------------------------------------------------------------------
+        # Route: Palm Beach (or any other county) — skip. No public parcel
+        # or permit API is available as of 2026-03.
+        # ------------------------------------------------------------------
+        else:
+            print(f"[storm-to-lead] County '{county}' has no public scan endpoint — skipping")
 
     print(
         f"[storm-to-lead] {len(candidates)} candidates → "

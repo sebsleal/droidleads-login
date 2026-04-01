@@ -42,6 +42,7 @@
 - Primary route for conversion assertions (`VAL-EXPAND-004`, `VAL-EXPAND-005`, `VAL-CROSS-005`): use `http://localhost:5173/fixtures/convert-case` which provides an isolated Converted-lead fixture and case-creation flow without mutating real leads.
 - Primary route for cross-area assertions (`VAL-CROSS-002`, `VAL-CROSS-003`, `VAL-CROSS-004`): use `http://localhost:5173/fixtures/cross-area`.
 - Current fixture behavior (`/fixtures/cross-area`, infra round 4): strict composed filters can produce a multi-page result set (validated with search='3', status='New', insurer='Citizens Property Insurance', sort='Score (high→low)' reaching page 2 of 2). Do not assume page-2 is blocked; validate using the contract's explicit composed-filter flow.
+- Dashboard data caveat (dashboard round 1): main dataset currently has `assessedValue` all-null and `permitValue` all-non-null, while current fixtures do not provide mixed null/non-null sort surfaces for those fields. Null-bottom assertions for assessed/permit sort ordering may block unless a dedicated mixed-null fixture is provided.
 - Shared-state boundary: fixture-created cases are acceptable test data for validation; do not attempt to mutate production Supabase records.
 - Evidence: capture screenshots/DOM checks for button visibility, prefilled modal fields, and case presence in `/cases` after submit.
 

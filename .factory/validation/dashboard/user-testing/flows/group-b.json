@@ -1,0 +1,289 @@
+{
+  "groupId": "group-b",
+  "testedAt": "2026-04-01T13:14:58Z",
+  "isolation": {
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "appUrl": "http://localhost:5173",
+    "testingSurface": "agent-browser",
+    "browserSession": "4a554638eca0__g2",
+    "assignedAssertions": [
+      "VAL-DASH-018",
+      "VAL-DASH-019",
+      "VAL-DASH-020",
+      "VAL-DASH-021",
+      "VAL-DASH-035",
+      "VAL-DASH-036",
+      "VAL-DASH-037",
+      "VAL-DASH-038",
+      "VAL-DASH-039",
+      "VAL-DASH-040",
+      "VAL-DASH-041"
+    ]
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertionResults": [
+    {
+      "id": "VAL-DASH-018",
+      "status": "pass",
+      "reason": "Leads footer displayed Previous/Next buttons and rows-per-page selector with 25/50/100 options.",
+      "reproductionNotes": [
+        "Open http://localhost:5173 on Leads view.",
+        "Observe table footer controls and page indicator."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-018-pagination-controls.png"
+        ],
+        "dom": {
+          "page": "Page 1 of 540",
+          "pageSizeOptions": [
+            "25",
+            "50",
+            "100"
+          ]
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-019",
+      "status": "pass",
+      "reason": "Row count respected selected page size at 25, 50, and 100.",
+      "reproductionNotes": [
+        "Set rows-per-page to 25, then 50, then 100.",
+        "Count rendered rows in tbody each time."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-019-page-size-25.png",
+          "dashboard/group-b/VAL-DASH-019-page-size-50.png",
+          "dashboard/group-b/VAL-DASH-019-page-size-100.png"
+        ],
+        "rowCounts": {
+          "25": 25,
+          "50": 50,
+          "100": 100
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-020",
+      "status": "pass",
+      "reason": "Next/Previous navigation changed pages and returned to original first-row data when navigating back.",
+      "reproductionNotes": [
+        "From page 1, click Next page to reach page 2.",
+        "Verify first row differs from page 1.",
+        "Click Previous page and verify first row matches original page 1 row."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-020-page-1.png",
+          "dashboard/group-b/VAL-DASH-020-page-2.png",
+          "dashboard/group-b/VAL-DASH-020-page-1-return.png"
+        ],
+        "rows": {
+          "page1FirstRow": "1 281 Nw 103 St Miami, FL 33150 Underpaid Hyacinth Grant Le Roof 79 Mar 28, 2026 New",
+          "page2FirstRow": "26 722 Ne 204Th Ln Miami, FL 33179 Repeat Uri Stauss Aronowitz Roof 77 Mar 26, 2026 New",
+          "page1ReturnFirstRow": "1 281 Nw 103 St Miami, FL 33150 Underpaid Hyacinth Grant Le Roof 79 Mar 28, 2026 New"
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-021",
+      "status": "pass",
+      "reason": "Displayed page count matched ceil(total_leads / page_size).",
+      "reproductionNotes": [
+        "With page size 25, read total leads and page indicator.",
+        "Compute ceil(13492 / 25) and compare against UI page count."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-021-page-count.png"
+        ],
+        "calculation": {
+          "totalLeads": 13492,
+          "pageSize": 25,
+          "expectedTotalPages": 540,
+          "displayedTotalPages": 540,
+          "match": true
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-035",
+      "status": "pass",
+      "reason": "Changing search text reset pagination to page 1.",
+      "reproductionNotes": [
+        "Navigate to page 2.",
+        "Type 'river' in search input.",
+        "Verify page indicator resets to page 1."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-035-search-resets-page.png"
+        ],
+        "state": {
+          "before": "Page 2 of 540",
+          "after": "Page 1 of 5",
+          "search": "river"
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-036",
+      "status": "pass",
+      "reason": "Changing status filter reset pagination to page 1.",
+      "reproductionNotes": [
+        "Set page size to 100 and navigate to page 2.",
+        "Change Status from All to New.",
+        "Verify page indicator resets to page 1."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-036-status-resets-page.png"
+        ],
+        "state": {
+          "before": "Page 2 of 135",
+          "after": "Page 1 of 135",
+          "statusAfter": "New",
+          "pageSize": "100",
+          "sort": "newest"
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-037",
+      "status": "blocked",
+      "reason": "Could not change insurer filter because dropdown contained only one option ('All insurers'), so no insurer change action was possible.",
+      "reproductionNotes": [
+        "Inspect insurer dropdown options in Leads filters.",
+        "Observed optionCount=1 with only 'All insurers'.",
+        "No alternate insurer value available to trigger pagination reset behavior."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-037-insurer-filter-options.png"
+        ],
+        "dropdown": {
+          "optionCount": 1,
+          "options": [
+            "All insurers"
+          ]
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-038",
+      "status": "pass",
+      "reason": "Changing FEMA filter reset pagination to page 1.",
+      "reproductionNotes": [
+        "Set page size to 50 and navigate to page 2.",
+        "Change FEMA filter from All to Tagged.",
+        "Verify page indicator resets to page 1."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-038-fema-resets-page.png"
+        ],
+        "state": {
+          "before": "Page 2 of 57",
+          "after": "Page 1 of 57",
+          "femaAfter": "Tagged",
+          "pageSize": "50"
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-039",
+      "status": "pass",
+      "reason": "Changing sort order reset pagination to page 1.",
+      "reproductionNotes": [
+        "Set page size to 50 and navigate to page 2.",
+        "Change sort from Newest first to Score (high→low).",
+        "Verify page indicator resets to page 1."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-039-sort-resets-page.png"
+        ],
+        "state": {
+          "before": "Page 2 of 270",
+          "after": "Page 1 of 270",
+          "sortAfter": "score",
+          "pageSize": "50"
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-040",
+      "status": "pass",
+      "reason": "Changing page size reset pagination to page 1.",
+      "reproductionNotes": [
+        "On page 2, change rows-per-page from 25 to 50 (and later 50 to 100).",
+        "Verify page indicator resets to page 1 after each page-size change."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-b/VAL-DASH-040-page-size-resets-page.png"
+        ],
+        "state": {
+          "before": "Page 2 of 540",
+          "after": "Page 1 of 270",
+          "pageSizeAfter": "50",
+          "sort": "score"
+        }
+      }
+    },
+    {
+      "id": "VAL-DASH-041",
+      "status": "pass",
+      "reason": "No console errors or page errors were reported during the tested pagination/filter interactions.",
+      "reproductionNotes": [
+        "Clear browser errors/console logs.",
+        "Run assigned pagination and filter interactions.",
+        "Check `agent-browser errors` and `agent-browser console` outputs."
+      ],
+      "evidence": {
+        "consoleErrors": "none",
+        "pageErrors": "none",
+        "network": "agent-browser network requests -> No requests captured"
+      }
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser chained heredoc + command chaining intermittently produced `SyntaxError: Unexpected identifier 'session'` during eval chains.",
+      "resolved": true,
+      "resolution": "Switched to shorter single-purpose commands (separate eval/snapshot/select/screenshot calls) and re-ran steps.",
+      "affectedAssertions": [
+        "VAL-DASH-035",
+        "VAL-DASH-036",
+        "VAL-DASH-038",
+        "VAL-DASH-039",
+        "VAL-DASH-040"
+      ]
+    },
+    {
+      "description": "Element refs became stale after page-state changes causing temporary click failures.",
+      "resolved": true,
+      "resolution": "Re-ran `agent-browser snapshot -i` before subsequent interactions to refresh refs.",
+      "affectedAssertions": [
+        "VAL-DASH-036",
+        "VAL-DASH-038",
+        "VAL-DASH-039",
+        "VAL-DASH-040"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Insurer dropdown did not expose any selectable insurer values beyond 'All insurers', preventing insurer-filter-change flow validation.",
+      "affectedAssertions": [
+        "VAL-DASH-037"
+      ],
+      "quickFixAttempted": "Repeatedly reset filters, refreshed refs, and re-inspected insurer select options; option count remained 1."
+    }
+  ],
+  "summary": "Validated 11 assigned assertions: 10 passed, 1 blocked (VAL-DASH-037 due to no selectable insurer options)."
+}

@@ -1,0 +1,181 @@
+{
+  "groupId": "group-c",
+  "testedAt": "2026-04-01T13:14:26.178651+00:00",
+  "isolation": {
+    "surface": "agent-browser",
+    "session": "4a554638eca0__g3",
+    "appUrl": "http://localhost:5173",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "assignedAssertions": [
+      "VAL-DASH-022",
+      "VAL-DASH-023",
+      "VAL-DASH-024",
+      "VAL-DASH-025",
+      "VAL-DASH-026",
+      "VAL-DASH-027",
+      "VAL-DASH-028"
+    ]
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertionResults": [
+    {
+      "id": "VAL-DASH-022",
+      "title": "Pagination controls on Storm Watch table",
+      "status": "pass",
+      "reason": "Storm Watch table footer shows page-size selector and previous/next controls.",
+      "reproductionNotes": [
+        "Open http://localhost:5173/storm-watch.",
+        "Verify footer has Rows per page selector (25/50/100) plus Previous/Next buttons.",
+        "Capture screenshot of footer controls."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-022-storm-watch-pagination-controls.png"
+        ],
+        "dom": "Rows per page select present with options 25/50/100; Previous button disabled on page 1; Next button enabled.",
+        "consoleErrors": "none",
+        "network": "GET /storm_candidates.json?_=... observed during route load"
+      }
+    },
+    {
+      "id": "VAL-DASH-023",
+      "title": "Storm Watch pagination works",
+      "status": "pass",
+      "reason": "Default size shows 25 rows on page 1 and navigating Next moves to page 2 with different pagination state; changing page size to 50 shows all 40 rows on one page.",
+      "reproductionNotes": [
+        "On /storm-watch at size 25, record page metrics.",
+        "Click Next page and verify page indicator changes to page 2 and row count changes.",
+        "Change Rows per page to 50 and verify single-page result set with all rows visible."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-023-storm-watch-page-2.png",
+          "dashboard/group-c/VAL-DASH-023-storm-watch-page-size-50.png"
+        ],
+        "dom": "Page1: rowCount=25, pageIndicator='Page 1 of 2'. Page2: rowCount=15, pageIndicator='Page 2 of 2'. Size50: rowCount=40, pageIndicator='Page 1 of 1'.",
+        "consoleErrors": "none",
+        "network": "GET /storm_candidates.json?_=... observed"
+      }
+    },
+    {
+      "id": "VAL-DASH-024",
+      "title": "Pagination controls on Cases table",
+      "status": "pass",
+      "reason": "After seeding fixture cases in-session via /fixtures/convert-case, Cases table rendered footer controls with page-size selector and previous/next buttons.",
+      "reproductionNotes": [
+        "Use /fixtures/convert-case and create fixture cases in the same browser session.",
+        "Navigate to /cases.",
+        "Verify footer includes Rows per page selector (25/50/100) and Previous/Next controls."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-024-cases-pagination-controls.png"
+        ],
+        "dom": "Cases nav count showed seeded data (Cases 35); footer controls present with 25/50/100 and Previous/Next.",
+        "consoleErrors": "none",
+        "network": "GET https://cevhdgdvebucrzyjfzol.supabase.co/rest/v1/cases?select=*&order=date_logged.desc observed"
+      }
+    },
+    {
+      "id": "VAL-DASH-025",
+      "title": "Cases pagination works",
+      "status": "pass",
+      "reason": "With 35 seeded fixture cases, page size 25 produced 2 pages (25 + 10 rows), and page size 50 collapsed to one page with all 35 rows.",
+      "reproductionNotes": [
+        "On /cases with seeded fixture data, verify page 1 metrics at size 25.",
+        "Click Next and verify page indicator and row count change on page 2.",
+        "Set Rows per page to 50 and verify one-page table with all rows visible."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-025-cases-page-2.png",
+          "dashboard/group-c/VAL-DASH-025-cases-page-size-50.png"
+        ],
+        "dom": "Size25 Page1: rowCount=25, pageIndicator='Page 1 of 2'. Size25 Page2: rowCount=10, pageIndicator='Page 2 of 2'. Size50: rowCount=35, pageIndicator='Page 1 of 1'.",
+        "consoleErrors": "none",
+        "network": "GET .../rest/v1/cases?select=*&order=date_logged.desc observed"
+      }
+    },
+    {
+      "id": "VAL-DASH-026",
+      "title": "Loading spinner during Leads data fetch",
+      "status": "pass",
+      "reason": "Spinner was observed during initial leads route load before data table rendered.",
+      "reproductionNotes": [
+        "Reload http://localhost:5173/.",
+        "Immediately check for [data-testid='loading-spinner'].",
+        "Capture screenshot while spinner is visible."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-026-leads-loading-spinner.png"
+        ],
+        "dom": "Observed state on reload: {spinner:true, noLeads:false, noLeadsMatch:false, path:'/'}",
+        "consoleErrors": "none",
+        "network": "GET /leads.json?_=... observed"
+      }
+    },
+    {
+      "id": "VAL-DASH-027",
+      "title": "Loading spinner during Storm Watch data fetch",
+      "status": "pass",
+      "reason": "Spinner was observed on storm-watch route during initial candidate fetch before table content rendered.",
+      "reproductionNotes": [
+        "Reload http://localhost:5173/storm-watch.",
+        "Immediately check for [data-testid='loading-spinner'].",
+        "Capture screenshot while spinner is visible."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-027-storm-watch-loading-spinner.png"
+        ],
+        "dom": "Observed state on reload: {spinner:true, noStorm:false, path:'/storm-watch'}",
+        "consoleErrors": "none",
+        "network": "GET /storm_candidates.json?_=... observed"
+      }
+    },
+    {
+      "id": "VAL-DASH-028",
+      "title": "Loading spinner during Cases data load",
+      "status": "pass",
+      "reason": "Spinner was observed during cases route load prior to case list rendering.",
+      "reproductionNotes": [
+        "Reload http://localhost:5173/cases.",
+        "Immediately check for [data-testid='loading-spinner'].",
+        "Capture screenshot while spinner is visible."
+      ],
+      "evidence": {
+        "screenshots": [
+          "dashboard/group-c/VAL-DASH-028-cases-loading-spinner.png"
+        ],
+        "dom": "Observed state on reload: {spinner:true, noCases:false, path:'/cases'}",
+        "consoleErrors": "none",
+        "network": "GET .../rest/v1/cases?select=*&order=date_logged.desc observed"
+      }
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Cases view can be empty with no pagination footer if no case rows are present.",
+      "resolved": true,
+      "resolution": "Used the documented fixture flow (/fixtures/convert-case) within the same browser session to create fixture cases before validating VAL-DASH-024/025.",
+      "affectedAssertions": [
+        "VAL-DASH-024",
+        "VAL-DASH-025"
+      ]
+    },
+    {
+      "description": "Fixture modal/drawer overlay occasionally blocked sidebar tab click while returning to Cases.",
+      "resolved": true,
+      "resolution": "Dismissed overlays with Escape before navigation to keep interactions deterministic.",
+      "affectedAssertions": [
+        "VAL-DASH-024",
+        "VAL-DASH-025"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Validated 7 assigned dashboard assertions (VAL-DASH-022..028): 7 passed, 0 failed, 0 blocked. Storm Watch and Cases pagination controls/behavior were confirmed with screenshots and DOM checks; all three loading-spinner assertions were observed during route fetch startup."
+}

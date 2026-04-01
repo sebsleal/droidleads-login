@@ -60,14 +60,14 @@ interface ToggleProps {
   activeColor?: string
 }
 
-function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-800' }: ToggleProps) {
+function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-800 dark:bg-zinc-700' }: ToggleProps) {
   return (
     <Tooltip text={tooltipText}>
       <label className="flex items-center gap-1.5 cursor-pointer select-none group">
         <div
           className={cn(
             'relative w-7 h-[16px] rounded-full transition-colors duration-200 flex-shrink-0',
-            checked ? activeColor : 'bg-zinc-200'
+            checked ? activeColor : 'bg-zinc-200 dark:bg-slate-600'
           )}
           onClick={onToggle}
         >
@@ -81,7 +81,7 @@ function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-
         <span
           className={cn(
             'text-[12px] font-medium transition-colors whitespace-nowrap',
-            checked ? 'text-zinc-900' : 'text-zinc-400 group-hover:text-zinc-600'
+            checked ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-slate-400 group-hover:text-zinc-600 dark:group-hover:text-slate-300'
           )}
         >
           {label}
@@ -94,7 +94,7 @@ function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-
 function FilterLabel({ text, tooltip }: { text: string; tooltip: string }) {
   return (
     <Tooltip text={tooltip}>
-      <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-[0.08em] whitespace-nowrap cursor-help">
+      <span className="text-[10px] font-semibold text-zinc-400 dark:text-slate-400 uppercase tracking-[0.08em] whitespace-nowrap cursor-help">
         {text}
       </span>
     </Tooltip>
@@ -109,7 +109,7 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
   }
 
   return (
-    <div className="bg-white border border-zinc-100 rounded-lg divide-y divide-zinc-50">
+    <div className="bg-white dark:bg-slate-800 border border-zinc-100 dark:border-slate-700 rounded-lg divide-y divide-zinc-50 dark:divide-slate-700">
       {/* Row 1: search + dropdowns */}
       <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap">
         {/* Search */}
@@ -122,14 +122,14 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
               placeholder="Owner, address, folio…"
               value={filters.search}
               onChange={(e) => update('search', e.target.value)}
-              className="w-52 rounded-md border border-zinc-200 bg-zinc-50 pl-8 pr-2.5 py-1 text-[13px] text-zinc-700
-                         focus:bg-white focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
-                         placeholder:text-zinc-300 transition-colors"
+              className="w-52 rounded-md border border-zinc-200 dark:border-slate-600 bg-zinc-50 dark:bg-slate-700 pl-8 pr-2.5 py-1 text-[13px] text-zinc-700 dark:text-slate-200
+                         focus:bg-white dark:focus:bg-slate-700 focus:border-zinc-400 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-slate-500/20
+                         placeholder:text-zinc-300 dark:placeholder:text-slate-500 transition-colors"
             />
           </div>
         </div>
 
-        <div className="w-px h-4 bg-zinc-100 flex-shrink-0" />
+        <div className="w-px h-4 bg-zinc-100 dark:bg-slate-700 flex-shrink-0" />
 
         {/* ZIP */}
         <div className="flex items-center gap-2">
@@ -140,13 +140,13 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
             maxLength={5}
             value={filters.zip}
             onChange={(e) => update('zip', e.target.value.replace(/\D/g, ''))}
-            className="w-20 rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[13px] text-zinc-700
-                       focus:bg-white focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
-                       placeholder:text-zinc-300 transition-colors"
+            className="w-20 rounded-md border border-zinc-200 dark:border-slate-600 bg-zinc-50 dark:bg-slate-700 px-2.5 py-1 text-[13px] text-zinc-700 dark:text-slate-200
+                       focus:bg-white dark:focus:bg-slate-700 focus:border-zinc-400 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-slate-500/20
+                       placeholder:text-zinc-300 dark:placeholder:text-slate-500 transition-colors"
           />
         </div>
 
-        <div className="w-px h-4 bg-zinc-100 flex-shrink-0" />
+        <div className="w-px h-4 bg-zinc-100 dark:bg-slate-700 flex-shrink-0" />
 
         <div className="flex items-center gap-2">
           <FilterLabel text="Damage" tooltip="Filter by the type of property damage on the permit." />
@@ -274,7 +274,7 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
         {hasActiveFilters && (
           <button
             onClick={onClear}
-            className="ml-auto flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-zinc-700 transition-colors"
+            className="ml-auto flex items-center gap-1 text-[11px] font-medium text-zinc-400 dark:text-slate-400 hover:text-zinc-700 dark:hover:text-slate-200 transition-colors"
           >
             <X className="w-3 h-3" />
             Clear

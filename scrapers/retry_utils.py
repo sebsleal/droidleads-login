@@ -44,7 +44,7 @@ def retry_request(
         timeout:     Request timeout in seconds.
         max_retries: Maximum number of retry attempts (default 3).
         backoff_delays: Sequence of delay seconds between attempts.
-                       Must have at least max_retries-1 entries.
+                       Must have at least max_retries - 1 entries.
 
     Returns:
         A requests.Response object from the final (successful or non-retryable) attempt.
@@ -53,9 +53,9 @@ def retry_request(
         requests.HTTPError: For non-retryable HTTP errors (4xx except 408/429).
         requests.ConnectionError: For non-retryable connection failures.
     """
-    if len(backoff_delays) < max_retries:
+    if len(backoff_delays) < max_retries - 1:
         raise ValueError(
-            f"backoff_delays must have at least {max_retries} entries, "
+            f"backoff_delays must have at least {max_retries - 1} entries, "
             f"got {len(backoff_delays)}"
         )
 

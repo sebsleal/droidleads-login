@@ -375,5 +375,117 @@ class RetryableStatusCodesContract(unittest.TestCase):
             )
 
 
+class BackoffDelayTupleValidationTests(unittest.TestCase):
+    """Verify backoff_delays tuple length validation (max_retries - 1 boundary)."""
+
+    # With default max_retries=3, we need exactly 2 delays (consumed at attempt 0 and 1)
+    # The last attempt (attempt=2) does not sleep — it propagates the error.
+
+    def test_accepts_exactly_max_retries_minus_one_delays(self) -> None:
+        """Custom backoff_delays with exactly max_retries-1 entries is accepted."""
+        # 2 delays for max_retries=3 — exactly the number of sleeps that occur
+        mock_resp = MagicMock(spec=requests.Response)
+        mock_resp.status_code = 503
+        exc = requests.HTTPError(response=MagicMock(status_code=503))
+        mock_resp.raise_for_status.side_effect = exc
+
+        with patch("scrapers.retry_utils.requests.get", return_value=mock_resp):
+            with patch("scrapers.retry_utils.time.sleep") as mock_sleep:
+                with self.assertRaises(requests.HTTPError):
+                    retry_request(
+                        "https://example.com/api",
+                        backoff_delays=(0.1, 0.2),
+                    )
+                # Two sleeps should have occurred with our custom delays
+                self.assertEqual(mock_sleep.call_count, 2)
+                backoff_values = [call[0][0] for call in mock_sleep.call_args_list]
+                self.assertEqual(backoff_values, [0.1, 0.2])
+
+    def test_accepts_more_than_max_retries_minus_one_delays(self) -> None:
+        """Custom backoff_delays with more than max_retries-1 entries is accepted (extra ignored)."""
+        # 4 delays for max_retries=3 — only first 2 are consumed
+        mock_resp = MagicMock(spec=requests.Response)
+        mock_resp.status_code = 503
+        exc = requests.HTTPError(response=MagicMock(status_code=503))
+        mock_resp.raise_for_status.side_effect = exc
+
+        with patch("scrapers.retry_utils.requests.get", return_value=mock_resp):
+            with patch("scrapers.retry_utils.time.sleep") as mock_sleep:
+                with self.assertRaises(requests.HTTPError):
+                    retry_request(
+                        "https://example.com/api",
+                        backoff_delays=(0.1, 0.2, 0.3, 0.4),
+                    )
+                # Only two sleeps should have occurred
+                self.assertEqual(mock_sleep.call_count, 2)
+                backoff_values = [call[0][0] for call in mock_sleep.call_args_list]
+                # First two custom delays should have been used
+                self.assertEqual(backoff_values, [0.1, 0.2])
+
+    def test_rejects_fewer_than_max_retries_minus_one_delays(self) -> None:
+        """Custom backoff_delays with fewer than max_retries-1 entries raises ValueError."""
+        # 1 delay for max_retries=3 — not enough for the two sleeps that occur
+        with self.assertRaises(ValueError) as ctx:
+            retry_request(
+                "https://example.com/api",
+                backoff_delays=(0.5,),
+            )
+        self.assertIn("at least 2 entries", str(ctx.exception))
+        self.assertIn("got 1", str(ctx.exception))
+
+    def test_rejects_empty_backoff_delays(self) -> None:
+        """Empty backoff_delays tuple raises ValueError."""
+        with self.assertRaises(ValueError) as ctx:
+            retry_request("https://example.com/api", backoff_delays=())
+        self.assertIn("at least 2 entries", str(ctx.exception))
+        self.assertIn("got 0", str(ctx.exception))
+
+    def test_default_backoff_delays_accepted_with_default_max_retries(self) -> None:
+        """Default BACKOFF_DELAYS (3 entries) is accepted with default max_retries=3."""
+        mock_resp = MagicMock(spec=requests.Response)
+        mock_resp.status_code = 503
+        exc = requests.HTTPError(response=MagicMock(status_code=503))
+        mock_resp.raise_for_status.side_effect = exc
+
+        with patch("scrapers.retry_utils.requests.get", return_value=mock_resp):
+            with patch("scrapers.retry_utils.time.sleep") as mock_sleep:
+                with self.assertRaises(requests.HTTPError):
+                    retry_request("https://example.com/api")
+                # Two sleeps with default BACKOFF_DELAYS
+                self.assertEqual(mock_sleep.call_count, 2)
+                backoff_values = [call[0][0] for call in mock_sleep.call_args_list]
+                self.assertEqual(backoff_values, [1.0, 2.0])
+
+    def test_custom_max_retries_and_matching_delays(self) -> None:
+        """Custom max_retries=4 requires exactly 3 delays — accepted."""
+        mock_resp = MagicMock(spec=requests.Response)
+        mock_resp.status_code = 503
+        exc = requests.HTTPError(response=MagicMock(status_code=503))
+        mock_resp.raise_for_status.side_effect = exc
+
+        with patch("scrapers.retry_utils.requests.get", return_value=mock_resp):
+            with patch("scrapers.retry_utils.time.sleep") as mock_sleep:
+                with self.assertRaises(requests.HTTPError):
+                    retry_request(
+                        "https://example.com/api",
+                        max_retries=4,
+                        backoff_delays=(0.1, 0.2, 0.3),
+                    )
+                # Three sleeps for max_retries=4
+                self.assertEqual(mock_sleep.call_count, 3)
+                backoff_values = [call[0][0] for call in mock_sleep.call_args_list]
+                self.assertEqual(backoff_values, [0.1, 0.2, 0.3])
+
+    def test_custom_max_retries_too_few_delays_raises(self) -> None:
+        """Custom max_retries=4 with only 2 delays raises ValueError."""
+        with self.assertRaises(ValueError) as ctx:
+            retry_request(
+                "https://example.com/api",
+                max_retries=4,
+                backoff_delays=(0.1, 0.2),
+            )
+        self.assertIn("at least 3 entries", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

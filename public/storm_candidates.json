@@ -647,25 +647,6 @@
       "source": "NOAA Storm Events"
     },
     {
-      "id": "556df25aa116",
-      "candidateType": "area",
-      "county": "palm-beach",
-      "city": "",
-      "zip": "",
-      "locationLabel": "Multiple areas in Palm Beach County",
-      "stormEvent": "Hail impact in Palm Beach County",
-      "eventType": "Hail",
-      "eventDate": "2025-03-31",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "A trained spotter reported quarter sized hail with passing thunderstorm in Wellington.\n\nA trained spotter reported nickel size hail in Lake Worth, east of I-95, at time of report.",
-      "score": 51,
-      "scoreReasoning": "Hail carries a 12-point severity weight. NOAA reported impacts across more than one area (+4).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
       "id": "7398e8ef2f48",
       "candidateType": "area",
       "county": "miami-dade",
@@ -780,6 +761,6 @@
       "source": "NOAA Storm Events"
     }
   ],
-  "lastGenerated": "2026-03-31T18:52:11.833483+00:00",
-  "count": 41
+  "lastGenerated": "2026-04-01T01:20:16.792336+00:00",
+  "count": 40
 }

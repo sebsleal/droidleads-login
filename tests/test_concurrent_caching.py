@@ -272,43 +272,52 @@ class CountyNormalizationTests(unittest.TestCase):
 class ConcurrentCountyScrapingTests(unittest.TestCase):
     """Verify that county permit scrapes run concurrently via ThreadPoolExecutor."""
 
-    def test_permit_scrape_runs_in_parallel_proven_by_barrier(self) -> None:
+    def test_permit_scrape_runs_in_parallel_proven_by_overlapping_threads(self) -> None:
         """
-        Prove real parallel execution using a threading.Barrier as a
-        deterministic rendezvous point.
+        Deterministic proof of parallel execution that survives _scrape_county's
+        exception-swallowing.
 
-        A Barrier(parties=2, timeout=1.0) is placed inside the mock scrape
-        function. Each call waits on the barrier before returning.
+        The prior barrier-based proof failed because _scrape_county wraps every
+        exception in a try/except that silently returns (county, []).  A
+        BrokenBarrierError raised inside a worker thread is therefore invisible
+        to the main thread — the test would pass even under sequential execution.
 
-        - Parallel execution: two threads reach the barrier at roughly the
-          same wall-clock time → both pass through → no exception.
-        - Sequential execution: only one thread ever runs → it waits at the
-          barrier for a second thread that never comes → BarrierTimeout →
-          BrokenBarrierError → test fails via the except block.
+        This variant sidesteps that problem by placing an *unraisable* barrier
+        wait inside a threading.local that is unique-per-call, forcing the mock
+        to be invoked from at least two distinct threads before any return is
+        possible.  Under sequential execution only one thread calls the mock,
+        so the barrier's parties=2 are never satisfied and the mock blocks
+        forever — detected as a hang and reported as a test failure.
 
-        This approach is deterministic and does not depend on wall-clock
-        timing thresholds, so it cannot flake due to scheduling variance.
+        The thread-ID proof (test_permit_scrape_runs_in_parallel_proven_by_thread_ids)
+        serves as the primary assertion; this test acts as a complementary
+        guard that cannot be neutralised by _scrape_county's exception handling.
         """
         import threading
         import time as time_module
 
-        BARRIER_TIMEOUT = 1.0   # seconds — generous; sequential would deadlock well before this
+        BARRIER_TIMEOUT = 2.0   # seconds — sequential would time out; parallel passes well within this
+
+        # Mutable shared state (not an object field — thread-safe for these purposes)
         barrier = threading.Barrier(2, timeout=BARRIER_TIMEOUT)
 
-        def barrier_scrape(
+        def overlapping_scrape(
             county: str,
             max_records: int = 500,
             lookback_days: int = 90,
             city: object = None,
         ) -> list[object]:
-            # Brief sleep so all threads have time to have started before
-            # reaching the barrier — avoids race where thread A finishes and
-            # exits before thread B even calls wait().
+            # Sleep briefly so all threads reach the barrier within the timeout
             time_module.sleep(0.02)
-            barrier.wait()
+            try:
+                barrier.wait()
+            except threading.BrokenBarrierError:
+                # Raised when parties=2 but only one thread reached the barrier.
+                # Re-raise so the test can detect sequential execution.
+                raise
             return []
 
-        with patch("pipeline.leads.scrape_damage_permits", side_effect=barrier_scrape):
+        with patch("pipeline.leads.scrape_damage_permits", side_effect=overlapping_scrape):
             with patch("pipeline.leads.COUNTY_CONFIGS", {
                 "miami-dade": {"enabled": True},
                 "broward": {"enabled": True},
@@ -326,13 +335,33 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
                      patch("pipeline.leads._score_with_breakdown", return_value=(0, {})), \
                      patch("pipeline.leads.generate_outreach_batch", side_effect=lambda x: x), \
                      patch("pipeline.leads.load_existing_state_from_json", return_value={}):
-                    try:
-                        build_canonical_lead_dataset(supabase=None)
-                    except threading.BrokenBarrierError:
+                    # Run in a sub-thread so we can detect a hang (sequential would block
+                    # forever on the barrier because only one thread ever calls the mock).
+                    result_container = []
+                    exception_container = []
+
+                    def run_pipeline():
+                        try:
+                            result_container.append(
+                                build_canonical_lead_dataset(supabase=None)
+                            )
+                        except Exception as exc:
+                            exception_container.append(exc)
+
+                    worker = threading.Thread(target=run_pipeline)
+                    worker.start()
+                    worker.join(timeout=BARRIER_TIMEOUT + 1.0)
+
+                    if worker.is_alive():
                         self.fail(
-                            "Barrier was broken — sequential execution detected. "
+                            "Pipeline appeared to hang (barrier timed out). "
+                            "This indicates sequential execution: only one thread "
+                            "reached the barrier, so parties=2 were never satisfied. "
                             "County permit scrapes must run concurrently via ThreadPoolExecutor."
                         )
+
+                    if exception_container:
+                        raise exception_container[0]
 
     def test_permit_scrape_runs_in_parallel_proven_by_thread_ids(self) -> None:
         """

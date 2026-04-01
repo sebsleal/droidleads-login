@@ -2,8 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/fintech-dashboard", "destination": "/fintech-dashboard.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/fintech-dashboard.html" }
   ],
   "headers": [
     {

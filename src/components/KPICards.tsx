@@ -1,11 +1,11 @@
-import { CloudLightning, TrendingUp, Shield, MapPin } from 'lucide-react'
-import type { StormStatsData } from '@/types'
+import { Users, TrendingUp, Building2, AlertTriangle } from 'lucide-react'
+import type { StatsData } from '@/types'
 
-interface StormKPICardProps {
+interface KPICardProps {
   title: string
   value: number
   icon: React.ReactNode
-  color: 'blue' | 'emerald' | 'amber' | 'slate'
+  color: 'blue' | 'emerald' | 'amber' | 'red'
   trend?: {
     value: number
     label: string
@@ -31,15 +31,15 @@ const colorStyles = {
     icon: 'text-amber-600 dark:text-amber-400',
     border: 'border-amber-100 dark:border-amber-800',
   },
-  slate: {
-    bg: 'bg-slate-50 dark:bg-slate-800/50',
-    text: 'text-slate-700 dark:text-slate-300',
-    icon: 'text-slate-600 dark:text-slate-400',
-    border: 'border-slate-100 dark:border-slate-700',
+  red: {
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    text: 'text-red-700 dark:text-red-300',
+    icon: 'text-red-600 dark:text-red-400',
+    border: 'border-red-100 dark:border-red-800',
   },
 }
 
-function StormKPICard({ title, value, icon, color, trend }: StormKPICardProps) {
+function KPICard({ title, value, icon, color, trend }: KPICardProps) {
   const styles = colorStyles[color]
 
   return (
@@ -75,40 +75,40 @@ function StormKPICard({ title, value, icon, color, trend }: StormKPICardProps) {
   )
 }
 
-interface StormWatchStatsRowProps {
-  stats: StormStatsData
+interface KPICardsProps {
+  stats: StatsData
 }
 
-export default function StormWatchStatsRow({ stats }: StormWatchStatsRowProps) {
+export default function KPICards({ stats }: KPICardsProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-      <StormKPICard
-        title="Total Candidates"
-        value={stats.totalCandidates}
-        icon={<CloudLightning className="w-5 h-5" />}
+      <KPICard
+        title="Total Leads"
+        value={stats.totalLeads}
+        icon={<Users className="w-5 h-5" />}
         color="blue"
-        trend={{ value: 15, label: 'storm opportunities' }}
+        trend={{ value: 12, label: 'vs last week' }}
       />
-      <StormKPICard
+      <KPICard
         title="High Priority"
         value={stats.highPriority}
         icon={<TrendingUp className="w-5 h-5" />}
         color="emerald"
         trend={{ value: 8, label: 'score ≥ 85' }}
       />
-      <StormKPICard
-        title="FEMA Tagged"
-        value={stats.femaTagged}
-        icon={<Shield className="w-5 h-5" />}
+      <KPICard
+        title="Absentee Owners"
+        value={stats.absenteeOwners}
+        icon={<Building2 className="w-5 h-5" />}
         color="amber"
-        trend={{ value: 12, label: 'matched declarations' }}
+        trend={{ value: 5, label: 'out-of-state' }}
       />
-      <StormKPICard
-        title="Area-Based"
-        value={stats.areaCandidates}
-        icon={<MapPin className="w-5 h-5" />}
-        color="slate"
-        trend={{ value: 5, label: 'not verified properties' }}
+      <KPICard
+        title="Underpaid Flags"
+        value={stats.underpaidFlags}
+        icon={<AlertTriangle className="w-5 h-5" />}
+        color="red"
+        trend={{ value: 3, label: 'below ZIP median' }}
       />
     </div>
   )

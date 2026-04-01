@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { BarChart2, Users, CloudLightning, Briefcase, Shield, Menu, X } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeProvider.tsx";
 import type {
   FilterState,
   Lead,
@@ -19,9 +20,10 @@ import {
 import { useTracking } from "@/lib/useTracking";
 import { useStormTracking } from "@/lib/useStormTracking";
 import { useCases } from "@/lib/useCases";
+import { useToast } from "@/components/Toast";
 import type { PageSize } from "@/components/Pagination";
 import Header from "@/components/Header";
-import StatsRow from "@/components/StatsRow";
+import KPICards from "@/components/KPICards";
 import FilterBar from "@/components/FilterBar";
 import LeadsTable from "@/components/LeadsTable";
 import LeadDrawer from "@/components/LeadDrawer";
@@ -212,6 +214,7 @@ export default function App() {
     readOnly: stormReadOnly,
   } = useStormTracking();
   const { cases, saveCase, createCase, loading: isLoadingCases, readOnly: caseReadOnly } = useCases();
+  const { addToast } = useToast();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -730,6 +733,12 @@ export default function App() {
 
     saveTracking(id, patch);
 
+    addToast({
+      type: 'success',
+      title: 'Status updated',
+      message: `Lead marked as ${status}`,
+    });
+
     if (selectedLead?.id === id) {
       setSelectedLead((previous) => {
         if (!previous) return null;
@@ -762,6 +771,11 @@ export default function App() {
     setConvertingLead(null);
     if (newCase) {
       setCaseToOpen(newCase);
+      addToast({
+        type: 'success',
+        title: 'Case created',
+        message: `${newCase.clientName} - ${newCase.lossAddress}`,
+      });
       navigate("/cases");
     }
   }
@@ -781,6 +795,12 @@ export default function App() {
     if (status === "Closed" && !current?.closedAt) patch.closedAt = nowIso;
 
     saveStormTracking(id, patch);
+
+    addToast({
+      type: 'success',
+      title: 'Status updated',
+      message: `Storm candidate marked as ${status}`,
+    });
 
     if (selectedStormCandidate?.id === id) {
       setSelectedStormCandidate((previous) =>
@@ -813,10 +833,24 @@ export default function App() {
 
   const headerExport =
     activeTab === "storm-watch"
-      ? () => downloadStormCandidatesCSV(filteredStormCandidates)
+      ? () => {
+          downloadStormCandidatesCSV(filteredStormCandidates);
+          addToast({
+            type: 'success',
+            title: 'Export complete',
+            message: `${filteredStormCandidates.length} storm candidates exported to CSV`,
+          });
+        }
       : activeTab === "cases"
         ? undefined
-        : () => downloadCSV(filteredLeads);
+        : () => {
+          downloadCSV(filteredLeads);
+          addToast({
+            type: 'success',
+            title: 'Export complete',
+            message: `${filteredLeads.length} leads exported to CSV`,
+          });
+        };
 
   const headerEntityLabel =
     activeTab === "storm-watch"
@@ -880,7 +914,7 @@ export default function App() {
       <div className="lg:hidden fixed top-[56px] left-0 z-50 p-3">
         <button
           onClick={() => setMobileSidebarOpen(true)}
-          className="flex items-center justify-center w-10 h-10 rounded-md bg-[#0f0f11] text-white hover:bg-[#1a1a1d] transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-lg"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
@@ -899,37 +933,37 @@ export default function App() {
       {/* ── Mobile: Sidebar overlay ── */}
       <aside
         className={cn(
-          "lg:hidden fixed top-0 left-0 z-50 w-[212px] h-full flex flex-col bg-[#0f0f11] border-r border-white/[0.06]",
+          "lg:hidden fixed top-0 left-0 z-50 w-[240px] h-full flex flex-col bg-slate-900 border-r border-slate-800",
           "transition-transform duration-200 ease-out",
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo + close button */}
-        <div className="px-5 pt-5 pb-4">
+        <div className="px-6 pt-6 pb-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Shield className="w-[18px] h-[18px] text-amber-400 flex-shrink-0" />
-              <span className="text-[13px] font-semibold text-white tracking-tight leading-none">
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-amber-400 flex-shrink-0" />
+              <span className="text-[15px] font-semibold text-white tracking-tight leading-none">
                 Claim Remedy
               </span>
             </div>
             <button
               onClick={() => setMobileSidebarOpen(false)}
-              className="flex items-center justify-center w-7 h-7 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
               aria-label="Close navigation menu"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-[11px] text-zinc-600 mt-1.5 pl-[26px] leading-none">
+          <p className="text-xs text-slate-500 mt-2 pl-8 leading-none">
             Lead Intelligence
           </p>
         </div>
 
-        <div className="mx-4 h-px bg-white/[0.06]" />
+        <div className="mx-4 h-px bg-slate-800" />
 
         {/* Nav */}
-        <nav className="flex-1 px-2 pt-3 pb-2 flex flex-col gap-0.5">
+        <nav className="flex-1 px-3 pt-4 pb-2 flex flex-col gap-1">
           {navItems.map(({ id, icon: Icon, label, path, count, tooltip }) => (
             <Tooltip key={id} text={tooltip} position="bottom">
               <button
@@ -939,13 +973,13 @@ export default function App() {
                   activeTab === id ? "nav-item-active" : "nav-item-inactive",
                 )}
               >
-                <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span className="flex-1 text-left">{label}</span>
                 {count != null && count > 0 && (
                   <span
                     className={cn(
-                      "text-[11px] score-number tabular-nums",
-                      activeTab === id ? "text-zinc-400" : "text-zinc-700",
+                      "text-2xs score-number tabular-nums px-1.5 py-0.5 rounded-full",
+                      activeTab === id ? "bg-white/10 text-slate-300" : "bg-slate-800 text-slate-500",
                     )}
                   >
                     {count.toLocaleString()}
@@ -957,16 +991,19 @@ export default function App() {
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-4 border-t border-white/[0.06]">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
-            <span className="text-[11px] text-zinc-600 leading-none">
+        <div className="px-4 py-4 border-t border-slate-800">
+          <div className="mb-3">
+            <ThemeToggle />
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
+            <span className="text-xs text-slate-500 leading-none">
               {headerLastUpdated
                 ? `Updated ${timeAgo(headerLastUpdated)}`
                 : "Syncing..."}
             </span>
           </div>
-          <p className="text-[11px] text-zinc-700 pl-[14px] leading-none">
+          <p className="text-xs text-slate-600 pl-4 leading-none">
             {headerTotalCount > 0
               ? `${headerTotalCount.toLocaleString()} ${headerEntityLabel}`
               : "Loading..."}
@@ -975,24 +1012,24 @@ export default function App() {
       </aside>
 
       {/* ── Desktop: Sidebar ── */}
-      <aside className="hidden lg:flex w-[212px] flex-shrink-0 flex flex-col bg-[#0f0f11] border-r border-white/[0.06]">
+      <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex flex-col bg-slate-900 border-r border-slate-800">
         {/* Logo */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-center gap-2.5">
-            <Shield className="w-[18px] h-[18px] text-amber-400 flex-shrink-0" />
-            <span className="text-[13px] font-semibold text-white tracking-tight leading-none">
+        <div className="px-6 pt-6 pb-5">
+          <div className="flex items-center gap-3">
+            <Shield className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <span className="text-[15px] font-semibold text-white tracking-tight leading-none">
               Claim Remedy
             </span>
           </div>
-          <p className="text-[11px] text-zinc-600 mt-1.5 pl-[26px] leading-none">
+          <p className="text-xs text-slate-500 mt-2 pl-8 leading-none">
             Lead Intelligence
           </p>
         </div>
 
-        <div className="mx-4 h-px bg-white/[0.06]" />
+        <div className="mx-4 h-px bg-slate-800" />
 
         {/* Nav */}
-        <nav className="flex-1 px-2 pt-3 pb-2 flex flex-col gap-0.5">
+        <nav className="flex-1 px-3 pt-4 pb-2 flex flex-col gap-1">
           {navItems.map(({ id, icon: Icon, label, path, count, tooltip }) => (
             <Tooltip key={id} text={tooltip} position="bottom">
               <button
@@ -1002,13 +1039,13 @@ export default function App() {
                   activeTab === id ? "nav-item-active" : "nav-item-inactive",
                 )}
               >
-                <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span className="flex-1 text-left">{label}</span>
                 {count != null && count > 0 && (
                   <span
                     className={cn(
-                      "text-[11px] score-number tabular-nums",
-                      activeTab === id ? "text-zinc-400" : "text-zinc-700",
+                      "text-2xs score-number tabular-nums px-1.5 py-0.5 rounded-full",
+                      activeTab === id ? "bg-white/10 text-slate-300" : "bg-slate-800 text-slate-500",
                     )}
                   >
                     {count.toLocaleString()}
@@ -1020,16 +1057,19 @@ export default function App() {
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-4 border-t border-white/[0.06]">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
-            <span className="text-[11px] text-zinc-600 leading-none">
+        <div className="px-4 py-4 border-t border-slate-800">
+          <div className="mb-3">
+            <ThemeToggle />
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 animate-pulse" />
+            <span className="text-xs text-slate-500 leading-none">
               {headerLastUpdated
                 ? `Updated ${timeAgo(headerLastUpdated)}`
                 : "Syncing..."}
             </span>
           </div>
-          <p className="text-[11px] text-zinc-700 pl-[14px] leading-none">
+          <p className="text-xs text-slate-600 pl-4 leading-none">
             {headerTotalCount > 0
               ? `${headerTotalCount.toLocaleString()} ${headerEntityLabel}`
               : "Loading..."}
@@ -1038,7 +1078,7 @@ export default function App() {
       </aside>
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-gray-50">
+      <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-slate-900">
         <Header
           title={headerTitle}
           totalCount={headerTotalCount}
@@ -1047,14 +1087,14 @@ export default function App() {
         />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1200px] w-full mx-auto px-6 py-6">
+          <div className="max-w-[1200px] w-full mx-auto px-6 lg:px-8 py-6 lg:py-8">
             {activeTab === "storm-watch" ? (
-              <div className="mb-6">
+              <div className="mb-8">
                 <StormWatchStatsRow stats={stormStats} />
               </div>
             ) : activeTab === "leads" ? (
-              <div className="mb-6">
-                <StatsRow stats={leadStats} />
+              <div className="mb-8">
+                <KPICards stats={leadStats} />
               </div>
             ) : null}
 

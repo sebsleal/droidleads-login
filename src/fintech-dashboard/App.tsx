@@ -2,9 +2,9 @@ import { useState } from "react";
 import { cn } from "../lib/utils";
 import { Sidebar } from "./components/Sidebar";
 import { StatCard } from "./components/StatCard";
-import { EquityChart } from "./components/EquityChart";
-import { MonthlyReturnsChart } from "./components/MonthlyReturnsChart";
-import { AlgorithmPerformanceChart } from "./components/AlgorithmPerformanceChart";
+import { EquityOverview } from "./components/EquityOverview";
+import { MonthlyPerformance } from "./components/MonthlyPerformance";
+import { AlgorithmStatus } from "./components/AlgorithmStatus";
 import { CertificatesProgress } from "./components/CertificatesProgress";
 import { motion } from "framer-motion";
 import {
@@ -85,7 +85,6 @@ function App() {
             className="flex items-start justify-between mb-8"
           >
             <div className="flex items-start gap-4">
-              {/* Mobile menu button */}
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/[0.04] transition-colors"
@@ -115,32 +114,21 @@ function App() {
           {/* Stats row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
             {stats.map((stat, index) => (
-              <StatCard
-                key={stat.label}
-                {...stat}
-                className={cn("animation-delay", index * 50)}
-              />
+              <StatCard key={stat.label} {...stat} className={cn("animation-delay", index * 50)} />
             ))}
           </div>
 
           {/* Main grid */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Equity overview - spans 7 columns */}
             <div className="xl:col-span-7">
-              <EquityChart />
+              <EquityOverview />
             </div>
-
-            {/* Monthly returns - spans 5 columns */}
             <div className="xl:col-span-5">
-              <MonthlyReturnsChart />
+              <MonthlyPerformance />
             </div>
-
-            {/* Algorithm performance - spans 7 columns */}
             <div className="xl:col-span-7">
-              <AlgorithmPerformanceChart />
+              <AlgorithmStatus />
             </div>
-
-            {/* Certificates progress - spans 5 columns */}
             <div className="xl:col-span-5">
               <CertificatesProgress />
             </div>

@@ -127,7 +127,7 @@ export default function FixtureCrossAreaPage() {
             Validation Fixture — Cross-Area Filter Validation
           </p>
           <p className="text-amber-700 mb-3">
-            This page loads <strong>6 enriched fixture leads</strong> with EV
+            This page loads <strong>32 enriched fixture leads</strong> with EV
             factor, homestead signal, and enriched outreach visible in the drawer.
             Use this surface to exercise all filter combinations, sort, and
             pagination on desktop and mobile.
@@ -142,7 +142,7 @@ export default function FixtureCrossAreaPage() {
             <div className="bg-amber-100/60 rounded-lg p-2">
               <p className="font-semibold">VAL-CROSS-003</p>
               <p className="text-amber-700 mt-0.5">
-                6 insurers, status, sort, pagination on desktop
+                6 insurers, status, sort, pagination — page 2 reachable with 25-row page size
               </p>
             </div>
             <div className="bg-amber-100/60 rounded-lg p-2">

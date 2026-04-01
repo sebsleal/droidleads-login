@@ -1,0 +1,30 @@
+{
+  "milestone": "infra",
+  "round": 2,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 3,
+    "passed": 2,
+    "failed": 0,
+    "blocked": 1
+  },
+  "passedAssertions": [
+    "VAL-CROSS-002",
+    "VAL-CROSS-004"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-CROSS-003",
+      "blockedBy": "Unable to complete contract's explicit page-2 step on this fixture surface because available data volume cannot produce a second page."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added cross-area fixture guidance and documented pagination-volume constraint (6 rows with 25/50/100 page sizes) affecting VAL-CROSS-003 page-2 step.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": "/Users/seb/Documents/claim-remedy-leads-testing/.factory/validation/infra/user-testing/synthesis.round1.json"
+}

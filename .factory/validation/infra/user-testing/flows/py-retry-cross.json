@@ -1,0 +1,189 @@
+{
+  "milestone": "infra",
+  "groupId": "py-retry-cross",
+  "testedAt": "2026-04-01T02:17:25Z",
+  "status": "pass",
+  "isolation": {
+    "surface": "python-test",
+    "repo": "/Users/seb/Documents/claim-remedy-leads-testing",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742",
+    "network": "mocked tests only; no live external HTTP",
+    "envFilesTouched": false
+  },
+  "toolsUsed": [
+    "python-test"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INFRA-008",
+      "title": "PA lookup caches results",
+      "status": "pass",
+      "test": "tests.test_concurrent_caching.PACachingTests.test_second_lookup_returns_cached_result",
+      "steps": [
+        {
+          "action": "Run targeted unittest for PA cache hit behavior",
+          "expected": "Second lookup for same folio+county does not call underlying PA API; call_count == 1",
+          "observed": "Test passed (ok); underlying lookup invoked once for repeated folio"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "infra/py-retry-cross/VAL-INFRA-008.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-009",
+      "title": "Scraper retries on HTTP failure",
+      "status": "pass",
+      "test": "tests.test_retry_logic.RetryRequestTests.test_retries_up_to_max_attempts",
+      "steps": [
+        {
+          "action": "Run targeted unittest with HTTP 503 on every attempt",
+          "expected": "Retry utility makes 3 calls (max retries) with backoff and then raises",
+          "observed": "Test passed (ok); retry log showed attempt 1/3 and 2/3 backoff then terminal failure path"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "infra/py-retry-cross/VAL-INFRA-009.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-010",
+      "title": "Scraper succeeds on transient failure with retry",
+      "status": "pass",
+      "test": "tests.test_retry_logic.TransientFailureThenSuccessTests.test_transient_503_then_success_returns_valid_response",
+      "steps": [
+        {
+          "action": "Run targeted unittest with side_effect [503 failure, 200 success]",
+          "expected": "Retry utility retries once and returns valid response data",
+          "observed": "Test passed (ok); retry occurred after first 503 and second call returned success"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "infra/py-retry-cross/VAL-INFRA-010.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "End-to-end pipeline produces enriched leads with new scoring",
+      "status": "pass",
+      "test": "tests.test_cross_area_integration.EndToEndPipelineTests.test_end_to_end_lead_flow_with_all_enrichments",
+      "steps": [
+        {
+          "action": "Run targeted integration unittest for canonicalize -> PA enrich -> scoring -> outreach",
+          "expected": "Homestead populated from PA, scoring includes EV factor, outreach references FEMA declaration",
+          "observed": "Test passed (ok); pipeline enrichment logs emitted and assertions succeeded"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "infra/py-retry-cross/VAL-CROSS-001.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Pipeline graceful degradation on partial failure",
+      "status": "pass",
+      "test": "tests.test_cross_area_integration.GracefulDegradationTests.test_build_canonical_lead_dataset_preserves_pa_enrichment_when_voter_fails",
+      "steps": [
+        {
+          "action": "Run targeted integration unittest with voter enrichment patched to raise",
+          "expected": "Pipeline catches voter exception and keeps PA-enriched fields intact",
+          "observed": "Test passed (ok); contact enrichment failure logged and PA fields preserved"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "infra/py-retry-cross/VAL-CROSS-007.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "title": "Concurrent scrape error isolation",
+      "status": "pass",
+      "test": "tests.test_cross_area_integration.ConcurrentScrapeErrorIsolationTests.test_one_county_fails_others_complete",
+      "steps": [
+        {
+          "action": "Run targeted concurrent unittest with one county scraper raising",
+          "expected": "Failure in one county is isolated; other county results still returned",
+          "observed": "Test passed (ok); broward failure logged while other county results remained"
+        }
+      ],
+      "evidence": {
+        "terminalOutput": "infra/py-retry-cross/VAL-CROSS-008.txt"
+      },
+      "issues": null
+    }
+  ],
+  "commands": [
+    {
+      "command": "python3 -m unittest -v tests.test_concurrent_caching.PACachingTests.test_second_lookup_returns_cached_result",
+      "exitCode": 0,
+      "assertions": [
+        "VAL-INFRA-008"
+      ]
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_retry_logic.RetryRequestTests.test_retries_up_to_max_attempts",
+      "exitCode": 0,
+      "assertions": [
+        "VAL-INFRA-009"
+      ]
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_retry_logic.TransientFailureThenSuccessTests.test_transient_503_then_success_returns_valid_response",
+      "exitCode": 0,
+      "assertions": [
+        "VAL-INFRA-010"
+      ]
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_cross_area_integration.EndToEndPipelineTests.test_end_to_end_lead_flow_with_all_enrichments",
+      "exitCode": 0,
+      "assertions": [
+        "VAL-CROSS-001"
+      ]
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_cross_area_integration.GracefulDegradationTests.test_build_canonical_lead_dataset_preserves_pa_enrichment_when_voter_fails",
+      "exitCode": 0,
+      "assertions": [
+        "VAL-CROSS-007"
+      ]
+    },
+    {
+      "command": "python3 -m unittest -v tests.test_cross_area_integration.ConcurrentScrapeErrorIsolationTests.test_one_county_fails_others_complete",
+      "exitCode": 0,
+      "assertions": [
+        "VAL-CROSS-008"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Initial guidance path '/Users/seb/.factory/library/user-testing.md' was unavailable in this workspace layout.",
+      "resolved": true,
+      "resolution": "Used repo-local guidance file '/Users/seb/Documents/claim-remedy-leads-testing/.factory/library/user-testing.md'.",
+      "affectedAssertions": [
+        "VAL-INFRA-008",
+        "VAL-INFRA-009",
+        "VAL-INFRA-010",
+        "VAL-CROSS-001",
+        "VAL-CROSS-007",
+        "VAL-CROSS-008"
+      ]
+    }
+  ],
+  "blockers": [],
+  "evidenceFiles": [
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/infra/py-retry-cross/VAL-INFRA-008.txt",
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/infra/py-retry-cross/VAL-INFRA-009.txt",
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/infra/py-retry-cross/VAL-INFRA-010.txt",
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/infra/py-retry-cross/VAL-CROSS-001.txt",
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/infra/py-retry-cross/VAL-CROSS-007.txt",
+    "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742/evidence/infra/py-retry-cross/VAL-CROSS-008.txt"
+  ],
+  "summary": "Validated 6 assigned python-test assertions (infra retry/cache + cross integration). All passed with targeted mocked tests and exit code 0."
+}

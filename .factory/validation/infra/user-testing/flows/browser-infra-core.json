@@ -1,0 +1,243 @@
+{
+  "groupId": "browser-infra-core",
+  "testedAt": "2026-04-01T02:31:52.458952+00:00",
+  "isolation": {
+    "surface": "agent-browser",
+    "sessionNamespace": "e53e08d3e8b3__u1",
+    "appUrl": "http://localhost:5173",
+    "missionDir": "/Users/seb/.factory/missions/fcdb25db-4dc0-42dc-85ab-95a267770742"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INFRA-011",
+      "title": "URL reflects filter state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open / in desktop viewport and clear error log",
+          "expected": "Leads view renders with default filters",
+          "observed": "Leads view loaded at / with default controls visible"
+        },
+        {
+          "action": "Set search input to 'garcia' and status filter to 'Contacted'",
+          "expected": "URL query params update to reflect filter state",
+          "observed": "URL became /?search=garcia&status=Contacted"
+        },
+        {
+          "action": "Read window.location.search",
+          "expected": "Query string contains the selected filters",
+          "observed": "window.location.search returned '?search=garcia&status=Contacted'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-011-url-reflects-filter-state.png"
+        ],
+        "dom": "{\"url\":\"/?search=garcia&status=Contacted\",\"search\":\"garcia\",\"status\":\"Contacted\"}",
+        "consoleErrors": "none",
+        "network": "GET /leads.json?_=... (fetch observed during page load)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-012",
+      "title": "URL params pre-apply filters on load",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate directly to /?status=New",
+          "expected": "Status control preselects New from URL params",
+          "observed": "Status dropdown value was 'New' on initial load"
+        },
+        {
+          "action": "Inspect search/status controls and table rows",
+          "expected": "Controls and results reflect URL params",
+          "observed": "Search input was empty, status='New', rowCount=25, uniqueStatuses=['New']"
+        },
+        {
+          "action": "Verify filtered data is shown immediately after load",
+          "expected": "No manual filter interaction needed",
+          "observed": "Rows were pre-filtered to New status on arrival"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-012-url-preapply-filters.png"
+        ],
+        "dom": "{\"url\":\"/?status=New\",\"search\":\"\",\"status\":\"New\",\"rowCount\":25,\"uniqueStatuses\":[\"New\"]}",
+        "consoleErrors": "none",
+        "network": "GET /leads.json?_=... (fetch observed)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-013",
+      "title": "LeadsTable card layout on mobile",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Set viewport to 375x812 and open /",
+          "expected": "Mobile responsive layout activates",
+          "observed": "Viewport confirmed at 375x812"
+        },
+        {
+          "action": "Inspect LeadsTable rendering mode",
+          "expected": "Stacked cards are shown, desktop table hidden",
+          "observed": "desktopTableVisible=false and mobileCardCount>0"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-013-leads-mobile-card-layout.png"
+        ],
+        "dom": "{\"viewport\":{\"w\":375,\"h\":812},\"desktopTableVisible\":false,\"mobileCardCount\":26}",
+        "consoleErrors": "none",
+        "network": "GET /leads.json?_=... (fetch observed)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-014",
+      "title": "StormWatchTable card layout on mobile",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "With viewport 375x812, navigate to /storm-watch",
+          "expected": "Storm Watch mobile layout renders",
+          "observed": "Storm Watch route loaded on mobile viewport"
+        },
+        {
+          "action": "Inspect StormWatchTable rendering mode",
+          "expected": "Stacked cards shown, desktop table hidden",
+          "observed": "desktopTableVisible=false, hasMobileCardContainer=true, mobileCardCount=25"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-014-stormwatch-mobile-card-layout.png"
+        ],
+        "dom": "{\"viewport\":{\"w\":375,\"h\":812},\"desktopTableVisible\":false,\"mobileCardCount\":25,\"hasMobileCardContainer\":true}",
+        "consoleErrors": "none",
+        "network": "GET /storm_candidates.json?_=... (fetch observed)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-015",
+      "title": "Sidebar collapses to hamburger on mobile",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Set viewport to 375x812 and open /",
+          "expected": "Mobile shell appears",
+          "observed": "Mobile viewport active with leads content rendered"
+        },
+        {
+          "action": "Inspect navigation chrome before opening menu",
+          "expected": "Hamburger visible and sidebar hidden off-canvas",
+          "observed": "hamburgerVisible=true; sidebar transform translated to x=-212 (off-screen)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-015-mobile-hamburger-no-sidebar.png"
+        ],
+        "dom": "{\"viewport\":{\"w\":375,\"h\":812},\"hamburgerVisible\":true,\"sidebarTransform\":\"matrix(1, 0, 0, 1, -212, 0)\",\"sidebarX\":-212}",
+        "consoleErrors": "none",
+        "network": "GET /leads.json?_=... (fetch observed)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-016",
+      "title": "Sidebar opens as overlay on hamburger tap",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "On mobile (375x812), open / and tap hamburger",
+          "expected": "Sidebar overlay opens with nav items",
+          "observed": "Sidebar transform moved to 0; backdropPresent=true; navButtons include Leads, Storm Watch, Cases, Analytics"
+        },
+        {
+          "action": "Tap 'Storm Watch' nav item from opened overlay",
+          "expected": "App navigates to /storm-watch and overlay closes",
+          "observed": "URL changed to /storm-watch; sidebar translated back off-canvas; backdrop removed"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-016-mobile-sidebar-before-open.png",
+          "infra/browser-infra-core/VAL-INFRA-016-mobile-sidebar-open-nav-items.png",
+          "infra/browser-infra-core/VAL-INFRA-016-mobile-sidebar-after-nav-click.png"
+        ],
+        "dom": "open={\"asideTransform\":\"matrix(1, 0, 0, 1, 0, 0)\",\"backdropPresent\":true,\"navButtons\":[\"Leads13,201\",\"Storm Watch43\",\"Cases\",\"Analytics\"]}; afterNav={\"url\":\"/storm-watch\",\"asideTransform\":\"matrix(1, 0, 0, 1, -212, 0)\",\"sidebarClosed\":true,\"backdropPresent\":false}",
+        "consoleErrors": "none",
+        "network": "Route navigation between / and /storm-watch; storm_candidates.json fetch observed"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-INFRA-017",
+      "title": "Browser back/forward restores URL filter state and defaults",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open filtered state URL /?search=garcia&status=Contacted",
+          "expected": "Filtered controls are applied",
+          "observed": "Filtered state loaded and captured"
+        },
+        {
+          "action": "Navigate to bare / (empty query string)",
+          "expected": "Default filters are active",
+          "observed": "URL became / with search='' and status='All'"
+        },
+        {
+          "action": "Use browser Back",
+          "expected": "Prior filtered URL state is restored from history",
+          "observed": "URL restored to /?search=garcia&status=Contacted with search='garcia' and status='Contacted'"
+        },
+        {
+          "action": "Use browser Forward",
+          "expected": "Empty-query default state is restored",
+          "observed": "URL returned to / with search='' and status='All'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "infra/browser-infra-core/VAL-INFRA-017-history-state-filtered.png",
+          "infra/browser-infra-core/VAL-INFRA-017-history-state-default.png",
+          "infra/browser-infra-core/VAL-INFRA-017-history-after-back.png",
+          "infra/browser-infra-core/VAL-INFRA-017-history-after-forward.png"
+        ],
+        "dom": "afterBack={\"url\":\"/?search=garcia&status=Contacted\",\"search\":\"garcia\",\"status\":\"Contacted\"}; afterForward={\"url\":\"/\",\"search\":\"\",\"status\":\"All\"}",
+        "consoleErrors": "none",
+        "network": "GET /leads.json?_=... (fetch observed during route loads)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Chaining heredoc eval with additional agent-browser commands intermittently produced 'SyntaxError: Unexpected identifier session'.",
+      "resolved": true,
+      "resolution": "Ran eval checks as separate commands after screenshot/navigation steps.",
+      "affectedAssertions": [
+        "VAL-INFRA-012",
+        "VAL-INFRA-017"
+      ]
+    },
+    {
+      "description": "Selector-based click on mobile overlay nav (`aside nav button:nth-of-type(2)`) timed out while menu was open.",
+      "resolved": true,
+      "resolution": "Used interactive snapshot refs and clicked the explicit Storm Watch nav ref; navigation and overlay-close behavior validated.",
+      "affectedAssertions": [
+        "VAL-INFRA-016"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 infra browser assertions (VAL-INFRA-011..017): 7 passed, 0 failed, 0 blocked. URL sync, URL-driven pre-application, mobile card layouts, mobile sidebar overlay behavior, and back/forward URL-state restoration including empty-query defaults all validated with screenshots and DOM checks."
+}

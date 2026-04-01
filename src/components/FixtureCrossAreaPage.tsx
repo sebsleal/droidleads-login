@@ -127,7 +127,7 @@ export default function FixtureCrossAreaPage() {
             Validation Fixture — Cross-Area Filter Validation
           </p>
           <p className="text-amber-700 mb-3">
-            This page loads <strong>32 enriched fixture leads</strong> with EV
+            This page loads <strong>57 enriched fixture leads</strong> with EV
             factor, homestead signal, and enriched outreach visible in the drawer.
             Use this surface to exercise all filter combinations, sort, and
             pagination on desktop and mobile.

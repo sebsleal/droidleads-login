@@ -77,25 +77,6 @@
       "source": "NOAA Storm Events"
     },
     {
-      "id": "e1768b000b12",
-      "candidateType": "area",
-      "county": "broward",
-      "city": "Pembroke",
-      "zip": "",
-      "locationLabel": "Pembroke area (Broward)",
-      "stormEvent": "Flood impact in Broward County",
-      "eventType": "Flood",
-      "eventDate": "2025-03-30",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "Heavy rainfall, with a passing thunderstorm, caused a roof over an outdoor patio at a University of Miami freshman dorm to partially collapse. Rainfall of 3 to 4 inches was noted in the area.",
-      "score": 63,
-      "scoreReasoning": "Flood carries a 18-point severity weight. Reported property damage exceeded $10K (+4). Narrative points to building or roof damage (+6).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
       "id": "c57db6b4e7ee",
       "candidateType": "area",
       "county": "palm-beach",
@@ -224,25 +205,6 @@
       "narrative": "An off duty NWS employee reported several large tree branches down near the intersection of NW 99th Ave and Johnson Street as a severe thunderstorm downburst occurred.\n\nEmergency Manager reported that two planes were damaged by a severe thunderstorm downburst at North Perry Airport. One was a Cessna which was lifted up and onto a fuel truck, and the other was turned and landed on a wing.",
       "score": 62,
       "scoreReasoning": "Thunderstorm Wind carries a 14-point severity weight. Reported property damage exceeded $10K (+4). Narrative suggests broad impact across the service area (+4). Peak reported wind magnitude reached 60 (+5).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
-      "id": "0a36f5be0d8f",
-      "candidateType": "area",
-      "county": "miami-dade",
-      "city": "",
-      "zip": "",
-      "locationLabel": "Multiple areas in Miami-Dade County",
-      "stormEvent": "Flood impact in Miami-Dade County",
-      "eventType": "Flood",
-      "eventDate": "2025-03-30",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "An off-duty federal meteorologist reported street flooding near Kendall Drive and SW 87th Ave.\n\nPublic reports of thigh-deep water from flooding due to thunderstorms on Miami Beach in the intersection of 15th Street and Euclid Avenue.",
-      "score": 62,
-      "scoreReasoning": "Flood carries a 18-point severity weight. NOAA reported impacts across more than one area (+4). Narrative indicates water intrusion or flooding (+5).",
       "status": "Watching",
       "notes": "",
       "source": "NOAA Storm Events"
@@ -685,25 +647,6 @@
       "source": "NOAA Storm Events"
     },
     {
-      "id": "556df25aa116",
-      "candidateType": "area",
-      "county": "palm-beach",
-      "city": "",
-      "zip": "",
-      "locationLabel": "Multiple areas in Palm Beach County",
-      "stormEvent": "Hail impact in Palm Beach County",
-      "eventType": "Hail",
-      "eventDate": "2025-03-31",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "A trained spotter reported quarter sized hail with passing thunderstorm in Wellington.\n\nA trained spotter reported nickel size hail in Lake Worth, east of I-95, at time of report.",
-      "score": 51,
-      "scoreReasoning": "Hail carries a 12-point severity weight. NOAA reported impacts across more than one area (+4).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
       "id": "7398e8ef2f48",
       "candidateType": "area",
       "county": "miami-dade",
@@ -818,6 +761,6 @@
       "source": "NOAA Storm Events"
     }
   ],
-  "lastGenerated": "2026-03-30T07:17:38.069385+00:00",
-  "count": 43
+  "lastGenerated": "2026-04-01T07:14:17.896313+00:00",
+  "count": 40
 }

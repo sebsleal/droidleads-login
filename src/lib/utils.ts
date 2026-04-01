@@ -116,6 +116,7 @@ const PA_PLACEHOLDER_NAMES = new Set([
 function isPlaceholderOwnerName(name: string | null | undefined): boolean {
   if (!name) return true;
   const normalized = name.trim().toLowerCase();
+  if (!normalized) return true;
   return (
     PA_PLACEHOLDER_NAMES.has(normalized) ||
     normalized.startsWith('ref only/') ||

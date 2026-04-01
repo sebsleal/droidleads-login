@@ -36,7 +36,7 @@ const colorStyles = {
   },
 }
 
-function StormKPICard({ title, value, icon, color, trend }: StormKPICardProps) {
+function StormKPICard({ title, value, icon, color, subtitle }: StormKPICardProps) {
   const styles = colorStyles[color]
 
   return (
@@ -45,14 +45,6 @@ function StormKPICard({ title, value, icon, color, trend }: StormKPICardProps) {
         <div className={`p-2.5 rounded-xl ${styles.bg} ${styles.icon} transition-transform group-hover:scale-110 duration-200`}>
           {icon}
         </div>
-        {trend && (
-          <div className="flex items-center gap-1 text-2xs">
-            <TrendingUp className="w-3 h-3 text-emerald-500" />
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-              +{trend.value}%
-            </span>
-          </div>
-        )}
       </div>
 
       <div>
@@ -62,9 +54,9 @@ function StormKPICard({ title, value, icon, color, trend }: StormKPICardProps) {
         <p className="text-3xl font-semibold text-slate-900 dark:text-white score-number tracking-tight">
           {value.toLocaleString()}
         </p>
-        {trend && (
+        {subtitle && (
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            {trend.label}
+            {subtitle}
           </p>
         )}
       </div>
@@ -84,28 +76,28 @@ export default function StormWatchStatsRow({ stats }: StormWatchStatsRowProps) {
         value={stats.totalCandidates}
         icon={<CloudLightning className="w-5 h-5" />}
         color="blue"
-        trend={{ value: 15, label: 'storm opportunities' }}
+        subtitle="storm opportunities"
       />
       <StormKPICard
         title="High Priority"
         value={stats.highPriority}
         icon={<TrendingUp className="w-5 h-5" />}
         color="emerald"
-        trend={{ value: 8, label: 'score ≥ 85' }}
+        subtitle="score ≥ 85"
       />
       <StormKPICard
         title="FEMA Tagged"
         value={stats.femaTagged}
         icon={<Shield className="w-5 h-5" />}
         color="amber"
-        trend={{ value: 12, label: 'matched declarations' }}
+        subtitle="matched declarations"
       />
       <StormKPICard
         title="Area-Based"
         value={stats.areaCandidates}
         icon={<MapPin className="w-5 h-5" />}
         color="slate"
-        trend={{ value: 5, label: 'not verified properties' }}
+        subtitle="not verified properties"
       />
     </div>
   )

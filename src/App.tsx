@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { BarChart2, Users, CloudLightning, Briefcase, Shield, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeProvider.tsx";
@@ -28,20 +28,8 @@ import KPICards from "@/components/KPICards";
 import FilterBar from "@/components/FilterBar";
 import LeadsTable from "@/components/LeadsTable";
 import LeadDrawer from "@/components/LeadDrawer";
-import Analytics from "@/components/Analytics";
-import StormWatchFilters from "@/components/StormWatchFilters";
 import Tooltip from "@/components/Tooltip";
 import StormWatchStatsRow from "@/components/StormWatchStatsRow";
-import StormWatchTable from "@/components/StormWatchTable";
-import StormWatchDrawer from "@/components/StormWatchDrawer";
-import CasesTable from "@/components/CasesTable";
-import CaseFilterBar from "@/components/CaseFilterBar";
-import CaseDrawer from "@/components/CaseDrawer";
-import ConvertToCaseModal from "@/components/ConvertToCaseModal";
-import FixtureConversionPage from "@/components/FixtureConversionPage";
-import FixtureLegacyCompatPage from "@/components/FixtureLegacyCompatPage";
-import FixtureCrossAreaPage from "@/components/FixtureCrossAreaPage";
-import FixtureSortNullsPage from "@/components/FixtureSortNullsPage";
 
 const DEFAULT_FILTERS: FilterState = {
   zip: "",
@@ -80,6 +68,19 @@ const DEFAULT_CASE_FILTERS: CaseFilterState = {
 };
 
 const MIN_INITIAL_LOADING_MS = 300;
+
+const Analytics = lazy(() => import("@/components/Analytics"));
+const StormWatchFilters = lazy(() => import("@/components/StormWatchFilters"));
+const StormWatchTable = lazy(() => import("@/components/StormWatchTable"));
+const StormWatchDrawer = lazy(() => import("@/components/StormWatchDrawer"));
+const CasesTable = lazy(() => import("@/components/CasesTable"));
+const CaseFilterBar = lazy(() => import("@/components/CaseFilterBar"));
+const CaseDrawer = lazy(() => import("@/components/CaseDrawer"));
+const ConvertToCaseModal = lazy(() => import("@/components/ConvertToCaseModal"));
+const FixtureConversionPage = lazy(() => import("@/components/FixtureConversionPage"));
+const FixtureLegacyCompatPage = lazy(() => import("@/components/FixtureLegacyCompatPage"));
+const FixtureCrossAreaPage = lazy(() => import("@/components/FixtureCrossAreaPage"));
+const FixtureSortNullsPage = lazy(() => import("@/components/FixtureSortNullsPage"));
 
 // ── URL Param Helpers ────────────────────────────────────────────────────────
 
@@ -1088,18 +1089,19 @@ export default function App() {
         />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1200px] w-full mx-auto px-6 lg:px-8 py-6 lg:py-8">
-            {activeTab === "storm-watch" ? (
-              <div className="mb-8">
-                <StormWatchStatsRow stats={stormStats} />
-              </div>
-            ) : activeTab === "leads" ? (
-              <div className="mb-8">
-                <KPICards stats={leadStats} />
-              </div>
-            ) : null}
+          <Suspense fallback={<div className="max-w-[1200px] w-full mx-auto px-6 lg:px-8 py-6 lg:py-8" />}>
+            <div className="max-w-[1200px] w-full mx-auto px-6 lg:px-8 py-6 lg:py-8">
+              {activeTab === "storm-watch" ? (
+                <div className="mb-8">
+                  <StormWatchStatsRow stats={stormStats} />
+                </div>
+              ) : activeTab === "leads" ? (
+                <div className="mb-8">
+                  <KPICards stats={leadStats} />
+                </div>
+              ) : null}
 
-            <Routes>
+              <Routes>
               <Route
                 path="/"
                 element={
@@ -1208,6 +1210,7 @@ export default function App() {
               />
             </Routes>
           </div>
+        </Suspense>
         </div>
       </div>
 
@@ -1222,35 +1225,37 @@ export default function App() {
         />
       )}
 
-      {convertingLead && (
-        <ConvertToCaseModal
-          lead={convertingLead}
-          onClose={() => setConvertingLead(null)}
-          onConvert={handleCaseCreate}
-        />
-      )}
+      <Suspense fallback={null}>
+        {convertingLead && (
+          <ConvertToCaseModal
+            lead={convertingLead}
+            onClose={() => setConvertingLead(null)}
+            onConvert={handleCaseCreate}
+          />
+        )}
 
-      {selectedStormCandidate && (
-        <StormWatchDrawer
-          candidate={selectedStormCandidate}
-          onClose={() => setSelectedStormCandidate(null)}
-          onUpdateStatus={handleUpdateStormStatus}
-          onUpdateTracking={handleUpdateStormTracking}
-          readOnly={stormReadOnly}
-        />
-      )}
+        {selectedStormCandidate && (
+          <StormWatchDrawer
+            candidate={selectedStormCandidate}
+            onClose={() => setSelectedStormCandidate(null)}
+            onUpdateStatus={handleUpdateStormStatus}
+            onUpdateTracking={handleUpdateStormTracking}
+            readOnly={stormReadOnly}
+          />
+        )}
 
-      {syncedSelectedCase && (
-        <CaseDrawer
-          kase={syncedSelectedCase}
-          onClose={() => {
-            setSelectedCase(null);
-            setCaseToOpen(null);
-          }}
-          onSave={saveCase}
-          readOnly={caseReadOnly}
-        />
-      )}
+        {syncedSelectedCase && (
+          <CaseDrawer
+            kase={syncedSelectedCase}
+            onClose={() => {
+              setSelectedCase(null);
+              setCaseToOpen(null);
+            }}
+            onSave={saveCase}
+            readOnly={caseReadOnly}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

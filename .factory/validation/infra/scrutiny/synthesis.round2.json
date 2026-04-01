@@ -1,0 +1,69 @@
+{
+  "milestone": "infra",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "python3 -m unittest discover -s \"/Users/seb/Documents/claim-remedy-leads-testing/tests\" -p \"test_*.py\" -v",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run build",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": false,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run lint",
+      "exitCode": 127
+    }
+  },
+  "reviewsSummary": {
+    "total": 6,
+    "passed": 5,
+    "failed": 1,
+    "failedFeatures": [
+      "fix-concurrency-proof-flake"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "fix-concurrency-proof-flake",
+      "severity": "blocking",
+      "description": "tests/test_concurrent_caching.py barrier proof can still pass under sequential execution because build_canonical_lead_dataset swallows scraper exceptions in _scrape_county; BrokenBarrierError does not reliably propagate, so the assertion is not a deterministic sequential-vs-concurrent proof."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skill: python-backend",
+      "suggestion": "Clarify RED→GREEN policy for verification/backfill features: either require an explicit initial failing run, or define acceptable alternative evidence when behavior is already correct and no red state is expected.",
+      "evidence": "Shared-state observations from fix-concurrent-caching-edge-cases and fix-cross-pipeline-graceful-degradation both flagged mismatch between required RED→GREEN proof and transcript behavior.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add an explicit validator-command rule: do not pipe test/typecheck/lint commands through tail/head/grep during recorded verification because pipes can mask non-zero exits.",
+      "evidence": "fix-retry-transient-scope review observed a piped unittest command in transcript (`... | tail -40`) while command-level reporting still showed exitCode 0.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a milestone-governance check that feature expectedBehavior and validation-contract assertions stay synchronized when fixes change validation semantics (for example, timing-based vs deterministic concurrency evidence).",
+      "evidence": "fix-concurrency-proof-flake review noted mismatch between feature requirement (non-timing proof) and validation-contract VAL-INFRA-006 wording that still references timed threshold evidence.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill: mission-worker-base",
+      "suggestion": "Require an explicit handoff audit that reported commitId matches the actual diff containing the implemented change before marking success.",
+      "evidence": "fix-cross-pipeline-graceful-degradation review found handoff commitId pointing to a dashboard fixture commit while the graceful-degradation test fix existed in a different working-tree diff.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/infra/scrutiny/synthesis.round1.json",
+  "orchestratorOverrides": {
+    "lintFailure": "Known pre-existing repository issue documented in mission AGENTS.md (eslint binary/config absent). Treated as non-blocking validator noise for scrutiny synthesis."
+  }
+}

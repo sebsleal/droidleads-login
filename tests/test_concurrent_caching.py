@@ -365,20 +365,25 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
 
     def test_permit_scrape_runs_in_parallel_proven_by_thread_ids(self) -> None:
         """
-        Complementary proof of parallel execution by tracking the thread
-        identities that entered the scrape function.
+        Complementary concurrency proof based on overlap, not thread-pool
+        implementation details.
 
-        Each call to the mock records the caller's thread identity in a
-        shared, lock-protected list. After the pipeline returns, we assert
-        that more than one unique thread was involved — which is only
-        possible with true parallel execution.
+        A prior version asserted that >1 unique worker thread IDs appeared.
+        That is flaky: ThreadPoolExecutor may legally execute very short tasks
+        on a single worker thread even when max_workers > 1.
 
-        Sequential execution would produce a list with one repeated thread ID.
+        Here we hold each mocked scrape briefly and assert that at least two
+        scrapes were active at the same time (`max_active > 1`). True overlap
+        is a deterministic signal of concurrent execution and cannot happen in
+        a strictly sequential implementation.
         """
         import threading
+        import time as time_module
 
-        thread_ids: list[int] = []
+        thread_ids: list[int | None] = []
         lock = threading.Lock()
+        active_calls = 0
+        max_active = 0
 
         def tracking_scrape(
             county: str,
@@ -386,8 +391,16 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
             lookback_days: int = 90,
             city: object = None,
         ) -> list[object]:
+            nonlocal active_calls, max_active
             with lock:
+                active_calls += 1
+                max_active = max(max_active, active_calls)
                 thread_ids.append(threading.current_thread().ident)
+            # Keep a worker busy long enough for other submitted county tasks
+            # to start on separate workers when concurrency is enabled.
+            time_module.sleep(0.05)
+            with lock:
+                active_calls -= 1
             return []
 
         with patch("pipeline.leads.scrape_damage_permits", side_effect=tracking_scrape):
@@ -410,13 +423,11 @@ class ConcurrentCountyScrapingTests(unittest.TestCase):
                      patch("pipeline.leads.load_existing_state_from_json", return_value={}):
                     build_canonical_lead_dataset(supabase=None)
 
-        unique_threads = set(thread_ids)
         self.assertGreater(
-            len(unique_threads),
+            max_active,
             1,
-            f"Expected multiple worker threads but got only {len(unique_threads)} — "
-            "county permit scrapes appear to be running sequentially. "
-            f"Thread IDs observed: {unique_threads}",
+            "Expected overlapping county scrapes (max_active > 1) but observed "
+            f"max_active={max_active}. Thread IDs seen: {set(thread_ids)}",
         )
 
 

@@ -1,0 +1,34 @@
+{
+  "featureId": "conversion-funnel-analytics",
+  "reviewedAt": "2026-03-31T15:24:45Z",
+  "commitId": "9fa443f",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds all requested analytics surfaces (conversion funnel, time-to-contact card, and age distribution chart) and integrates them into Analytics.tsx with recharts. However, the lead-age bucketing logic has a correctness bug that prevents the 60+d bucket from ever counting leads, which breaks VAL-EXPAND-008 behavior for stale leads.",
+    "issues": [
+      {
+        "file": "src/components/Analytics.tsx",
+        "line": 222,
+        "severity": "blocking",
+        "description": "Lead age distribution computes `cutoff` as `now - bucket.max * ...` even when `bucket.max` is `Infinity` for the 60+d bucket; this produces `-Infinity`, and the condition `d <= cutoff` can never be true, so 60+d is always zero. This makes the age distribution incorrect and fails expected bucket behavior for stale leads."
+      },
+      {
+        "file": "src/components/Analytics.tsx",
+        "line": 742,
+        "severity": "non_blocking",
+        "description": "Overall New→Converted percentage divides by `funnelData[0].count` without guarding for zero. If New count is 0, this renders `NaN%`/`Infinity%` instead of a safe fallback (e.g., 0%)."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The react-frontend verification procedure (build + agent-browser manual checks) did not catch chart-data correctness defects in computed analytics values; heading/presence checks passed while a bucket math bug shipped.",
+      "evidence": "Handoff verification and transcript skeleton show UI presence checks on Analytics with real dataset (all New leads) but no deterministic data-driven validation of age-bucket math; bug remains in `src/components/Analytics.tsx:222-227`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature conversion-funnel-analytics at commit 9fa443f. VAL-EXPAND-006 and VAL-EXPAND-007 appear implemented, but VAL-EXPAND-008 is not reliably satisfied due to a blocking age-bucket calculation bug (60+d always zero)."
+}

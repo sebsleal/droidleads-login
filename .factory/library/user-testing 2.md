@@ -41,10 +41,9 @@
 - Isolation boundary: use only the assigned URL and browser session; do not change global app config or env files.
 - Primary route for conversion assertions (`VAL-EXPAND-004`, `VAL-EXPAND-005`, `VAL-CROSS-005`): use `http://localhost:5173/fixtures/convert-case` which provides an isolated Converted-lead fixture and case-creation flow without mutating real leads.
 - Primary route for cross-area assertions (`VAL-CROSS-002`, `VAL-CROSS-003`, `VAL-CROSS-004`): use `http://localhost:5173/fixtures/cross-area`.
-- Primary route for dashboard null-sort assertions (`VAL-DASH-008`, `VAL-DASH-010`): use `http://localhost:5173/fixtures/sort-nulls`, which provides mixed null/non-null `assessedValue` and `permitValue` rows in one isolated surface so null-bottom sorting can be proven deterministically.
 - Current fixture behavior (`/fixtures/cross-area`, infra round 4): strict composed filters can produce a multi-page result set (validated with search='3', status='New', insurer='Citizens Property Insurance', sort='Score (high→low)' reaching page 2 of 2). Do not assume page-2 is blocked; validate using the contract's explicit composed-filter flow.
 - Shared-state boundary: fixture-created cases are acceptable test data for validation; do not attempt to mutate production Supabase records.
-- Evidence: capture screenshots/DOM checks for button visibility, prefilled modal fields, case presence in `/cases` after submit, and ordered row evidence for sort fixtures.
+- Evidence: capture screenshots/DOM checks for button visibility, prefilled modal fields, and case presence in `/cases` after submit.
 
 ## Testing Notes
 - Dashboard data comes from static JSON files in `public/` — no Supabase connection needed for validation

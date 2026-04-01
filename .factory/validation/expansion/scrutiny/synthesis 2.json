@@ -1,0 +1,49 @@
+{
+  "milestone": "expansion",
+  "round": 3,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "python3 -m unittest discover -s \"/Users/seb/Documents/claim-remedy-leads-testing/tests\" -p \"test_*.py\" -v",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run build",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": false,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run lint",
+      "exitCode": 127
+    }
+  },
+  "reviewsSummary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Update frontend validation guidance to reflect current repo reality: deterministic unit tests (e.g., Vitest) may exist and should be run alongside build/browser checks when present.",
+      "evidence": "fix-analytics-stale-age-bucket added deterministic Vitest coverage while mission AGENTS still states no frontend test framework.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill: react-frontend",
+      "suggestion": "Add a fallback validation playbook for conversion-related UI flows when fixture data lacks required statuses (for example no Converted leads), including deterministic seeding/fixtures to verify close-state regressions.",
+      "evidence": "fix-case-drawer-close-after-conversion resolved the state bug, but review noted agent-browser verification constraints due to available local data distribution.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/expansion/scrutiny/synthesis.round2.json",
+  "orchestratorOverrides": {
+    "lintFailure": "Known pre-existing repository issue documented in mission AGENTS.md (eslint binary/config absent). Treated as non-blocking validator noise for scrutiny synthesis."
+  }
+}

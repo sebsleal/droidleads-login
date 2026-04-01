@@ -1,0 +1,33 @@
+{
+  "featureId": "lead-to-case-conversion",
+  "reviewedAt": "2026-03-31T15:44:48Z",
+  "commitId": "a7cbab0",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature delivers the requested conversion surface (button gating by Converted status, pre-filled modal, case creation wiring, and navigation to /cases), so VAL-EXPAND-004/005 and the core VAL-CROSS-005 flow are largely implemented. However, the new auto-open logic introduces a blocking state bug: after conversion, the CaseDrawer cannot actually be closed because `caseToOpen` is never cleared and always takes precedence over `selectedCase`.",
+    "issues": [
+      {
+        "file": "src/App.tsx",
+        "line": 542,
+        "severity": "blocking",
+        "description": "`syncedSelectedCase` always returns `caseToOpen` when present, but `caseToOpen` is set on create (line 615) and never reset. The CaseDrawer close handler only does `setSelectedCase(null)` (line 937), so close does not dismiss the drawer once a converted lead creates a case. This also prevents normal case selection from taking over because `caseToOpen` continues to win."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Manual UI verification for this feature required mutating `public/leads.json` because local data had no Converted leads. This testing precondition is not documented in shared testing guidance.",
+      "evidence": "Transcript skeleton includes: \"Status counts: { New: 13201 } Converted leads: 0\" followed by \"Modified first lead status to Converted\" and later \"Reverted first lead status to New\" in session 18897ad4-3756-4677-a600-0dca435f8eb1. `/.factory/library/user-testing.md` documents data size but not status-distribution caveat or a safe fixture strategy for conversion-flow validation."
+    },
+    {
+      "area": "conventions",
+      "observation": "This feature handoff omits a `skillFeedback` block, while many other mission handoffs include it; this makes procedural-compliance auditing inconsistent across features.",
+      "evidence": "`handoffs/2026-03-31T14-55-21-266Z__lead-to-case-conversion__18897ad4-3756-4677-a600-0dca435f8eb1.json` ends after `discoveredIssues` and has no `skillFeedback`, unlike neighboring handoffs such as `...__conversion-funnel-analytics__...` and `...__address-normalization-dedup__...`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Failing review due to a blocking App state bug introduced by the conversion auto-open path: after creating a case, the CaseDrawer cannot be closed because `caseToOpen` is never cleared and overrides `selectedCase` forever."
+}

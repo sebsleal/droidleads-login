@@ -35,7 +35,7 @@ This repo now runs on a single canonical lead pipeline. `run_scraper.py` calls [
 2. Install frontend dependencies: `npm install`
 3. Copy `.env.example` to `.env` and fill in the required values.
 4. Easiest one-time DB setup: paste [`db/setup_all.sql`](/Users/seb/Documents/claim-remedy-leads-testing/db/setup_all.sql) into the Supabase SQL editor and run it once.
-5. If you prefer migration-by-migration setup, apply the ordered SQL migrations in [`db/migrations`](/Users/seb/Documents/claim-remedy-leads-testing/db/migrations) from `0001` through `0005`.
+5. If you prefer migration-by-migration setup, apply the ordered SQL migrations in [`db/migrations`](/Users/seb/Documents/claim-remedy-leads-testing/db/migrations) from `0001` through `0006`.
 6. Generate sanitized company metrics from your local PDFs:
 
 ```bash

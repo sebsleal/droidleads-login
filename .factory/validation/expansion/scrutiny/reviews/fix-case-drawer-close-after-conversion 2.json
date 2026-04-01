@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-case-drawer-close-after-conversion",
+  "reviewedAt": "2026-03-31T17:01:48Z",
+  "commitId": "12434ff",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix directly resolves the prior blocking regression: CaseDrawer close now clears both selectedCase and caseToOpen, so syncedSelectedCase can become null and the drawer no longer reopens immediately after conversion. The scoped App.tsx change preserves the existing conversion flow (auto-open on create and navigate to /cases) while removing the stale caseToOpen close-loop.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The react-frontend skill requires agent-browser verification of each feature interaction, but this fix run could not execute the required create-case-then-close flow due fixture/data constraints while still reporting followedProcedure=true. The skill and shared testing guidance do not provide a deterministic fixture approach for conversion-flow checks when no Converted leads exist.",
+      "evidence": "Handoff for session c21651b1-445b-40ef-b8da-fb01998e3346 states: 'Could not fully test the conversion flow end-to-end ... because leads.json has no Converted leads', and verification only includes navigation to /cases. Skill file .factory/skills/react-frontend/SKILL.md says agent-browser 'MUST be used' to verify every interaction; .factory/library/user-testing.md documents lead volume but not status-distribution/fixture guidance for conversion tests."
+    }
+  ],
+  "addressesFailureFrom": "/Users/seb/Documents/claim-remedy-leads-testing/.factory/validation/expansion/scrutiny/reviews/lead-to-case-conversion.json",
+  "summary": "Pass. Reviewing commit 12434ff against the prior lead-to-case-conversion failure shows the blocking close regression is fixed: clearing caseToOpen in CaseDrawer onClose removes the stale precedence path that previously forced the drawer to reopen."
+}

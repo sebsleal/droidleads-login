@@ -1,0 +1,114 @@
+{
+  "milestone": "expansion",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "python3 -m unittest discover -s \"/Users/seb/Documents/claim-remedy-leads-testing/tests\" -p \"test_*.py\" -v",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run build",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": false,
+      "command": "npm --prefix \"/Users/seb/Documents/claim-remedy-leads-testing\" run lint",
+      "exitCode": 127
+    }
+  },
+  "reviewsSummary": {
+    "total": 5,
+    "passed": 0,
+    "failed": 5,
+    "failedFeatures": [
+      "broward-expansion",
+      "storm-to-lead-pipeline",
+      "lead-to-case-conversion",
+      "conversion-funnel-analytics",
+      "address-normalization-dedup"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "broward-expansion",
+      "severity": "blocking",
+      "description": "Broward COUNTY_CONFIGS includes only two endpoints, so VAL-EXPAND-001 (>=3 distinct Broward city ArcGIS endpoints) is not met."
+    },
+    {
+      "featureId": "broward-expansion",
+      "severity": "blocking",
+      "description": "tests/test_broward_expansion.py asserts >=2 distinct hosts, weakening contract requirement (>=3) and allowing false pass against VAL-EXPAND-001."
+    },
+    {
+      "featureId": "storm-to-lead-pipeline",
+      "severity": "blocking",
+      "description": "build_storm_leads_from_candidates routes non-Miami county ZIP scans through fetch_parcels_by_zip, which is backed by a Miami-Dade-only endpoint, so county-targeted storm lead generation is incorrect."
+    },
+    {
+      "featureId": "storm-to-lead-pipeline",
+      "severity": "blocking",
+      "description": "Candidate area specificity is ignored; scans run full county ZIP sets instead of targeted candidate area, leaving VAL-EXPAND-003 incomplete."
+    },
+    {
+      "featureId": "lead-to-case-conversion",
+      "severity": "blocking",
+      "description": "App.tsx keeps caseToOpen set after conversion, so syncedSelectedCase always resolves to that case and CaseDrawer cannot be closed normally."
+    },
+    {
+      "featureId": "conversion-funnel-analytics",
+      "severity": "blocking",
+      "description": "60+d age bucket math uses Infinity in cutoff computation, yielding -Infinity and preventing stale leads from being counted in age distribution."
+    },
+    {
+      "featureId": "address-normalization-dedup",
+      "severity": "blocking",
+      "description": "Directional spacing normalization is incomplete (e.g., NW7th vs NW 7th), so equivalent addresses can hash differently and evade dedup."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add explicit policy that contract thresholds/assertions cannot be weakened in tests (e.g., >=3 to >=2) without orchestrator approval and contract update.",
+      "evidence": "broward-expansion reduced validation threshold in tests despite VAL-EXPAND-001 requiring >=3 endpoints.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill: python-backend",
+      "suggestion": "Clarify that validation/test verification must avoid real scraper API calls when mission AGENTS requires mocked HTTP, and add a checklist to reconcile skill steps with mission-specific constraints.",
+      "evidence": "storm-to-lead-pipeline review observed tension between python-backend skill guidance and mission AGENTS external-call constraints.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill: react-frontend",
+      "suggestion": "Add guidance to validate computed analytics values with deterministic fixtures/assertions (not only UI presence checks) for chart-heavy features.",
+      "evidence": "conversion-funnel-analytics passed manual UI presence checks but shipped incorrect 60+d bucket computation.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Document Broward endpoint discovery matrix in shared library.",
+      "reason": "ambiguous"
+    },
+    {
+      "observation": "Add shared library note that local leads.json may have zero Converted leads and require temporary fixture mutation for conversion-flow testing.",
+      "reason": "ambiguous"
+    },
+    {
+      "observation": "Flag missing skillFeedback block in one worker handoff as a shared-state issue.",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "Add directional tokenization conventions for dedup to architecture docs.",
+      "reason": "ambiguous"
+    }
+  ],
+  "previousRound": null,
+  "orchestratorOverrides": {
+    "lintFailure": "Known pre-existing repository issue documented in mission AGENTS.md (eslint binary/config absent). Treated as non-blocking validator noise for scrutiny synthesis."
+  }
+}

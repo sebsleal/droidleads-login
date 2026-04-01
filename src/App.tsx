@@ -36,6 +36,7 @@ import CaseDrawer from "@/components/CaseDrawer";
 import ConvertToCaseModal from "@/components/ConvertToCaseModal";
 import FixtureConversionPage from "@/components/FixtureConversionPage";
 import FixtureLegacyCompatPage from "@/components/FixtureLegacyCompatPage";
+import FixtureCrossAreaPage from "@/components/FixtureCrossAreaPage";
 
 const DEFAULT_FILTERS: FilterState = {
   zip: "",
@@ -1142,6 +1143,10 @@ export default function App() {
               <Route
                 path="/fixtures/legacy-compat"
                 element={<FixtureLegacyCompatPage />}
+              />
+              <Route
+                path="/fixtures/cross-area"
+                element={<FixtureCrossAreaPage />}
               />
             </Routes>
           </div>

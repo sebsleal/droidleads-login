@@ -78,14 +78,14 @@ const styles = {
 
 function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div className="fixed inset-x-4 bottom-4 z-50 flex flex-col items-end gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-auto">
       {toasts.map((toast, index) => {
         const Icon = icons[toast.type]
         return (
           <div
             key={toast.id}
             className={cn(
-              'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border min-w-[320px] max-w-[480px]',
+              'pointer-events-auto flex w-full max-w-[480px] items-start gap-3 px-4 py-3 rounded-xl shadow-lg border sm:min-w-[320px] sm:w-auto',
               'transform transition-all duration-300 ease-out',
               styles[toast.type]
             )}

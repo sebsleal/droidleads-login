@@ -3,6 +3,40 @@ import { Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Theme = 'light' | 'dark' | 'system'
+type ResolvedTheme = 'light' | 'dark'
+
+const THEME_STORAGE_KEY = 'theme'
+
+export function getStoredTheme(): Theme {
+  if (typeof window === 'undefined') {
+    return 'system'
+  }
+
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+  return storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
+    ? storedTheme
+    : 'system'
+}
+
+function resolveTheme(theme: Theme): ResolvedTheme {
+  if (typeof window === 'undefined') {
+    return 'light'
+  }
+
+  return theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme
+}
+
+export function applyTheme(theme: Theme): ResolvedTheme {
+  const resolvedTheme = resolveTheme(theme)
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
+  }
+
+  return resolvedTheme
+}
 
 interface ThemeContextType {
   theme: Theme
@@ -13,39 +47,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || 'system'
-    }
-    return 'system'
-  })
-  
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setThemeState] = useState<Theme>(getStoredTheme)
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => applyTheme(getStoredTheme()))
 
   useEffect(() => {
-    const root = window.document.documentElement
-    
     const updateTheme = () => {
-      let resolved: 'light' | 'dark'
-      
-      if (theme === 'system') {
-        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      } else {
-        resolved = theme
-      }
-      
-      setResolvedTheme(resolved)
-      
-      if (resolved === 'dark') {
-        root.classList.add('dark')
-      } else {
-        root.classList.remove('dark')
-      }
+      setResolvedTheme(applyTheme(theme))
     }
 
     updateTheme()
 
-    // Listen for system theme changes
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       const listener = () => updateTheme()
@@ -56,7 +67,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
+    window.localStorage.setItem(THEME_STORAGE_KEY, newTheme)
+    setResolvedTheme(applyTheme(newTheme))
   }, [])
 
   return (

@@ -723,7 +723,7 @@ export default function App() {
     [stormCandidates],
   );
 
-  function handleUpdateStatus(id: string, status: Lead["status"]) {
+  async function handleUpdateStatus(id: string, status: Lead["status"]) {
     const nowIso = new Date().toISOString();
     const current = leads.find((lead) => lead.id === id);
     const patch: Parameters<typeof saveTracking>[1] = { status };
@@ -733,7 +733,16 @@ export default function App() {
     if (status === "Converted" && !current?.convertedAt)
       patch.convertedAt = nowIso;
 
-    saveTracking(id, patch);
+    const saved = await saveTracking(id, patch);
+
+    if (!saved) {
+      addToast({
+        type: 'error',
+        title: 'Update failed',
+        message: 'Lead status could not be saved',
+      });
+      return;
+    }
 
     addToast({
       type: 'success',
@@ -782,7 +791,7 @@ export default function App() {
     }
   }
 
-  function handleUpdateStormStatus(
+  async function handleUpdateStormStatus(
     id: string,
     status: StormCandidate["status"],
   ) {
@@ -796,7 +805,16 @@ export default function App() {
       patch.permitFiledAt = nowIso;
     if (status === "Closed" && !current?.closedAt) patch.closedAt = nowIso;
 
-    saveStormTracking(id, patch);
+    const saved = await saveStormTracking(id, patch);
+
+    if (!saved) {
+      addToast({
+        type: 'error',
+        title: 'Update failed',
+        message: 'Storm candidate status could not be saved',
+      });
+      return;
+    }
 
     addToast({
       type: 'success',

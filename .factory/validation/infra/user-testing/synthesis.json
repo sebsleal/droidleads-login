@@ -1,21 +1,24 @@
 {
   "milestone": "infra",
-  "round": 3,
-  "status": "fail",
+  "round": 4,
+  "status": "pass",
   "assertionsSummary": {
     "total": 1,
-    "passed": 0,
+    "passed": 1,
     "failed": 0,
-    "blocked": 1
+    "blocked": 0
   },
-  "passedAssertions": [],
+  "passedAssertions": [
+    "VAL-CROSS-003"
+  ],
   "failedAssertions": [],
-  "blockedAssertions": [
+  "blockedAssertions": [],
+  "appliedUpdates": [
     {
-      "id": "VAL-CROSS-003",
-      "blockedBy": "Strict composed filters (search + non-default status + non-default insurer + score sort) on /fixtures/cross-area yield insufficient matching rows to execute the contract's explicit page-2 step; Next remains disabled at page 1."
+      "target": "user-testing.md",
+      "description": "Updated cross-area flow guidance to reflect infra round-4 evidence that strict composed filters can reach page 2 under fixture data.",
+      "source": "flow-report"
     }
   ],
-  "appliedUpdates": [],
-  "previousRound": "/Users/seb/Documents/claim-remedy-leads-testing/.factory/validation/infra/user-testing/synthesis.round2.json"
+  "previousRound": "/Users/seb/Documents/claim-remedy-leads-testing/.factory/validation/infra/user-testing/synthesis.round3.json"
 }

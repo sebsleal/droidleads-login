@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-concurrent-caching-edge-cases",
+  "reviewedAt": "2026-04-01T00:02:27Z",
+  "commitId": "f533ddc2ed190a0e22bbe5685f8fa5a631df63c8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Reviewed the prior failed feature diff (137f282) and the fix diff (f533ddc2ed190a0e22bbe5685f8fa5a631df63c8). The fix directly addresses all three blocking findings from the prior review: (1) `lookup_by_folio()` now normalizes county once and uses it consistently for routing and cache keys, removing the Broward misroute/cache-poisoning path; (2) `build_canonical_lead_dataset()` now guards the zero-enabled-counties path before constructing ThreadPoolExecutor, preventing `max_workers=0` crashes; and (3) the weak interleaving assertion was replaced with a timing-based proof that fails under sequential execution. Sunbiz cache behavior is untouched in this commit.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The python-backend skill requires RED→GREEN evidence (failing test before implementation), but the fix session edited production files before adding/updating the new tests and did not show a first failing targeted test run.",
+      "evidence": "Transcript skeleton for workerSessionId 9e393051-4f16-485f-a05f-1c9e56398f02 shows Edit on scrapers/property.py and pipeline/leads.py before test edits in tests/test_concurrent_caching.py, and the first test execution shown is a broad suite run after implementation edits."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/infra/scrutiny/reviews/concurrent-scrapes-and-caching.json",
+  "summary": "PASS: this fix adequately resolves the original concurrent-scrapes-and-caching failure by correcting county normalization/cache routing, guarding zero-enabled county executor construction, and replacing the unsound concurrency assertion with a proof that rejects sequential behavior."
+}

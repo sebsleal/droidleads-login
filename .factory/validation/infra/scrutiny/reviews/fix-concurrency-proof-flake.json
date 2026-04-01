@@ -1,0 +1,28 @@
+{
+  "featureId": "fix-concurrency-proof-flake",
+  "reviewedAt": "2026-04-01T00:05:58Z",
+  "commitId": "c1f0ceb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Reviewed the original failed feature diff (137f282) and the fix diff (c1f0ceb), plus the fix transcript skeleton. The flaky timing threshold assertion was removed, but the new barrier proof is not contract-faithful: it cannot fail under sequential execution in this pipeline because scraper exceptions are swallowed inside `_scrape_county`. As written, the barrier test can pass even when county scraping is sequential, so the fix does not fully satisfy the requirement for a deterministic proof that rejects sequential behavior.",
+    "issues": [
+      {
+        "file": "tests/test_concurrent_caching.py",
+        "line": 329,
+        "severity": "blocking",
+        "description": "`test_permit_scrape_runs_in_parallel_proven_by_barrier` expects `BrokenBarrierError` to propagate from `build_canonical_lead_dataset`, but `_scrape_county` catches all scraper exceptions and returns `(county, [])` (`pipeline/leads.py:768-770`). Under sequential execution, `barrier.wait()` times out, the error is swallowed by pipeline error isolation, and the test still passes; therefore this barrier assertion does not actually prove concurrency or fail reliably for sequential behavior."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Mission shared state has conflicting guidance for VAL-INFRA-006: the feature definition now requires removing timing-sensitive proofs, while `validation-contract.md` still prescribes a timed threshold assertion for concurrency evidence.",
+      "evidence": "features.json (`fix-concurrency-proof-flake.expectedBehavior`) requires no narrow timing thresholds; `validation-contract.md:515-519` still says evidence should be a timed test asserting <2.5s for 3 counties."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/infra/scrutiny/reviews/concurrent-scrapes-and-caching.json",
+  "summary": "FAIL: while timing-based flake risk was removed, the new barrier proof is ineffective because pipeline exception isolation swallows the barrier failure path. The fix therefore does not fully establish a deterministic sequential-vs-concurrent proof for the county scrape contract."
+}

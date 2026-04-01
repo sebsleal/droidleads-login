@@ -1,0 +1,28 @@
+{
+  "featureId": "fix-retry-transient-scope",
+  "reviewedAt": "2026-04-01T00:01:57Z",
+  "commitId": "9193696",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix directly addresses the prior blocking defect: retry_request() no longer retries broad RequestException subclasses and is now constrained to transient HTTP statuses plus connection-oriented failures (ConnectionError, Timeout). The added negative tests prove non-transient RequestException subclasses fail fast, and added recovery tests confirm transient failures still retry and return valid responses.",
+    "issues": [
+      {
+        "file": "scrapers/retry_utils.py",
+        "line": 56,
+        "severity": "non_blocking",
+        "description": "backoff_delays length validation still requires len(backoff_delays) >= max_retries even though only max_retries-1 delays are consumed between attempts. This is a pre-existing off-by-one validation mismatch with the docstring and can reject otherwise valid custom delay tuples."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Test-result evidence can be masked when test commands are piped (e.g., to tail), producing a successful shell exit code even when tests fail; current mission guidance does not explicitly warn against this.",
+      "evidence": "Fix transcript skeleton includes `python3 -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tail -40`, then notes a failing flaky test, while handoff records `exitCode: 0` for that command."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/infra/scrutiny/reviews/scraper-retry-logic.json",
+  "summary": "Reviewed both diffs (original failure commit abe6e95 and fix commit 9193696), the prior scrutiny review, and the fix worker transcript skeleton. The fix adequately resolves the original blocking retry-scope regression and adds contract-aligned negative coverage for non-transient RequestException subclasses, so this review passes."
+}

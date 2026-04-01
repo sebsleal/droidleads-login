@@ -13,6 +13,7 @@ import {
   downloadCSV,
   downloadStormCandidatesCSV,
   isWithinDays,
+  isBusinessEntityLead,
   cn,
 } from "@/lib/utils";
 import { useTracking } from "@/lib/useTracking";
@@ -46,6 +47,7 @@ const DEFAULT_FILTERS: FilterState = {
   dateRange: "all",
   sortOrder: "newest",
   search: "",
+  ownerType: "All",
   hasContact: false,
   absenteeOwner: false,
   underpaid: false,
@@ -89,6 +91,10 @@ function parseUrlParams(
 
   const search = sp.get("search");
   if (typeof search === "string" && search.trim()) f.search = search.trim();
+
+  const ownerType = sp.get("ownerType");
+  if (ownerType === "person") f.ownerType = "Person";
+  if (ownerType === "business") f.ownerType = "Business";
 
   const sort = sp.get("sort");
   if (sort === "oldest" || sort === "score" || sort === "assessedValue" || sort === "permitValue")
@@ -315,6 +321,8 @@ export default function App() {
 
     const params: Record<string, string> = {};
     if (filters.search) params.search = filters.search;
+    if (filters.ownerType === "Person") params.ownerType = "person";
+    if (filters.ownerType === "Business") params.ownerType = "business";
     if (filters.sortOrder !== "newest") params.sort = filters.sortOrder;
     if (filters.statusFilter !== "All") params.status = filters.statusFilter;
     if (filters.insurerFilter) params.insurer = filters.insurerFilter;
@@ -368,7 +376,7 @@ export default function App() {
     setLeadsPage(1);
   }, [
     filters.zip, filters.damageType, filters.scoreTier, filters.dateRange,
-    filters.sortOrder, filters.search, filters.hasContact, filters.absenteeOwner,
+    filters.sortOrder, filters.search, filters.ownerType, filters.hasContact, filters.absenteeOwner,
     filters.underpaid, filters.noContractor, filters.stormFirst, filters.county,
     filters.statusFilter, filters.insurerFilter, filters.femaFilter, leadsPageSize,
   ]);
@@ -442,6 +450,10 @@ export default function App() {
       )
         return false;
       if (filters.hasContact && !lead.contact) return false;
+      if (filters.ownerType === "Person" && isBusinessEntityLead(lead))
+        return false;
+      if (filters.ownerType === "Business" && !isBusinessEntityLead(lead))
+        return false;
 
       if (filters.scoreTier !== "All") {
         if (filters.scoreTier === "High" && lead.score < 85) return false;

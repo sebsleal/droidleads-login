@@ -24,6 +24,7 @@ import { fixtureSortNullsLeads } from '@/data/fixtureSortNulls'
 import FilterBar from '@/components/FilterBar'
 import LeadsTable from '@/components/LeadsTable'
 import LeadDrawer from '@/components/LeadDrawer'
+import { isBusinessEntityLead } from '@/lib/utils'
 
 const FIXTURE_FILTERS: FilterState = {
   zip: '',
@@ -32,6 +33,7 @@ const FIXTURE_FILTERS: FilterState = {
   dateRange: 'all',
   sortOrder: 'newest',
   search: '',
+  ownerType: 'All',
   hasContact: false,
   absenteeOwner: false,
   underpaid: false,
@@ -78,6 +80,10 @@ export default function FixtureSortNullsPage() {
         )
           return false
       }
+      if (filters.ownerType === 'Person' && isBusinessEntityLead(lead))
+        return false
+      if (filters.ownerType === 'Business' && !isBusinessEntityLead(lead))
+        return false
       // Status filter
       if (filters.statusFilter !== 'All' && lead.status !== filters.statusFilter)
         return false

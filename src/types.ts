@@ -108,6 +108,7 @@ export interface FilterState {
   dateRange: "7" | "30" | "90" | "all";
   sortOrder: "newest" | "oldest" | "score" | "assessedValue" | "permitValue";
   search: string;
+  ownerType: "All" | "Person" | "Business";
   hasContact: boolean;
   absenteeOwner: boolean;
   underpaid: boolean;

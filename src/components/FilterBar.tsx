@@ -41,6 +41,7 @@ const isDefaultFilters = (f: FilterState) =>
   f.dateRange === 'all' &&
   f.sortOrder === 'newest' &&
   f.search === '' &&
+  f.ownerType === 'All' &&
   !f.hasContact &&
   !f.absenteeOwner &&
   !f.underpaid &&
@@ -170,6 +171,19 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
             {COUNTY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <FilterLabel text="Owner Type" tooltip="Filter out business, government, and institutional owners when you only want actual people." />
+          <select
+            value={filters.ownerType}
+            onChange={(e) => update('ownerType', e.target.value as FilterState['ownerType'])}
+            className="select-input w-36"
+          >
+            <option value="All">All owners</option>
+            <option value="Person">People only</option>
+            <option value="Business">Businesses only</option>
           </select>
         </div>
 

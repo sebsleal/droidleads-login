@@ -2,6 +2,51 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { ScoreTier, DamageType, Lead, StormCandidate } from '@/types';
 
+const OWNER_BUSINESS_KEYWORDS = [
+  'LLC',
+  'L L C',
+  'INC',
+  'CORP',
+  'CORPORATION',
+  'CO',
+  'COMPANY',
+  'LTD',
+  'LIMITED',
+  'LP',
+  'L P',
+  'LLP',
+  'L L P',
+  'TRUST',
+  'ESTATE',
+  'HOLDINGS',
+  'REALTY',
+  'PROPERTIES',
+  'PROPERTY',
+  'INVESTMENTS',
+  'GROUP',
+  'PARTNERS',
+  'PARTNERSHIP',
+  'VENTURES',
+  'ASSOCIATION',
+  'ASSN',
+  'CONDO',
+  'CONDOMINIUM',
+  'HOMEOWNERS',
+  'HOA',
+  'AUTHORITY',
+  'COUNTY',
+  'CITY',
+  'TOWN',
+  'VILLAGE',
+  'BANK',
+  'CHURCH',
+  'SCHOOL',
+  'UNIVERSITY',
+  'HOSPITAL',
+  'SYNAGOGUE',
+  'TEMPLE',
+] as const;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -80,6 +125,34 @@ export function displayOwnerName(name: string | null | undefined): { display: st
     return { display: 'Owner Unknown', isPlaceholder: true };
   }
   return { display: name, isPlaceholder: false };
+}
+
+function normalizeOwnerName(name: string | null | undefined): string {
+  return (name ?? '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim();
+}
+
+export function classifyOwnerType(
+  lead: Pick<Lead, 'ownerName' | 'registeredAgentName' | 'llcOfficers'>,
+): 'Person' | 'Business' {
+  if (lead.registeredAgentName?.trim()) return 'Business';
+  if ((lead.llcOfficers?.length ?? 0) > 0) return 'Business';
+
+  const normalizedName = normalizeOwnerName(lead.ownerName);
+  if (!normalizedName) return 'Person';
+
+  const paddedName = ` ${normalizedName} `;
+  return OWNER_BUSINESS_KEYWORDS.some((keyword) => paddedName.includes(` ${keyword} `))
+    ? 'Business'
+    : 'Person';
+}
+
+export function isBusinessEntityLead(
+  lead: Pick<Lead, 'ownerName' | 'registeredAgentName' | 'llcOfficers'>,
+): boolean {
+  return classifyOwnerType(lead) === 'Business';
 }
 
 export function formatDate(iso: string): string {

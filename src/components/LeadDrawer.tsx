@@ -19,15 +19,13 @@ import {
   Users,
 } from "lucide-react";
 import type { Lead, LLCOfficer } from "@/types";
-import { formatDate, damageTypeColor, cn, displayOwnerName } from "@/lib/utils";
-
-const LLC_KEYWORDS = ["LLC", "L.L.C", "INC", "CORP", "LTD", "TRUST", "HOLDINGS",
-  "PROPERTIES", "REALTY", "INVESTMENTS", "GROUP", "PARTNERS", "VENTURES"];
-
-function isBusinessEntity(name: string): boolean {
-  const upper = name.toUpperCase();
-  return LLC_KEYWORDS.some((kw) => upper.includes(kw));
-}
+import {
+  formatDate,
+  damageTypeColor,
+  cn,
+  displayOwnerName,
+  isBusinessEntityLead,
+} from "@/lib/utils";
 import ScoreBadge from "@/components/ScoreBadge";
 import Tooltip from "@/components/Tooltip";
 
@@ -96,6 +94,7 @@ export default function LeadDrawer({
   const [claimValue, setClaimValue] = useState(
     lead.claimValue != null ? String(lead.claimValue) : "",
   );
+  const isBusinessOwner = isBusinessEntityLead(lead);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Sync local editable state when the lead prop changes (e.g. different lead opened)
@@ -195,7 +194,7 @@ export default function LeadDrawer({
                 {lead.damageType}
               </span>
             </Tooltip>
-            {isBusinessEntity(lead.ownerName) && (
+            {isBusinessOwner && (
               <Tooltip
                 text="This property is owned by a business entity (LLC, Corp, Trust, etc.). See the LLC Principals section below for registered officers and Sunbiz lookup."
                 position="bottom"
@@ -561,7 +560,7 @@ export default function LeadDrawer({
           </section>
 
           {/* LLC Principals — always visible for business entities */}
-          {isBusinessEntity(lead.ownerName) && (
+          {isBusinessOwner && (
             <section>
               <div className="flex items-center justify-between mb-4">
                 <Tooltip

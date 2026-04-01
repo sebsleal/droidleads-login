@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: main-branch-writes
+  cancel-in-progress: false
+
 jobs:
   enrich:
     # Only run if the scraper succeeded (skip if it failed or was cancelled)

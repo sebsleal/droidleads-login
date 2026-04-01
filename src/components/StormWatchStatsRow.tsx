@@ -6,10 +6,7 @@ interface StormKPICardProps {
   value: number
   icon: React.ReactNode
   color: 'blue' | 'emerald' | 'amber' | 'slate'
-  trend?: {
-    value: number
-    label: string
-  }
+  subtitle?: string
 }
 
 const colorStyles = {

@@ -15,6 +15,7 @@ import {
   downloadStormCandidatesCSV,
   isWithinDays,
   isBusinessEntityLead,
+  isNaturalPersonLead,
   cn,
 } from "@/lib/utils";
 import { useTracking } from "@/lib/useTracking";
@@ -453,7 +454,7 @@ export default function App() {
       )
         return false;
       if (filters.hasContact && !lead.contact) return false;
-      if (filters.ownerType === "Person" && isBusinessEntityLead(lead))
+      if (filters.ownerType === "Person" && !isNaturalPersonLead(lead))
         return false;
       if (filters.ownerType === "Business" && !isBusinessEntityLead(lead))
         return false;

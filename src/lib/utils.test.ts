@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Lead, LLCOfficer } from '@/types';
-import { classifyOwnerType, isBusinessEntityLead } from '@/lib/utils';
+import { classifyOwnerType, isBusinessEntityLead, isNaturalPersonLead } from '@/lib/utils';
 
 function lead(overrides: Partial<Pick<Lead, 'ownerName' | 'registeredAgentName' | 'llcOfficers'>> = {}) {
   return {
@@ -31,11 +31,23 @@ describe('classifyOwnerType', () => {
     expect(classifyOwnerType(lead({ ownerName: 'Jane Doe', registeredAgentName: 'John Agent' }))).toBe('Business');
     expect(classifyOwnerType(lead({ ownerName: 'John Smith', llcOfficers: officers }))).toBe('Business');
   });
+
+  it('treats placeholder and missing owner names as unknown', () => {
+    expect(classifyOwnerType(lead({ ownerName: 'Property Owner' }))).toBe('Unknown');
+    expect(classifyOwnerType(lead({ ownerName: 'Ref Only/Luis Martinez' }))).toBe('Unknown');
+    expect(classifyOwnerType(lead({ ownerName: '' }))).toBe('Unknown');
+  });
 });
 
-describe('isBusinessEntityLead', () => {
+describe('owner type helpers', () => {
   it('returns false for people and true for non-person owners', () => {
     expect(isBusinessEntityLead(lead({ ownerName: 'Pedro Sanchez' }))).toBe(false);
     expect(isBusinessEntityLead(lead({ ownerName: 'The Garcia Family Trust' }))).toBe(true);
+  });
+
+  it('only treats actual people as natural-person leads', () => {
+    expect(isNaturalPersonLead(lead({ ownerName: 'Pedro Sanchez' }))).toBe(true);
+    expect(isNaturalPersonLead(lead({ ownerName: 'Property Owner' }))).toBe(false);
+    expect(isNaturalPersonLead(lead({ ownerName: 'Labrada Investments Llc' }))).toBe(false);
   });
 });

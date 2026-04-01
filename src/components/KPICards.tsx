@@ -6,10 +6,7 @@ interface KPICardProps {
   value: number
   icon: React.ReactNode
   color: 'blue' | 'emerald' | 'amber' | 'red'
-  trend?: {
-    value: number
-    label: string
-  }
+  subtitle?: string
 }
 
 const colorStyles = {
@@ -39,7 +36,7 @@ const colorStyles = {
   },
 }
 
-function KPICard({ title, value, icon, color, trend }: KPICardProps) {
+function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
   const styles = colorStyles[color]
 
   return (
@@ -48,14 +45,6 @@ function KPICard({ title, value, icon, color, trend }: KPICardProps) {
         <div className={`p-2.5 rounded-xl ${styles.bg} ${styles.icon} transition-transform group-hover:scale-110 duration-200`}>
           {icon}
         </div>
-        {trend && (
-          <div className="flex items-center gap-1 text-2xs">
-            <TrendingUp className="w-3 h-3 text-emerald-500" />
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-              +{trend.value}%
-            </span>
-          </div>
-        )}
       </div>
 
       <div>
@@ -65,9 +54,9 @@ function KPICard({ title, value, icon, color, trend }: KPICardProps) {
         <p className="text-3xl font-semibold text-slate-900 dark:text-white score-number tracking-tight">
           {value.toLocaleString()}
         </p>
-        {trend && (
+        {subtitle && (
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            {trend.label}
+            {subtitle}
           </p>
         )}
       </div>
@@ -87,28 +76,28 @@ export default function KPICards({ stats }: KPICardsProps) {
         value={stats.totalLeads}
         icon={<Users className="w-5 h-5" />}
         color="blue"
-        trend={{ value: 12, label: 'vs last week' }}
+        subtitle="in database"
       />
       <KPICard
         title="High Priority"
         value={stats.highPriority}
         icon={<TrendingUp className="w-5 h-5" />}
         color="emerald"
-        trend={{ value: 8, label: 'score ≥ 85' }}
+        subtitle="score ≥ 85"
       />
       <KPICard
         title="Absentee Owners"
         value={stats.absenteeOwners}
         icon={<Building2 className="w-5 h-5" />}
         color="amber"
-        trend={{ value: 5, label: 'out-of-state' }}
+        subtitle="out-of-state mailing"
       />
       <KPICard
         title="Underpaid Flags"
         value={stats.underpaidFlags}
         icon={<AlertTriangle className="w-5 h-5" />}
         color="red"
-        trend={{ value: 3, label: 'below ZIP median' }}
+        subtitle="below ZIP median"
       />
     </div>
   )

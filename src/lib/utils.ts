@@ -113,18 +113,20 @@ const PA_PLACEHOLDER_NAMES = new Set([
   'ref only',
 ]);
 
-/** Returns { display, isPlaceholder } so callers can style unknown names differently. */
-export function displayOwnerName(name: string | null | undefined): { display: string; isPlaceholder: boolean } {
-  if (!name) return { display: 'Owner Unknown', isPlaceholder: true };
+function isPlaceholderOwnerName(name: string | null | undefined): boolean {
+  if (!name) return true;
   const normalized = name.trim().toLowerCase();
-  if (
+  return (
     PA_PLACEHOLDER_NAMES.has(normalized) ||
     normalized.startsWith('ref only/') ||
     normalized.startsWith('reference only/')
-  ) {
-    return { display: 'Owner Unknown', isPlaceholder: true };
-  }
-  return { display: name, isPlaceholder: false };
+  );
+}
+
+/** Returns { display, isPlaceholder } so callers can style unknown names differently. */
+export function displayOwnerName(name: string | null | undefined): { display: string; isPlaceholder: boolean } {
+  if (isPlaceholderOwnerName(name)) return { display: 'Owner Unknown', isPlaceholder: true };
+  return { display: name!, isPlaceholder: false };
 }
 
 function normalizeOwnerName(name: string | null | undefined): string {
@@ -136,12 +138,13 @@ function normalizeOwnerName(name: string | null | undefined): string {
 
 export function classifyOwnerType(
   lead: Pick<Lead, 'ownerName' | 'registeredAgentName' | 'llcOfficers'>,
-): 'Person' | 'Business' {
+): 'Person' | 'Business' | 'Unknown' {
   if (lead.registeredAgentName?.trim()) return 'Business';
   if ((lead.llcOfficers?.length ?? 0) > 0) return 'Business';
+  if (isPlaceholderOwnerName(lead.ownerName)) return 'Unknown';
 
   const normalizedName = normalizeOwnerName(lead.ownerName);
-  if (!normalizedName) return 'Person';
+  if (!normalizedName) return 'Unknown';
 
   const paddedName = ` ${normalizedName} `;
   return OWNER_BUSINESS_KEYWORDS.some((keyword) => paddedName.includes(` ${keyword} `))
@@ -153,6 +156,12 @@ export function isBusinessEntityLead(
   lead: Pick<Lead, 'ownerName' | 'registeredAgentName' | 'llcOfficers'>,
 ): boolean {
   return classifyOwnerType(lead) === 'Business';
+}
+
+export function isNaturalPersonLead(
+  lead: Pick<Lead, 'ownerName' | 'registeredAgentName' | 'llcOfficers'>,
+): boolean {
+  return classifyOwnerType(lead) === 'Person';
 }
 
 export function formatDate(iso: string): string {

@@ -953,7 +953,7 @@ export default function App() {
       {/* ── Mobile: Sidebar overlay ── */}
       <aside
         className={cn(
-          "lg:hidden fixed top-0 left-0 z-50 w-[240px] h-full flex flex-col bg-[#16161a] border-r border-white/[0.04]",
+          "lg:hidden fixed top-0 left-0 z-50 w-[240px] h-full flex flex-col bg-slate-900 border-r border-slate-800",
           "transition-transform duration-200 ease-out",
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -1032,7 +1032,7 @@ export default function App() {
       </aside>
 
       {/* ── Desktop: Sidebar ── */}
-      <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex flex-col bg-[#16161a] border-r border-white/[0.04]">
+      <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex flex-col bg-slate-900 border-r border-slate-800">
         {/* Logo */}
         <div className="px-6 pt-6 pb-5">
           <div className="flex items-center gap-3">

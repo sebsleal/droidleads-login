@@ -14,11 +14,11 @@ export default function Header({
   entityLabel = 'leads',
 }: HeaderProps) {
   return (
-    <div className="h-14 flex items-center justify-between px-6 bg-[#16161a] border-b border-white/[0.04] flex-shrink-0">
+    <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-zinc-100 flex-shrink-0">
       <div className="flex items-center gap-3">
-        <h1 className="text-[15px] font-semibold text-white tracking-tight">{title}</h1>
+        <h1 className="text-[15px] font-semibold text-zinc-900 tracking-tight">{title}</h1>
         {totalCount > 0 && (
-          <span className="text-[12px] text-white/30 score-number">
+          <span className="text-[12px] text-zinc-400 score-number">
             {totalCount.toLocaleString()} {entityLabel}
           </span>
         )}
@@ -27,7 +27,7 @@ export default function Header({
       {onExport && (
         <button
           onClick={onExport}
-          className="flex items-center gap-1.5 text-[13px] font-medium text-white/40 hover:text-white/80 transition-colors duration-150"
+          className="flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 hover:text-zinc-900 transition-colors duration-150"
         >
           <Download className="w-3.5 h-3.5" />
           Export CSV

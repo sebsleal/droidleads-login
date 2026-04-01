@@ -11,28 +11,28 @@ interface KPICardProps {
 
 const colorStyles = {
   blue: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-400',
-    icon: 'text-blue-400',
-    border: 'border-blue-500/20',
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    text: 'text-blue-700 dark:text-blue-300',
+    icon: 'text-blue-600 dark:text-blue-400',
+    border: 'border-blue-100 dark:border-blue-800',
   },
   emerald: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    icon: 'text-emerald-400',
-    border: 'border-emerald-500/20',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    border: 'border-emerald-100 dark:border-emerald-800',
   },
   amber: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    icon: 'text-amber-400',
-    border: 'border-amber-500/20',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    text: 'text-amber-700 dark:text-amber-300',
+    icon: 'text-amber-600 dark:text-amber-400',
+    border: 'border-amber-100 dark:border-amber-800',
   },
   red: {
-    bg: 'bg-rose-500/10',
-    text: 'text-rose-400',
-    icon: 'text-rose-400',
-    border: 'border-rose-500/20',
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    text: 'text-red-700 dark:text-red-300',
+    icon: 'text-red-600 dark:text-red-400',
+    border: 'border-red-100 dark:border-red-800',
   },
 }
 
@@ -48,14 +48,14 @@ function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
       </div>
 
       <div>
-        <p className="text-sm text-white/40 font-medium mb-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">
           {title}
         </p>
-        <p className="text-3xl font-semibold text-white score-number tracking-tight">
+        <p className="text-3xl font-semibold text-slate-900 dark:text-white score-number tracking-tight">
           {value.toLocaleString()}
         </p>
         {subtitle && (
-          <p className="text-xs text-white/25 mt-1">
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
             {subtitle}
           </p>
         )}

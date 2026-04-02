@@ -400,25 +400,6 @@
       "source": "NOAA Storm Events"
     },
     {
-      "id": "a6eb3ad0bb1c",
-      "candidateType": "area",
-      "county": "miami-dade",
-      "city": "",
-      "zip": "",
-      "locationLabel": "Coastal Miami-Dade County",
-      "stormEvent": "Wildfire impact in Miami-Dade County",
-      "eventType": "Wildfire",
-      "eventDate": "2025-04-01",
-      "femaDeclarationNumber": "",
-      "femaIncidentType": "",
-      "narrative": "The Florida Forest Service reported that the 344 Wildfire, in extreme Southeast Miami-Dade County, had burned a total 26,719 acres. As of April 4th, the wildfire was 100 percent contained. No injuries or fatalities were reported. There was damage to power lines and communication towers, but no significant damage from the fire.",
-      "score": 57,
-      "scoreReasoning": "Wildfire carries a 18-point severity weight. Reported property damage exceeded $10K (+4).",
-      "status": "Watching",
-      "notes": "",
-      "source": "NOAA Storm Events"
-    },
-    {
       "id": "9cda70c341b6",
       "candidateType": "area",
       "county": "broward",
@@ -761,6 +742,6 @@
       "source": "NOAA Storm Events"
     }
   ],
-  "lastGenerated": "2026-04-01T19:05:55.618786+00:00",
-  "count": 40
+  "lastGenerated": "2026-04-02T03:11:37.540875+00:00",
+  "count": 39
 }

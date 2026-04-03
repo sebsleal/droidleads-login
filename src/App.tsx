@@ -81,7 +81,6 @@ const FixtureConversionPage = lazy(() => import("@/components/FixtureConversionP
 const FixtureLegacyCompatPage = lazy(() => import("@/components/FixtureLegacyCompatPage"));
 const FixtureCrossAreaPage = lazy(() => import("@/components/FixtureCrossAreaPage"));
 const FixtureSortNullsPage = lazy(() => import("@/components/FixtureSortNullsPage"));
-
 // ── URL Param Helpers ────────────────────────────────────────────────────────
 
 function parseUrlParams(
@@ -789,6 +788,7 @@ export default function App() {
       });
       navigate("/cases");
     }
+    return Boolean(newCase);
   }
 
   async function handleUpdateStormStatus(

@@ -14,6 +14,7 @@ import type { StormCandidate, StormWatchStatus } from "@/types";
 import { COUNTY_LABELS } from "@/types";
 import { cn, formatDate } from "@/lib/utils";
 import ScoreBadge from "@/components/ScoreBadge";
+import { useReadOnlyNotice } from "@/hooks/useReadOnlyNotice";
 
 type TrackingPatch = Partial<
   Pick<
@@ -26,7 +27,7 @@ interface StormWatchDrawerProps {
   candidate: StormCandidate;
   onClose: () => void;
   onUpdateStatus: (id: string, status: StormWatchStatus) => void;
-  onUpdateTracking?: (id: string, patch: TrackingPatch) => void;
+  onUpdateTracking?: (id: string, patch: TrackingPatch) => Promise<boolean | void> | boolean | void;
   readOnly?: boolean;
 }
 
@@ -60,6 +61,7 @@ export default function StormWatchDrawer({
 }: StormWatchDrawerProps) {
   const [notesValue, setNotesValue] = useState(candidate.notes ?? "");
   const drawerRef = useRef<HTMLDivElement>(null);
+  const showReadOnlyNotice = useReadOnlyNotice();
 
   useEffect(() => {
     setNotesValue(candidate.notes ?? "");
@@ -79,6 +81,13 @@ export default function StormWatchDrawer({
   }, [candidate.id]);
 
   const hasPreciseLocation = Boolean(candidate.city || candidate.zip);
+
+  function handleReadOnlyInteraction(section: string) {
+    showReadOnlyNotice(
+      `${section} requires configured browser writes or an authenticated save path.`,
+      "Storm Watch updates unavailable",
+    );
+  }
 
   return (
     <>
@@ -290,13 +299,23 @@ export default function StormWatchDrawer({
                     rows={4}
                     placeholder="Add Storm Watch notes..."
                     value={notesValue}
-                    disabled={readOnly}
-                    onChange={(event) => setNotesValue(event.target.value)}
-                    onBlur={() =>
-                      onUpdateTracking?.(candidate.id, {
+                    readOnly={readOnly}
+                    onClick={() => {
+                      if (readOnly) handleReadOnlyInteraction("Storm Watch notes");
+                    }}
+                    onChange={(event) => {
+                      if (readOnly) {
+                        handleReadOnlyInteraction("Storm Watch notes");
+                        return;
+                      }
+                      setNotesValue(event.target.value);
+                    }}
+                    onBlur={() => {
+                      if (readOnly) return;
+                      void onUpdateTracking?.(candidate.id, {
                         notes: notesValue.trim(),
-                      })
-                    }
+                      });
+                    }}
                     className={cn(
                       "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none",
                       "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
@@ -318,8 +337,14 @@ export default function StormWatchDrawer({
               {STATUS_OPTIONS.map((status) => (
                 <button
                   key={status}
-                  disabled={readOnly}
-                  onClick={() => onUpdateStatus(candidate.id, status)}
+                  aria-disabled={readOnly}
+                  onClick={() => {
+                    if (readOnly) {
+                      handleReadOnlyInteraction("Storm Watch status changes");
+                      return;
+                    }
+                    onUpdateStatus(candidate.id, status);
+                  }}
                   className={cn(
                     "py-2 rounded-lg text-sm font-medium border transition-all duration-150",
                     candidate.status === status

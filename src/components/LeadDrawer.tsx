@@ -28,6 +28,7 @@ import {
 } from "@/lib/utils";
 import ScoreBadge from "@/components/ScoreBadge";
 import Tooltip from "@/components/Tooltip";
+import { useReadOnlyNotice } from "@/hooks/useReadOnlyNotice";
 
 type TrackingPatch = Partial<
   Pick<
@@ -45,9 +46,10 @@ interface LeadDrawerProps {
   lead: Lead;
   onClose: () => void;
   onUpdateStatus: (id: string, status: Lead["status"]) => void;
-  onUpdateTracking?: (id: string, patch: TrackingPatch) => void;
+  onUpdateTracking?: (id: string, patch: TrackingPatch) => Promise<boolean | void> | boolean | void;
   onConvertToCase?: (lead: Lead) => void;
   readOnly?: boolean;
+  caseCreationReadOnly?: boolean;
 }
 
 const STATUS_OPTIONS: Lead["status"][] = [
@@ -88,6 +90,7 @@ export default function LeadDrawer({
   onUpdateTracking,
   onConvertToCase,
   readOnly = false,
+  caseCreationReadOnly = false,
 }: LeadDrawerProps) {
   const [copied, setCopied] = useState(false);
   const [notesValue, setNotesValue] = useState(lead.notes ?? "");
@@ -96,6 +99,7 @@ export default function LeadDrawer({
   );
   const isBusinessOwner = isBusinessEntityLead(lead);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const showReadOnlyNotice = useReadOnlyNotice();
 
   // Sync local editable state when the lead prop changes (e.g. different lead opened)
   useEffect(() => {
@@ -118,10 +122,25 @@ export default function LeadDrawer({
   }, [lead.id]);
 
   function handleCopy() {
-    navigator.clipboard.writeText(cleanOutreachMessage(lead.outreachMessage)).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard
+      .writeText(cleanOutreachMessage(lead.outreachMessage))
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        showReadOnlyNotice(
+          "Clipboard access is unavailable in this browser context.",
+          "Copy unavailable",
+        );
+      });
+  }
+
+  function handleReadOnlyInteraction(section: string) {
+    showReadOnlyNotice(
+      `${section} requires configured browser writes or an authenticated save path.`,
+      "Lead updates unavailable",
+    );
   }
 
   return (
@@ -232,6 +251,16 @@ export default function LeadDrawer({
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
+          {readOnly && (
+            <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-800">
+                Lead tracking edits are unavailable in read-only mode. Click any
+                disabled-looking tracking control to see what is required to
+                enable saving.
+              </p>
+            </section>
+          )}
+
           {/* Property details */}
           <section>
             <Tooltip
@@ -726,10 +755,18 @@ export default function LeadDrawer({
                   </Tooltip>
                   <select
                     value={lead.contactMethod ?? ""}
-                    disabled={readOnly}
+                    aria-disabled={readOnly}
+                    onClick={() => {
+                      if (readOnly) handleReadOnlyInteraction("Contact method updates");
+                    }}
                     onChange={(e) => {
+                      if (readOnly) {
+                        e.preventDefault();
+                        handleReadOnlyInteraction("Contact method updates");
+                        return;
+                      }
                       const val = e.target.value || undefined;
-                      onUpdateTracking?.(lead.id, { contactMethod: val });
+                      void onUpdateTracking?.(lead.id, { contactMethod: val });
                     }}
                     className={cn(
                       "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
@@ -766,11 +803,21 @@ export default function LeadDrawer({
                     step="100"
                     placeholder="e.g. 45000"
                     value={claimValue}
-                    disabled={readOnly}
-                    onChange={(e) => setClaimValue(e.target.value)}
+                    readOnly={readOnly}
+                    onClick={() => {
+                      if (readOnly) handleReadOnlyInteraction("Claim value updates");
+                    }}
+                    onChange={(e) => {
+                      if (readOnly) {
+                        handleReadOnlyInteraction("Claim value updates");
+                        return;
+                      }
+                      setClaimValue(e.target.value);
+                    }}
                     onBlur={() => {
+                      if (readOnly) return;
                       const num = parseFloat(claimValue);
-                      onUpdateTracking?.(lead.id, {
+                      void onUpdateTracking?.(lead.id, {
                         claimValue: isNaN(num) ? undefined : num,
                       });
                     }}
@@ -800,10 +847,20 @@ export default function LeadDrawer({
                     rows={3}
                     placeholder="Add adjuster notes…"
                     value={notesValue}
-                    disabled={readOnly}
-                    onChange={(e) => setNotesValue(e.target.value)}
+                    readOnly={readOnly}
+                    onClick={() => {
+                      if (readOnly) handleReadOnlyInteraction("Lead notes");
+                    }}
+                    onChange={(e) => {
+                      if (readOnly) {
+                        handleReadOnlyInteraction("Lead notes");
+                        return;
+                      }
+                      setNotesValue(e.target.value);
+                    }}
                     onBlur={() => {
-                      onUpdateTracking?.(lead.id, {
+                      if (readOnly) return;
+                      void onUpdateTracking?.(lead.id, {
                         notes: notesValue.trim() || undefined,
                       });
                     }}
@@ -831,8 +888,14 @@ export default function LeadDrawer({
               {STATUS_OPTIONS.map((s) => (
                 <Tooltip key={s} text={STATUS_TOOLTIPS[s]} position="top">
                   <button
-                    disabled={readOnly}
-                    onClick={() => onUpdateStatus(lead.id, s)}
+                    aria-disabled={readOnly}
+                    onClick={() => {
+                      if (readOnly) {
+                        handleReadOnlyInteraction("Lead status changes");
+                        return;
+                      }
+                      onUpdateStatus(lead.id, s);
+                    }}
                     className={cn(
                       "flex-1 py-2 rounded-lg text-sm font-medium border transition-all duration-150",
                       lead.status === s ? STATUS_ACTIVE[s] : STATUS_INACTIVE,
@@ -852,10 +915,14 @@ export default function LeadDrawer({
           {lead.status === "Converted" && onConvertToCase && (
             <button
               onClick={() => onConvertToCase(lead)}
-              className="w-full mb-2 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium
-                         hover:bg-emerald-700 transition-colors shadow-sm"
+              className={cn(
+                "w-full mb-2 py-2.5 rounded-lg text-white text-sm font-medium transition-colors shadow-sm",
+                caseCreationReadOnly
+                  ? "bg-emerald-400 hover:bg-emerald-500"
+                  : "bg-emerald-600 hover:bg-emerald-700",
+              )}
             >
-              Convert to Case
+              {caseCreationReadOnly ? "Convert to Case (setup required)" : "Convert to Case"}
             </button>
           )}
           <button

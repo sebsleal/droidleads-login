@@ -18,6 +18,7 @@ import type { Case, CaseStatusPhase } from "@/types";
 import { cn, formatDate } from "@/lib/utils";
 import { caseStatusColor, caseStatusLabel } from "@/components/CasesTable";
 import Tooltip from "@/components/Tooltip";
+import { useReadOnlyNotice } from "@/hooks/useReadOnlyNotice";
 
 type CasePatch = Partial<
   Pick<
@@ -42,7 +43,7 @@ type CasePatch = Partial<
 interface CaseDrawerProps {
   kase: Case;
   onClose: () => void;
-  onSave: (id: string, patch: CasePatch) => void;
+  onSave: (id: string, patch: CasePatch) => Promise<boolean | void> | boolean | void;
   readOnly?: boolean;
 }
 
@@ -220,6 +221,7 @@ export default function CaseDrawer({
 }: CaseDrawerProps) {
   const [notesValue, setNotesValue] = useState(kase.notes ?? "");
   const drawerRef = useRef<HTMLDivElement>(null);
+  const showReadOnlyNotice = useReadOnlyNotice();
 
   useEffect(() => {
     setNotesValue(kase.notes ?? "");
@@ -241,6 +243,13 @@ export default function CaseDrawer({
     kase.estimatedLoss != null && kase.feeRate != null
       ? Math.round(kase.estimatedLoss * kase.feeRate)
       : null;
+
+  function handleReadOnlyInteraction(section: string) {
+    showReadOnlyNotice(
+      `${section} requires configured browser writes or an authenticated save path.`,
+      "Case edits unavailable",
+    );
+  }
 
   return (
     <>
@@ -458,10 +467,14 @@ export default function CaseDrawer({
               ).map(({ key, label, value }) => (
                 <button
                   key={key}
-                  disabled={readOnly}
-                  onClick={() =>
-                    onSave(kase.id, { [key]: !value } as CasePatch)
-                  }
+                  aria-disabled={readOnly}
+                  onClick={() => {
+                    if (readOnly) {
+                      handleReadOnlyInteraction(`${label} updates`);
+                      return;
+                    }
+                    void onSave(kase.id, { [key]: !value } as CasePatch);
+                  }}
                   className={cn(
                     "flex items-center gap-2.5 w-full text-left rounded-lg px-2 py-1.5 transition-colors",
                     readOnly
@@ -507,12 +520,20 @@ export default function CaseDrawer({
             </h3>
             <select
               value={kase.statusPhase}
-              disabled={readOnly}
-              onChange={(e) =>
-                onSave(kase.id, {
+              aria-disabled={readOnly}
+              onClick={() => {
+                if (readOnly) handleReadOnlyInteraction("Case status changes");
+              }}
+              onChange={(e) => {
+                if (readOnly) {
+                  e.preventDefault();
+                  handleReadOnlyInteraction("Case status changes");
+                  return;
+                }
+                void onSave(kase.id, {
                   statusPhase: e.target.value as CaseStatusPhase,
-                })
-              }
+                });
+              }}
               className={cn(
                 "w-full rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                 "focus:outline-none focus:ring-2 focus:ring-blue-500",
@@ -540,10 +561,20 @@ export default function CaseDrawer({
               rows={3}
               placeholder="Add case notes…"
               value={notesValue}
-              disabled={readOnly}
-              onChange={(e) => setNotesValue(e.target.value)}
+              readOnly={readOnly}
+              onClick={() => {
+                if (readOnly) handleReadOnlyInteraction("Case notes");
+              }}
+              onChange={(e) => {
+                if (readOnly) {
+                  handleReadOnlyInteraction("Case notes");
+                  return;
+                }
+                setNotesValue(e.target.value);
+              }}
               onBlur={() => {
-                onSave(kase.id, { notes: notesValue.trim() || undefined });
+                if (readOnly) return;
+                void onSave(kase.id, { notes: notesValue.trim() || undefined });
               }}
               className={cn(
                 "w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none",

@@ -59,11 +59,14 @@ export default function FixtureConversionPage() {
     estimatedLoss?: number;
     notes?: string;
   }) {
+    const created = await createCase(caseData);
+    if (!created) return false;
+
     setShowModal(false);
-    await createCase(caseData);
     setTimeout(() => {
       navigate("/cases");
     }, 500);
+    return true;
   }
 
   return (

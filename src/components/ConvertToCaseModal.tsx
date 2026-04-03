@@ -20,7 +20,7 @@ interface ConvertToCaseModalProps {
     policyNumber?: string;
     estimatedLoss?: number;
     notes?: string;
-  }) => void;
+  }) => Promise<boolean> | boolean;
 }
 
 export default function ConvertToCaseModal({
@@ -63,12 +63,12 @@ export default function ConvertToCaseModal({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!clientName.trim() || !lossAddress.trim()) return;
 
     setIsSubmitting(true);
-    onConvert({
+    const created = await onConvert({
       clientName: clientName.trim(),
       lossAddress: lossAddress.trim(),
       mailingAddress: mailingAddress.trim() || undefined,
@@ -80,6 +80,10 @@ export default function ConvertToCaseModal({
       estimatedLoss: estimatedLoss ? parseFloat(estimatedLoss) : undefined,
       notes: notes.trim() || undefined,
     });
+
+    if (!created) {
+      setIsSubmitting(false);
+    }
   }
 
   return (

@@ -11,28 +11,28 @@ interface KPICardProps {
 
 const colorStyles = {
   blue: {
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    text: 'text-blue-700 dark:text-blue-300',
-    icon: 'text-blue-600 dark:text-blue-400',
-    border: 'border-blue-100 dark:border-blue-800',
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    icon: 'text-blue-600',
+    border: 'border-blue-100',
   },
   emerald: {
-    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-    text: 'text-emerald-700 dark:text-emerald-300',
-    icon: 'text-emerald-600 dark:text-emerald-400',
-    border: 'border-emerald-100 dark:border-emerald-800',
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    icon: 'text-emerald-600',
+    border: 'border-emerald-100',
   },
   amber: {
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    text: 'text-amber-700 dark:text-amber-300',
-    icon: 'text-amber-600 dark:text-amber-400',
-    border: 'border-amber-100 dark:border-amber-800',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    icon: 'text-amber-600',
+    border: 'border-amber-100',
   },
   red: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    text: 'text-red-700 dark:text-red-300',
-    icon: 'text-red-600 dark:text-red-400',
-    border: 'border-red-100 dark:border-red-800',
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    icon: 'text-red-600',
+    border: 'border-red-100',
   },
 }
 
@@ -40,22 +40,22 @@ function KPICard({ title, value, icon, color, subtitle }: KPICardProps) {
   const styles = colorStyles[color]
 
   return (
-    <div className="kpi-card group">
-      <div className="flex items-start justify-between mb-4">
-        <div className={`p-2.5 rounded-xl ${styles.bg} ${styles.icon} transition-transform group-hover:scale-110 duration-200`}>
+    <div className="kpi-card group border border-transparent hover:-translate-y-0.5 hover:border-blue-100/80">
+      <div className="mb-4 flex items-start justify-between">
+        <div className={`rounded-2xl border p-2.5 ${styles.bg} ${styles.icon} ${styles.border} transition-transform duration-200 group-hover:scale-105`}>
           {icon}
         </div>
       </div>
 
       <div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">
+        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-slate-400">
           {title}
         </p>
-        <p className="text-3xl font-semibold text-slate-900 dark:text-white score-number tracking-tight">
+        <p className="score-number font-headline text-3xl font-extrabold tracking-tight text-slate-900">
           {value.toLocaleString()}
         </p>
         {subtitle && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="mt-2 text-xs font-medium text-slate-500">
             {subtitle}
           </p>
         )}

@@ -119,7 +119,6 @@ export default function FixtureLegacyCompatPage() {
           onClose={handleCloseDrawer}
           onUpdateStatus={() => {}}
           onUpdateTracking={() => {}}
-          onConvertToCase={() => {}}
           readOnly={leadReadOnly}
         />
       )}

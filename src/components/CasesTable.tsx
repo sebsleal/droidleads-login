@@ -50,7 +50,7 @@ export default function CasesTable({ cases, totalCases, currentPage, pageSize, o
 
   if (cases.length === 0) {
     return (
-      <div className="card px-6 py-16 text-center">
+      <div className="workspace-panel px-6 py-16 text-center">
         <Briefcase className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-slate-500 font-medium">No cases match your filters</p>
         <p className="text-slate-400 text-sm mt-1">Try clearing filters or check back after importing CRM data</p>
@@ -59,15 +59,15 @@ export default function CasesTable({ cases, totalCases, currentPage, pageSize, o
   }
 
   return (
-    <div className="card overflow-hidden">
+    <div className="workspace-panel overflow-hidden">
       {/* Table header */}
-      <div className="hidden lg:grid grid-cols-[2fr_2fr_1.2fr_1.5fr_1fr_1fr_32px] gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50/60">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Client</span>
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Property</span>
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Claim Type</span>
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Insurance Co.</span>
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</span>
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-right">Fee Collected</span>
+      <div className="hidden grid-cols-[2fr_2fr_1.2fr_1.5fr_1fr_1fr_32px] gap-4 border-b border-slate-200/70 bg-slate-50/70 px-5 py-4 lg:grid">
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Client</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Property</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Claim Type</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Insurance Co.</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Status</span>
+        <span className="text-right text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Fee Collected</span>
         <span />
       </div>
 
@@ -80,8 +80,8 @@ export default function CasesTable({ cases, totalCases, currentPage, pageSize, o
               key={c.id}
               onClick={() => onSelectCase(c)}
               className={cn(
-                'w-full text-left px-5 py-4 transition-colors duration-100',
-                'hover:bg-slate-50/80 focus:outline-none focus:bg-blue-50/50',
+                'group w-full px-5 py-4 text-left transition-colors duration-100',
+                'focus:bg-blue-50/50 focus:outline-none hover:bg-slate-50/90',
                 isSelected && 'bg-blue-50/60 border-l-2 border-zinc-700',
               )}
             >
@@ -89,7 +89,7 @@ export default function CasesTable({ cases, totalCases, currentPage, pageSize, o
               <div className="lg:hidden">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{c.clientName}</p>
+                    <p className="truncate text-sm font-semibold text-slate-900">{c.clientName}</p>
                     <p className="text-xs text-slate-500 truncate mt-0.5">{c.lossAddress}</p>
                   </div>
                   <span className={cn('badge flex-shrink-0 text-[10px]', caseStatusColor(c.statusPhase))}>
@@ -114,7 +114,7 @@ export default function CasesTable({ cases, totalCases, currentPage, pageSize, o
               <div className="hidden lg:grid grid-cols-[2fr_2fr_1.2fr_1.5fr_1fr_1fr_32px] gap-4 items-center">
                 {/* Client */}
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{c.clientName}</p>
+                  <p className="truncate text-sm font-semibold text-slate-900">{c.clientName}</p>
                   <p className="text-xs text-slate-400 truncate">#{c.fileNumber}</p>
                 </div>
 
@@ -171,7 +171,7 @@ export default function CasesTable({ cases, totalCases, currentPage, pageSize, o
 
                 {/* Chevron */}
                 <div className="flex justify-end">
-                  <ChevronRight className="w-4 h-4 text-slate-300" />
+                  <ChevronRight className="h-4 w-4 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-slate-500" />
                 </div>
               </div>
             </button>

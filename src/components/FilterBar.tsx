@@ -94,7 +94,7 @@ function Toggle({ label, checked, onToggle, tooltipText, activeColor = 'bg-zinc-
 function FilterLabel({ text, tooltip }: { text: string; tooltip: string }) {
   return (
     <Tooltip text={tooltip}>
-      <span className="text-[10px] font-semibold text-zinc-400 dark:text-slate-400 uppercase tracking-[0.08em] whitespace-nowrap cursor-help">
+      <span className="cursor-help whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
         {text}
       </span>
     </Tooltip>
@@ -109,27 +109,25 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-zinc-100 dark:border-slate-700 rounded-lg divide-y divide-zinc-50 dark:divide-slate-700">
+    <div className="workspace-filter-shell divide-y divide-slate-200/60 overflow-hidden">
       {/* Row 1: search + dropdowns */}
-      <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center gap-4 px-4 py-4">
         {/* Search */}
         <div className="flex items-center gap-2">
           <FilterLabel text="Search" tooltip="Search leads by owner name, property address, or folio number." />
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Owner, address, folio…"
               value={filters.search}
               onChange={(e) => update('search', e.target.value)}
-              className="w-52 rounded-md border border-zinc-200 dark:border-slate-600 bg-zinc-50 dark:bg-slate-700 pl-8 pr-2.5 py-1 text-[13px] text-zinc-700 dark:text-slate-200
-                         focus:bg-white dark:focus:bg-slate-700 focus:border-zinc-400 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-slate-500/20
-                         placeholder:text-zinc-300 dark:placeholder:text-slate-500 transition-colors"
+              className="workspace-input w-56 pl-10"
             />
           </div>
         </div>
 
-        <div className="w-px h-4 bg-zinc-100 dark:bg-slate-700 flex-shrink-0" />
+        <div className="h-5 w-px flex-shrink-0 bg-slate-200/80" />
 
         {/* ZIP */}
         <div className="flex items-center gap-2">
@@ -140,13 +138,11 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
             maxLength={5}
             value={filters.zip}
             onChange={(e) => update('zip', e.target.value.replace(/\D/g, ''))}
-            className="w-20 rounded-md border border-zinc-200 dark:border-slate-600 bg-zinc-50 dark:bg-slate-700 px-2.5 py-1 text-[13px] text-zinc-700 dark:text-slate-200
-                       focus:bg-white dark:focus:bg-slate-700 focus:border-zinc-400 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-slate-500/20
-                       placeholder:text-zinc-300 dark:placeholder:text-slate-500 transition-colors"
+            className="workspace-input w-20 py-2"
           />
         </div>
 
-        <div className="w-px h-4 bg-zinc-100 dark:bg-slate-700 flex-shrink-0" />
+        <div className="h-5 w-px flex-shrink-0 bg-slate-200/80" />
 
         <div className="flex items-center gap-2">
           <FilterLabel text="Damage" tooltip="Filter by the type of property damage on the permit." />
@@ -274,7 +270,7 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
         {hasActiveFilters && (
           <button
             onClick={onClear}
-            className="ml-auto flex items-center gap-1 text-[11px] font-medium text-zinc-400 dark:text-slate-400 hover:text-zinc-700 dark:hover:text-slate-200 transition-colors"
+            className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 transition-colors hover:text-slate-700"
           >
             <X className="w-3 h-3" />
             Clear
@@ -283,7 +279,7 @@ export default function FilterBar({ filters, onChange, onClear, availableInsurer
       </div>
 
       {/* Row 2: toggles */}
-      <div className="px-4 py-2.5 flex items-center gap-5 flex-wrap">
+      <div className="flex flex-wrap items-center gap-5 px-4 py-3.5">
         <Toggle
           label="Has contact"
           checked={filters.hasContact}

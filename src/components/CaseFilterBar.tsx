@@ -40,7 +40,7 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
   }
 
   return (
-    <div className="card px-4 py-3.5">
+    <div className="workspace-filter-shell px-4 py-4">
       <div className="flex flex-wrap items-center gap-3">
 
         {/* Search */}
@@ -51,17 +51,13 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
             placeholder="Search client or address…"
             value={filters.search}
             onChange={(e) => update('search', e.target.value)}
-            className={cn(
-              'flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700',
-              'focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10',
-              'placeholder:text-slate-400 transition-colors',
-            )}
+            className={cn('workspace-input flex-1')}
           />
         </div>
 
         {/* Status group */}
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Status</label>
+          <label className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Status</label>
           <select
             value={filters.statusGroup}
             onChange={(e) => update('statusGroup', e.target.value as CaseFilterState['statusGroup'])}
@@ -76,7 +72,7 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
         {/* Insurance Company */}
         {availableInsurers.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Insurer</label>
+            <label className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Insurer</label>
             <select
               value={filters.insuranceCompany}
               onChange={(e) => update('insuranceCompany', e.target.value)}
@@ -93,7 +89,7 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
         {/* Peril Type */}
         {availablePerils.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Claim Type</label>
+            <label className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Claim Type</label>
             <select
               value={filters.perilType}
               onChange={(e) => update('perilType', e.target.value)}
@@ -109,7 +105,7 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
 
         {/* Date Range */}
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500 whitespace-nowrap">Date</label>
+          <label className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Date</label>
           <select
             value={filters.dateRange}
             onChange={(e) => update('dateRange', e.target.value as CaseFilterState['dateRange'])}
@@ -125,7 +121,7 @@ export default function CaseFilterBar({ filters, onChange, onClear, availableIns
         {hasActive && (
           <button
             onClick={onClear}
-            className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors ml-auto"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-800"
           >
             <X className="w-3.5 h-3.5" />
             Clear filters

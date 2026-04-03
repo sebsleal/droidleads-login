@@ -44,7 +44,7 @@ export default function StormWatchTable({
 
   if (candidates.length === 0) {
     return (
-      <div className="card flex flex-col items-center justify-center py-20 text-center">
+      <div className="workspace-panel flex flex-col items-center justify-center py-20 text-center">
         <AlertCircle className="w-10 h-10 text-slate-300 mb-3" />
         <p className="text-slate-500 font-medium">No storm candidates yet</p>
         <p className="text-slate-400 text-sm mt-1">
@@ -55,20 +55,20 @@ export default function StormWatchTable({
   }
 
   return (
-    <div className="card overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-700">
-          <span className="text-zinc-900 font-semibold score-number">{totalCandidates}</span>{' '}
+    <div className="workspace-panel overflow-hidden">
+      <div className="flex items-center justify-between border-b border-slate-200/70 bg-slate-50/70 px-5 py-4">
+        <p className="text-sm font-medium text-slate-500">
+          <span className="score-number font-semibold text-slate-900">{totalCandidates}</span>{' '}
           {totalCandidates === 1 ? 'candidate' : 'candidates'} found
         </p>
-        <p className="text-xs text-slate-400 hidden lg:block">Area-based opportunities stay separate from permit leads</p>
+        <p className="hidden text-2xs font-medium uppercase tracking-[0.18em] text-slate-400 lg:block">Area opportunities stay separate from permit leads</p>
       </div>
 
       {/* Desktop table — hidden on mobile, visible on lg+ */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/60">
+            <tr className="border-b border-slate-200/70">
               <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-6">
                 #
               </th>
@@ -96,20 +96,20 @@ export default function StormWatchTable({
               <th className="w-8" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-slate-100">
             {candidates.map((candidate, index) => (
               <tr
                 key={candidate.id}
                 onClick={() => onSelectCandidate(candidate)}
                 className={cn(
-                  'table-row-hover group',
-                  selectedCandidateId === candidate.id && 'bg-blue-50/60',
+                  'workspace-row-hover group',
+                  selectedCandidateId === candidate.id && 'bg-blue-50/60 border-l-2 border-blue-500',
                 )}
               >
                 <td className="px-5 py-3.5 text-slate-300 text-xs score-number">{(currentPage - 1) * pageSize + index + 1}</td>
 
                 <td className="px-3 py-3.5">
-                  <div className="font-medium text-slate-900 truncate max-w-[220px]">
+                  <div className="max-w-[220px] truncate font-semibold text-slate-900">
                     {candidate.locationLabel}
                   </div>
                   <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
@@ -164,7 +164,7 @@ export default function StormWatchTable({
                 </td>
 
                 <td className="px-3 py-3.5">
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-400 transition-colors" />
+                  <ChevronRight className="h-4 w-4 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-slate-500" />
                 </td>
               </tr>
             ))}

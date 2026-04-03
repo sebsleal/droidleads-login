@@ -255,7 +255,7 @@ export default function CaseDrawer({
     <>
       {/* Backdrop */}
       <div
-        className="drawer-backdrop fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+        className="drawer-backdrop fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -266,14 +266,14 @@ export default function CaseDrawer({
         tabIndex={-1}
         role="dialog"
         aria-label={`Case: ${kase.clientName}`}
-        className="fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] lg:w-[520px] bg-white shadow-drawer
+        className="drawer-surface fixed inset-y-0 right-0 z-[70] w-full sm:w-[480px] shadow-drawer
                    flex flex-col animate-slide-in focus:outline-none overflow-hidden"
       >
         {/* Header */}
-        <div className="flex-shrink-0 px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex-shrink-0 border-b border-slate-200/70 bg-slate-50/80 px-6 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-900 leading-snug truncate">
+              <h2 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface leading-snug truncate">
                 {kase.clientName}
               </h2>
               <div className="flex items-center gap-1.5 mt-1 text-sm text-slate-500">
@@ -321,7 +321,7 @@ export default function CaseDrawer({
 
           {/* Case Details */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+            <h3 className="drawer-section-title mb-3">
               Case Details
             </h3>
             <div className="space-y-2.5">
@@ -364,7 +364,7 @@ export default function CaseDrawer({
           {/* Contact */}
           {(kase.phone || kase.email) && (
             <section>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+              <h3 className="drawer-section-title mb-3">
                 Contact
               </h3>
               <div className="space-y-2.5">
@@ -404,11 +404,11 @@ export default function CaseDrawer({
 
           {/* Financials */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+            <h3 className="drawer-section-title mb-3">
               Financials
             </h3>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-50 rounded-xl p-3 text-center">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 text-center">
                 <p className="text-lg font-bold text-slate-900 score-number">
                   {kase.feeRate != null
                     ? `${Math.round(kase.feeRate * 100)}%`
@@ -416,7 +416,7 @@ export default function CaseDrawer({
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">Fee Rate</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-3 text-center">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 text-center">
                 <p className="text-lg font-bold text-emerald-700 score-number">
                   {kase.feeDisbursed != null && kase.feeDisbursed > 0
                     ? `$${kase.feeDisbursed.toLocaleString()}`
@@ -424,7 +424,7 @@ export default function CaseDrawer({
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">Collected</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-3 text-center">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 text-center">
                 <p className="text-lg font-bold text-blue-700 score-number">
                   {pipelineValue != null && kase.statusPhase !== "Settled"
                     ? `$${pipelineValue.toLocaleString()}`
@@ -445,7 +445,7 @@ export default function CaseDrawer({
               text="Track which documents and milestones have been completed for this case. Click to toggle."
               position="bottom"
             >
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+              <h3 className="drawer-section-title mb-3 inline-block cursor-help underline decoration-dotted decoration-slate-300">
                 Process Checklist
               </h3>
             </Tooltip>
@@ -506,7 +506,7 @@ export default function CaseDrawer({
               text="Process timeline showing completed milestones and current stage. A blue badge shows days in the current stage — over 30 days triggers a stall warning."
               position="bottom"
             >
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3 cursor-help inline-block underline decoration-dotted decoration-slate-300">
+              <h3 className="drawer-section-title mb-3 inline-block cursor-help underline decoration-dotted decoration-slate-300">
                 Timeline
               </h3>
             </Tooltip>
@@ -515,7 +515,7 @@ export default function CaseDrawer({
 
           {/* Status Selector */}
           <section>
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+            <h3 className="drawer-section-title mb-3">
               Update Status
             </h3>
             <select
@@ -553,7 +553,7 @@ export default function CaseDrawer({
           <section>
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              <h3 className="drawer-section-title">
                 Notes
               </h3>
             </div>
@@ -587,7 +587,7 @@ export default function CaseDrawer({
           {/* Mailing address (if different from loss address) */}
           {kase.mailingAddress && kase.mailingAddress !== kase.lossAddress && (
             <section>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+              <h3 className="drawer-section-title mb-2">
                 Mailing Address
               </h3>
               <div className="flex items-start gap-2 text-sm text-slate-600">
@@ -599,7 +599,7 @@ export default function CaseDrawer({
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+        <div className="flex-shrink-0 border-t border-slate-200/70 bg-slate-50/80 px-6 py-4">
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-lg border border-slate-200 text-sm font-medium

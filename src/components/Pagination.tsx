@@ -23,14 +23,14 @@ export default function Pagination({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-100 bg-zinc-50/50">
+    <div className="flex items-center justify-between border-t border-slate-200/70 bg-slate-50/70 px-5 py-4">
       {/* Page size selector */}
       <div className="flex items-center gap-2">
-        <label className="text-[11px] text-zinc-400">Rows per page</label>
+        <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Rows</label>
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value) as PageSize)}
-          className="text-[12px] text-zinc-600 bg-white border border-zinc-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-zinc-300"
+          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[12px] font-semibold text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-200"
         >
           {PAGE_SIZES.map((size) => (
             <option key={size} value={size}>
@@ -42,7 +42,7 @@ export default function Pagination({
 
       {/* Page indicator and navigation */}
       <div className="flex items-center gap-3">
-        <span className="text-[12px] text-zinc-500 score-number">
+        <span className="score-number text-[12px] font-medium text-slate-500">
           Page {currentPage} of {totalPages}
         </span>
         <div className="flex items-center gap-1">
@@ -50,10 +50,10 @@ export default function Pagination({
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage <= 1}
             className={cn(
-              'p-1 rounded transition-colors',
+              'rounded-lg border p-1.5 transition-colors',
               currentPage <= 1
-                ? 'text-zinc-200 cursor-not-allowed'
-                : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'
+                ? 'cursor-not-allowed border-slate-100 text-slate-200'
+                : 'border-slate-200 text-slate-500 hover:bg-white hover:text-slate-700'
             )}
             aria-label="Previous page"
           >
@@ -63,10 +63,10 @@ export default function Pagination({
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages}
             className={cn(
-              'p-1 rounded transition-colors',
+              'rounded-lg border p-1.5 transition-colors',
               currentPage >= totalPages
-                ? 'text-zinc-200 cursor-not-allowed'
-                : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'
+                ? 'cursor-not-allowed border-slate-100 text-slate-200'
+                : 'border-slate-200 text-slate-500 hover:bg-white hover:text-slate-700'
             )}
             aria-label="Next page"
           >

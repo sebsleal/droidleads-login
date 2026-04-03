@@ -227,7 +227,6 @@ export default function FixtureCrossAreaPage() {
           onClose={() => setSelectedLead(null)}
           onUpdateStatus={() => {}}
           onUpdateTracking={() => {}}
-          onConvertToCase={() => {}}
           readOnly={leadReadOnly}
         />
       )}

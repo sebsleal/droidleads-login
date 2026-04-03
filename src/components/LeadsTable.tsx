@@ -27,7 +27,7 @@ const STATUS_STYLES: Record<Lead['status'], string> = {
   Closed: 'bg-zinc-100 text-zinc-400 border-zinc-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700',
 }
 
-const TH = 'text-left px-3 py-3 text-2xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'
+const TH = 'px-3 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400'
 
 interface ScorePopoverState {
   lead: Lead
@@ -60,21 +60,21 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
   }
 
   return (
-    <div className="card overflow-hidden">
+    <div className="workspace-panel overflow-hidden">
       {/* Count bar */}
-      <div className="px-4 py-3 border-b border-zinc-100 dark:border-slate-700 flex items-center justify-between bg-zinc-50/50 dark:bg-slate-800/50">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          <span className="text-slate-900 dark:text-white font-semibold score-number">{totalLeads.toLocaleString()}</span>
+      <div className="flex items-center justify-between border-b border-slate-200/70 bg-slate-50/70 px-5 py-4">
+        <p className="text-sm text-slate-500">
+          <span className="score-number font-semibold text-slate-900">{totalLeads.toLocaleString()}</span>
           {' '}{totalLeads === 1 ? 'lead' : 'leads'} found
         </p>
-        <p className="text-2xs text-slate-400 dark:text-slate-500 hidden lg:block">Click a row to view details</p>
+        <p className="hidden text-2xs font-medium uppercase tracking-[0.18em] text-slate-400 lg:block">Click a row to inspect details</p>
       </div>
 
       {/* Desktop table — hidden on mobile, visible on lg+ */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full">
           <thead className="table-sticky-header">
-            <tr className="border-b border-zinc-100 dark:border-slate-700 bg-zinc-50/95 dark:bg-slate-800/95">
+            <tr className="border-b border-slate-200/70">
               <th className={cn(TH, 'px-5 w-8')}>#</th>
               <th className={TH}>Property Address</th>
               <th className={TH}>Owner</th>
@@ -86,28 +86,27 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
               <th className="w-8" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-100">
             {leads.map((lead, idx) => (
               <tr
                 key={lead.id}
                 onClick={() => onSelectLead(lead)}
                 className={cn(
-                  'group transition-all duration-150 cursor-pointer border-l-2 border-transparent',
-                  'hover:bg-zinc-50 dark:hover:bg-slate-800/50 hover:border-l-primary-500',
-                  selectedLeadId === lead.id && 'bg-primary-50/60 dark:bg-primary-900/20 border-l-primary-500'
+                  'workspace-row-hover group cursor-pointer border-l-2 border-transparent transition-all duration-150',
+                  selectedLeadId === lead.id && 'table-row-active'
                 )}
               >
                 {/* Index */}
-                <td className="px-5 py-3.5 text-slate-400 dark:text-slate-500 text-2xs score-number">
+                <td className="px-5 py-4 text-2xs score-number text-slate-400">
                   {(currentPage - 1) * pageSize + idx + 1}
                 </td>
 
                 {/* Address */}
-                <td className="px-3 py-3.5">
-                  <div className="text-sm font-medium text-slate-900 dark:text-white truncate max-w-[200px]">
+                <td className="px-3 py-4">
+                  <div className="max-w-[220px] truncate text-sm font-semibold text-slate-900">
                     {lead.propertyAddress}
                   </div>
-                  <div className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <div className="mt-0.5 text-2xs text-slate-500">
                     {lead.city}, FL {lead.zip}
                   </div>
                   {/* Flag pills */}
@@ -124,22 +123,22 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
                     return (
                       <div className="flex gap-1 mt-2 flex-wrap">
                         {pills.slice(0, 2).map(p => (
-                          <span key={p.label} className={`text-2xs font-medium px-1.5 py-0.5 rounded ${p.color}`}>{p.label}</span>
+                          <span key={p.label} className={`rounded-full px-2 py-1 text-2xs font-semibold ${p.color}`}>{p.label}</span>
                         ))}
-                        {pills.length > 2 && <span className="text-2xs text-slate-400 dark:text-slate-500">+{pills.length - 2}</span>}
+                        {pills.length > 2 && <span className="text-2xs font-medium text-slate-400">+{pills.length - 2}</span>}
                       </div>
                     );
                   })()}
                 </td>
 
                 {/* Owner */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-4">
                   {(() => {
                     const { display, isPlaceholder } = displayOwnerName(lead.ownerName);
                     return (
                       <span className={isPlaceholder
-                        ? 'text-slate-400 dark:text-slate-500 italic text-xs'
-                        : 'text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap'
+                        ? 'text-xs italic text-slate-400'
+                        : 'whitespace-nowrap text-sm font-medium text-slate-700'
                       }>
                         {display}
                       </span>
@@ -148,14 +147,14 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
                 </td>
 
                 {/* Damage type */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-4">
                   <span className={cn('badge', damageTypeColor(lead.damageType))}>
                     {lead.damageType}
                   </span>
                 </td>
 
                 {/* Score */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-4">
                   <button
                     onClick={(e) => handleScoreClick(e, lead)}
                     className="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none"
@@ -166,19 +165,19 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
                 </td>
 
                 {/* Date */}
-                <td className="px-3 py-3.5 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap score-number">
+                <td className="px-3 py-4 whitespace-nowrap text-xs score-number text-slate-500">
                   {formatDate(lead.date)}
                 </td>
 
                 {/* Contact icons */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-4">
                   <div className="flex items-center gap-2">
                     {lead.contact?.email ? (
                       <a
                         href={`mailto:${lead.contact.email}`}
                         title={lead.contact.email}
                         aria-label={lead.contact.email}
-                        className="text-primary-400 hover:text-primary-600 dark:text-primary-500 dark:hover:text-primary-400 transition-colors"
+                        className="text-primary-500 transition-colors hover:text-primary-700"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Mail className="w-4 h-4" />
@@ -189,28 +188,28 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
                         href={`tel:${lead.contact.phone}`}
                         title={lead.contact.phone}
                         aria-label={lead.contact.phone}
-                        className="text-emerald-400 hover:text-emerald-600 dark:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                        className="text-emerald-500 transition-colors hover:text-emerald-700"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Phone className="w-4 h-4" />
                       </a>
                     ) : null}
                     {!lead.contact?.email && !lead.contact?.phone && (
-                      <span className="text-slate-300 dark:text-slate-600 text-2xs">—</span>
+                      <span className="text-2xs text-slate-300">—</span>
                     )}
                   </div>
                 </td>
 
                 {/* Status */}
-                <td className="px-3 py-3.5">
+                <td className="px-3 py-4">
                   <span className={cn('badge', STATUS_STYLES[lead.status])}>
                     {lead.status}
                   </span>
                 </td>
 
                 {/* Arrow */}
-                <td className="px-3 py-3.5">
-                  <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-400 transition-colors transform group-hover:translate-x-0.5" />
+                <td className="px-3 py-4">
+                  <ChevronRight className="h-4 w-4 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-slate-500" />
                 </td>
               </tr>
             ))}
@@ -219,7 +218,7 @@ export default function LeadsTable({ leads, totalLeads, currentPage, pageSize, o
       </div>
 
       {/* Mobile card layout — visible on mobile, hidden on lg+ */}
-      <div className="lg:hidden divide-y divide-zinc-100 dark:divide-slate-800">
+      <div className="divide-y divide-slate-100 lg:hidden">
         {leads.map((lead, idx) => {
           const { display: ownerDisplay, isPlaceholder } = displayOwnerName(lead.ownerName);
           return (

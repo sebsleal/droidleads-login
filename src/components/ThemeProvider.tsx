@@ -123,7 +123,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <button
       onClick={cycleTheme}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors w-full',
+        'flex w-full items-center gap-2 rounded-xl border border-slate-200/80 bg-white/75 px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-900',
         className
       )}
       title={`Theme: ${theme}`}

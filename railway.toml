@@ -1,9 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[[services]]
-name = "scraper"
-
-[services.deploy]
-startCommand = "python run_scraper.py"
-cronSchedule = "0 */6 * * *"  # every 6 hours

@@ -1,3 +1,0 @@
--- Superseded by the ordered migrations in this directory.
--- Keep this file as a no-op so older manual instructions do not reintroduce
--- unsafe anon write policies after 0005_rls_policies.sql has been applied.

@@ -2,7 +2,9 @@ import { useState, useEffect, type ReactNode } from 'react'
 import { Shield, Lock, Eye, EyeOff } from 'lucide-react'
 
 const SESSION_KEY = 'cra_authed'
-const APP_PASSWORD = import.meta.env.VITE_APP_PASSWORD as string | undefined
+const ENV_PASSWORD = import.meta.env.VITE_APP_PASSWORD as string | undefined
+const PASSWORD = ENV_PASSWORD?.trim() || 'droidleads'
+const USING_DEFAULT_PASSWORD = !ENV_PASSWORD
 
 interface PasswordGateProps {
   children: ReactNode
@@ -16,14 +18,14 @@ export default function PasswordGate({ children }: PasswordGateProps) {
   const [shaking, setShaking] = useState(false)
 
   useEffect(() => {
-    if (!APP_PASSWORD || sessionStorage.getItem(SESSION_KEY) === '1') {
+    if (sessionStorage.getItem(SESSION_KEY) === '1') {
       setAuthed(true)
     }
   }, [])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (input === APP_PASSWORD) {
+    if (input === PASSWORD) {
       sessionStorage.setItem(SESSION_KEY, '1')
       setAuthed(true)
     } else {
@@ -100,6 +102,11 @@ export default function PasswordGate({ children }: PasswordGateProps) {
               </div>
               {error && (
                 <p className="text-[11px] text-red-400 mt-1.5">Incorrect password. Try again.</p>
+              )}
+              {USING_DEFAULT_PASSWORD && (
+                <p className="text-[11px] text-zinc-500 mt-1.5">
+                  Local default password: <span className="text-zinc-300">droidleads</span>
+                </p>
               )}
             </div>
 
